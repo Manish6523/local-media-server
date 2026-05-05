@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import PosterCard from "./PosterCard";
 
@@ -34,7 +34,7 @@ export default function MediaRow({ title, items, showEpisodeInfo = false }: Medi
 
   const scroll = (direction: "left" | "right") => {
     if (!scrollRef.current) return;
-    const scrollAmount = scrollRef.current.clientWidth * 0.8;
+    const scrollAmount = scrollRef.current.clientWidth * 0.85;
     scrollRef.current.scrollBy({
       left: direction === "left" ? -scrollAmount : scrollAmount,
       behavior: "smooth",
@@ -45,54 +45,67 @@ export default function MediaRow({ title, items, showEpisodeInfo = false }: Medi
     if (!scrollRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
     setShowLeftArrow(scrollLeft > 10);
-    setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 10);
+    setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 20);
   };
+
+  useEffect(() => {
+    handleScroll();
+    window.addEventListener('resize', handleScroll);
+    return () => window.removeEventListener('resize', handleScroll);
+  }, [items]);
 
   if (items.length === 0) return null;
 
   return (
-    <div className="relative group/row">
-      <h2 className="text-xl md:text-2xl font-bold text-white/90 mb-4 tracking-tight px-6 md:px-10 lg:px-14">
-        {title}
-      </h2>
+    <div className="relative group/row py-0 first:pt-4">
+      {/* Editorial Header */}
+      <div className="flex items-center gap-3 px-6 md:px-12 lg:px-20 mb-6">
+        <div className="h-6 w-1 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
+        <h2 className="text-lg md:text-xl font-black italic tracking-tighter uppercase text-white/90">
+          {title}
+        </h2>
+      </div>
 
       <div className="relative">
-        {/* Left arrow */}
+        {/* Left Arrow - Triggered ONLY by row hover */}
         {showLeftArrow && (
-          <button
-            onClick={() => scroll("left")}
-            className="absolute left-0 top-0 bottom-0 z-20 w-14 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent 
-                       flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity"
-          >
-            <ChevronLeft className="w-8 h-8 text-white" />
-          </button>
+          <div className="absolute left-0 top-0 bottom-0 z-30 w-24 bg-gradient-to-r from-[#050505] via-[#050505]/70 to-transparent pointer-events-none flex items-center justify-start pl-6 md:pl-12">
+            <button
+              onClick={() => scroll("left")}
+              className="pointer-events-auto h-12 w-12 flex items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all opacity-0 group-hover/row:opacity-100 -translate-x-4 group-hover/row:translate-x-0"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          </div>
         )}
 
         {/* Scroll container */}
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-6 md:px-10 lg:px-14 pb-4"
+          className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide px-6 md:px-12 lg:px-20 pb-8"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {items.map((item) => (
-            <PosterCard
-              key={`${item.id}-${item.title}`}
-              media={item}
-              showEpisodeInfo={showEpisodeInfo}
-            />
+            <div key={`${item.id}-${item.title}`} className="relative">
+              <PosterCard
+                media={item}
+                showEpisodeInfo={showEpisodeInfo}
+              />
+            </div>
           ))}
         </div>
 
-        {/* Right arrow */}
+        {/* Right Arrow - Triggered ONLY by row hover */}
         {showRightArrow && (
-          <button
-            onClick={() => scroll("right")}
-            className="absolute right-0 top-0 bottom-0 z-20 w-14 bg-gradient-to-l from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent 
-                       flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity"
-          >
-            <ChevronRight className="w-8 h-8 text-white" />
-          </button>
+          <div className="absolute right-0 top-0 bottom-0 z-30 w-24 bg-gradient-to-l from-[#050505] via-[#050505]/70 to-transparent pointer-events-none flex items-center justify-end pr-6 md:pr-12">
+            <button
+              onClick={() => scroll("right")}
+              className="pointer-events-auto h-12 w-12 flex items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all opacity-0 group-hover/row:opacity-100 translate-x-4 group-hover/row:translate-x-0"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
         )}
       </div>
     </div>

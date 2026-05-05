@@ -109,8 +109,8 @@ export default function HeroSection({ items }: HeroSectionProps) {
 
             {/* Heavy Dark Gradients for Readability */}
             {/* <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent w-[80%]" /> */}
-            {/* <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent" /> */}
-            <div className="absolute inset-0 bg-[#0a0a0a]/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent" />
+            {/* <div className="absolute inset-0 bg-[#0a0a0a]/20" /> */}
              {/* Slight overall darkening */}
 
             {/* Content positioned on left */}
