@@ -1,0 +1,316 @@
+"use client";
+
+import { useState, useRef, useCallback, useEffect } from "react";
+
+export interface SubtitleTrack {
+  label: string;
+  language: string;
+  url: string;
+}
+
+export interface AudioTrack {
+  index: number;
+  label: string;
+  language: string;
+  codec: string;
+}
+
+export interface PlayerState {
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  volume: number;
+  isMuted: boolean;
+  isBuffering: boolean;
+  bufferedEnd: number;
+  isFullscreen: boolean;
+  showControls: boolean;
+  activeSubtitle: number | null;
+  activeAudioTrack: number;
+  subtitleTracks: SubtitleTrack[];
+  audioTracks: AudioTrack[];
+  skipAnimation: "left" | "right" | null;
+  currentCueText: string;
+  subtitleSize: "small" | "medium" | "large";
+  subtitleColor: "white" | "yellow";
+}
+
+export function usePlayer(mediaId: string, baseNeedsTranscode: boolean, exactDuration: number) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipAnimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [state, setState] = useState<PlayerState>({
+    isPlaying: false,
+    currentTime: 0,
+    duration: exactDuration || 0,
+    volume: 1,
+    isMuted: false,
+    isBuffering: true,
+    bufferedEnd: 0,
+    isFullscreen: false,
+    showControls: true,
+    activeSubtitle: null,
+    activeAudioTrack: 0,
+    subtitleTracks: [],
+    audioTracks: [],
+    skipAnimation: null,
+    currentCueText: "",
+    subtitleSize: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_size")) as any || "medium",
+    subtitleColor: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_color")) as any || "white",
+  });
+
+  const [transcodeStartTime, setTranscodeStartTime] = useState(0);
+
+  // If user selects an alternate audio track on an MP4, we MUST transcode it on the server
+  // because native HTML5 over HTTP doesn't easily let you select audio streams dynamically
+  const needsTranscode = baseNeedsTranscode || state.activeAudioTrack > 0;
+
+  // Build video source URL
+  const videoSrc = needsTranscode
+    ? `/api/transcode?id=${mediaId}&audioTrack=${state.activeAudioTrack}&start=${transcodeStartTime}`
+    : `/api/stream?id=${mediaId}`;
+
+  // Fetch subtitle and audio tracks
+  useEffect(() => {
+    fetch(`/api/subtitles?id=${mediaId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setState((s) => ({ ...s, subtitleTracks: data }));
+      })
+      .catch(console.error);
+
+    fetch(`/api/audio-tracks?id=${mediaId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setState((s) => ({ ...s, audioTracks: data }));
+      })
+      .catch(console.error);
+  }, [mediaId]);
+
+  const ignorePauseRef = useRef(false);
+
+  // ---- Video event bindings ----
+  const bindVideoEvents = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const onPlay = () => setState((s) => ({ ...s, isPlaying: true }));
+    const onPause = () => {
+      if (!ignorePauseRef.current) {
+        setState((s) => ({ ...s, isPlaying: false }));
+      }
+    };
+    const onTimeUpdate = () => {
+      // If we are transcoding, we add the transcodeStartTime to the native currentTime
+      // so the progress bar represents the global time in the movie
+      const realTime = needsTranscode ? transcodeStartTime + v.currentTime : v.currentTime;
+      setState((s) => ({ ...s, currentTime: realTime }));
+    };
+    const onDurationChange = () => {
+      // Only override duration if we don't have an exact one from the server
+      if (!exactDuration && v.duration && isFinite(v.duration)) {
+        setState((s) => ({ ...s, duration: v.duration }));
+      }
+    };
+    const onWaiting = () => setState((s) => ({ ...s, isBuffering: true }));
+    const onCanPlay = () => setState((s) => ({ ...s, isBuffering: false }));
+    const onProgress = () => {
+      if (v.buffered.length > 0) {
+        const end = v.buffered.end(v.buffered.length - 1);
+        const realEnd = needsTranscode ? transcodeStartTime + end : end;
+        setState((s) => ({ ...s, bufferedEnd: realEnd }));
+      }
+    };
+    const onVolumeChange = () => {
+      setState((s) => ({ ...s, volume: v.volume, isMuted: v.muted }));
+    };
+
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
+    v.addEventListener("timeupdate", onTimeUpdate);
+    v.addEventListener("durationchange", onDurationChange);
+    v.addEventListener("loadedmetadata", onDurationChange);
+    v.addEventListener("waiting", onWaiting);
+    v.addEventListener("canplay", onCanPlay);
+    v.addEventListener("canplaythrough", onCanPlay);
+    v.addEventListener("playing", onCanPlay);
+    v.addEventListener("progress", onProgress);
+    v.addEventListener("volumechange", onVolumeChange);
+
+    return () => {
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
+      v.removeEventListener("timeupdate", onTimeUpdate);
+      v.removeEventListener("durationchange", onDurationChange);
+      v.removeEventListener("loadedmetadata", onDurationChange);
+      v.removeEventListener("waiting", onWaiting);
+      v.removeEventListener("canplay", onCanPlay);
+      v.removeEventListener("canplaythrough", onCanPlay);
+      v.removeEventListener("playing", onCanPlay);
+      v.removeEventListener("progress", onProgress);
+      v.removeEventListener("volumechange", onVolumeChange);
+    };
+  }, [exactDuration, needsTranscode, transcodeStartTime]);
+
+  // ---- Controls auto-hide ----
+  const resetControlsTimer = useCallback(() => {
+    setState((s) => ({ ...s, showControls: true }));
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      setState((s) => ({ ...s, showControls: false }));
+    }, 3000);
+  }, []);
+
+  // ---- Player actions ----
+  const togglePlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.paused ? v.play() : v.pause();
+  }, []);
+
+  const seek = useCallback((time: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const targetTime = Math.max(0, Math.min(time, state.duration || 0));
+    
+    if (needsTranscode) {
+      ignorePauseRef.current = true;
+      setTranscodeStartTime(targetTime);
+      setState(s => ({ ...s, currentTime: targetTime, isBuffering: true, bufferedEnd: targetTime }));
+      
+      const onLoaded = () => {
+        v.play().catch(() => {});
+        ignorePauseRef.current = false;
+        v.removeEventListener("loadeddata", onLoaded);
+      };
+      v.addEventListener("loadeddata", onLoaded);
+    } else {
+      v.currentTime = targetTime;
+    }
+  }, [needsTranscode, state.duration]);
+
+  const skipBack = useCallback(() => {
+    setState((s) => {
+      seek(s.currentTime - 10);
+      return { ...s, skipAnimation: "left" };
+    });
+    if (skipAnimTimer.current) clearTimeout(skipAnimTimer.current);
+    skipAnimTimer.current = setTimeout(() => {
+      setState((s) => ({ ...s, skipAnimation: null }));
+    }, 600);
+  }, [seek]);
+
+  const skipForward = useCallback(() => {
+    setState((s) => {
+      seek(s.currentTime + 10);
+      return { ...s, skipAnimation: "right" };
+    });
+    if (skipAnimTimer.current) clearTimeout(skipAnimTimer.current);
+    skipAnimTimer.current = setTimeout(() => {
+      setState((s) => ({ ...s, skipAnimation: null }));
+    }, 600);
+  }, [seek]);
+
+  const setVolume = useCallback((vol: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.volume = Math.max(0, Math.min(1, vol));
+    if (vol > 0 && v.muted) v.muted = false;
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const c = containerRef.current;
+    if (!c) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+      setState((s) => ({ ...s, isFullscreen: false }));
+    } else {
+      c.requestFullscreen();
+      setState((s) => ({ ...s, isFullscreen: true }));
+    }
+  }, []);
+
+  const setActiveSubtitle = useCallback((index: number | null) => {
+    setState((s) => ({ ...s, activeSubtitle: index }));
+  }, []);
+
+  const setActiveAudioTrack = useCallback((index: number) => {
+    const v = videoRef.current;
+    const currentTime = v?.currentTime || 0;
+    setState((s) => ({ ...s, activeAudioTrack: index }));
+    // After state update triggers source change, restore time
+    setTimeout(() => {
+      const v2 = videoRef.current;
+      if (v2) {
+        const onLoaded = () => {
+          v2.currentTime = currentTime;
+          v2.play().catch(() => {});
+          v2.removeEventListener("loadeddata", onLoaded);
+        };
+        v2.addEventListener("loadeddata", onLoaded);
+      }
+    }, 100);
+  }, []);
+
+  const setCueText = useCallback((text: string) => {
+    setState((s) => ({ ...s, currentCueText: text }));
+  }, []);
+
+  const setSubtitleSize = useCallback((size: "small" | "medium" | "large") => {
+    setState((s) => ({ ...s, subtitleSize: size }));
+    if (typeof window !== "undefined") localStorage.setItem("vidlock_subtitle_size", size);
+  }, []);
+
+  const setSubtitleColor = useCallback((color: "white" | "yellow") => {
+    setState((s) => ({ ...s, subtitleColor: color }));
+    if (typeof window !== "undefined") localStorage.setItem("vidlock_subtitle_color", color);
+  }, []);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handler = () => {
+      setState((s) => ({ ...s, isFullscreen: !!document.fullscreenElement }));
+    };
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  // Cleanup timers
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      if (skipAnimTimer.current) clearTimeout(skipAnimTimer.current);
+    };
+  }, []);
+
+  return {
+    videoRef,
+    containerRef,
+    state,
+    videoSrc,
+    needsTranscode,
+    transcodeStartTime,
+    bindVideoEvents,
+    resetControlsTimer,
+    togglePlay,
+    seek,
+    skipBack,
+    skipForward,
+    setVolume,
+    toggleMute,
+    toggleFullscreen,
+    setActiveSubtitle,
+    setActiveAudioTrack,
+    setCueText,
+    setSubtitleSize,
+    setSubtitleColor,
+  };
+}
