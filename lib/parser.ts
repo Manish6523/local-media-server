@@ -15,8 +15,8 @@ export interface ParsedFile {
 }
 
 // Rule 1 & 2: SxxExx pattern with optional multi-episode range
-// Matches: S02E01-05, S02E01-E05, S01E03, S04E14
-const SXXEXX_REGEX = /S(\d{1,2})E(\d{1,2})(?:-E?(\d{1,2}))?/i;
+// Matches: S02E01-05, S02E01-E05, S01E03, S04E14, s03 e2, [s01-e05], etc.
+const SXXEXX_REGEX = /[.\s_\-\[]?[Ss](\d{1,2})[.\s_\-]?[Ee](\d{1,2})(?:[.\s_\-]?[Ee]?(\d{1,2}))?/i;
 
 // Rule 3: Junk tags to strip (order matters — match before title extraction)
 const JUNK_PATTERNS = [
@@ -59,17 +59,16 @@ export function parseFilename(filename: string): ParsedFile {
   let season: number | null = null;
   let episodeStart: number | null = null;
   let episodeEnd: number | null = null;
+  
+  let titlePart = name;
 
   if (sxxexxMatch) {
     season = parseInt(sxxexxMatch[1], 10);
     episodeStart = parseInt(sxxexxMatch[2], 10);
     episodeEnd = sxxexxMatch[3] ? parseInt(sxxexxMatch[3], 10) : episodeStart;
-  }
-
-  // Get the portion before the SxxExx match for title extraction
-  let titlePart = name;
-  if (sxxexxMatch && sxxexxMatch.index !== undefined) {
-    titlePart = name.substring(0, sxxexxMatch.index);
+    
+    // Strip the matched episode pattern from the filename so it doesn't appear in the title
+    titlePart = titlePart.replace(sxxexxMatch[0], " ");
   }
 
   // Rule 3: Strip junk bracket/brace/paren patterns

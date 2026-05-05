@@ -48,47 +48,47 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --color-netflix-red: #E50914;
   --color-netflix-red-hover: #f6121d;
-  --color-netflix-dark: #141414;
-  --color-netflix-card: #1a1a2e;
-  --color-netflix-surface: #181818;
+  --color-netflix-dark: #0a0a0a;
+  --color-netflix-card: #161616;
+  --color-netflix-surface: #111111;
 }
 
 :root {
-  --background: #141414;
+  --background: #031716;
   --foreground: #e5e5e5;
-  --card: #1a1a2e;
+  --card: #082422;
   --card-foreground: #e5e5e5;
-  --popover: #181818;
+  --popover: #082422;
   --popover-foreground: #e5e5e5;
-  --primary: #E50914;
+  --primary: #FF7B00;
   --primary-foreground: #ffffff;
-  --secondary: #2a2a3e;
+  --secondary: #082422;
   --secondary-foreground: #e5e5e5;
-  --muted: #232338;
-  --muted-foreground: #a0a0b0;
-  --accent: #2a2a3e;
+  --muted: #082422;
+  --muted-foreground: #888888;
+  --accent: #082422;
   --accent-foreground: #e5e5e5;
   --destructive: #E50914;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #E50914;
-  --chart-1: #E50914;
-  --chart-2: #b81d24;
-  --chart-3: #831010;
+  --border: rgba(255, 255, 255, 0.06);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #FF7B00;
+  --chart-1: #FF7B00;
+  --chart-2: #cc6200;
+  --chart-3: #994900;
   --chart-4: #e87c03;
   --chart-5: #46d369;
   --radius: 0.5rem;
-  --sidebar: #0f0f1a;
+  --sidebar: #02100f;
   --sidebar-foreground: #e5e5e5;
-  --sidebar-primary: #E50914;
+  --sidebar-primary: #FF7B00;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #232338;
+  --sidebar-accent: #082422;
   --sidebar-accent-foreground: #e5e5e5;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #E50914;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #FF7B00;
 }
 
-/* No light mode — always dark Netflix theme */
+/* No light mode — always dark cinematic theme */
 
 @layer base {
   * {
@@ -102,104 +102,201 @@
   }
 }
 
-/* Custom scrollbar */
+/* =======================================
+   Custom Scrollbar
+   ======================================= */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.22);
 }
 
-/* Horizontal scroll row fade edges */
-.scroll-fade-right {
-  mask-image: linear-gradient(to right, black 90%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+/* Hide scrollbar for horizontal scroll rows */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-/* Poster card hover effects */
-.poster-card {
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
-              box-shadow 0.3s ease,
-              z-index 0s;
+/* =======================================
+   Atmospheric Red Glow (Hero)
+   ======================================= */
+.hero-glow {
+  position: absolute;
+  top: -120px;
+  right: 0;
+  width: 70%;
+  height: 500px;
+  background: radial-gradient(
+    ellipse at 70% 0%,
+    rgba(229, 9, 20, 0.15) 0%,
+    rgba(229, 9, 20, 0.06) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
-.poster-card:hover {
-  transform: scale(1.08);
-  z-index: 10;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.poster-card .poster-overlay {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.poster-card:hover .poster-overlay {
-  opacity: 1;
-}
-
-/* Hero gradient overlay */
+/* Hero gradient overlays */
 .hero-gradient {
   background: linear-gradient(
     to right,
-    rgba(20, 20, 20, 0.95) 0%,
-    rgba(20, 20, 20, 0.7) 30%,
-    rgba(20, 20, 20, 0.3) 60%,
-    rgba(20, 20, 20, 0) 100%
+    rgba(10, 10, 10, 0.98) 0%,
+    rgba(10, 10, 10, 0.75) 35%,
+    rgba(10, 10, 10, 0.3) 60%,
+    rgba(10, 10, 10, 0) 100%
   );
 }
 
 .hero-gradient-bottom {
   background: linear-gradient(
     to top,
-    #141414 0%,
-    rgba(20, 20, 20, 0.8) 30%,
+    #0a0a0a 0%,
+    rgba(10, 10, 10, 0.85) 25%,
     transparent 100%
   );
 }
 
-/* Shimmer loading effect */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+/* =======================================
+   Poster Card Hover
+   ======================================= */
+.poster-card {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.3s ease;
+}
+.poster-card:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+.poster-card .poster-overlay {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.poster-card:hover .poster-overlay {
+  opacity: 1;
 }
 
+/* Landscape card hover */
+.landscape-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.landscape-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* =======================================
+   Star Ratings
+   ======================================= */
+.star-rating {
+  display: inline-flex;
+  gap: 1px;
+}
+.star-rating .star {
+  color: #fbbf24;
+  width: 12px;
+  height: 12px;
+}
+.star-rating .star-empty {
+  color: #333;
+  width: 12px;
+  height: 12px;
+}
+
+/* =======================================
+   Progress Bar (Continue Watching)
+   ======================================= */
+.watch-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+}
+.watch-progress-fill {
+  height: 100%;
+  background: #E50914;
+  border-radius: 0 2px 2px 0;
+}
+
+/* =======================================
+   Loading Skeleton
+   ======================================= */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 .skeleton {
-  background: linear-gradient(90deg, #1a1a2e 25%, #2a2a3e 50%, #1a1a2e 75%);
+  background: linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
-/* Netflix-style navigation blur */
+/* =======================================
+   Navbar
+   ======================================= */
 .nav-blur {
-  background: linear-gradient(to bottom, rgba(20, 20, 20, 0.9) 0%, transparent 100%);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(to bottom, rgba(10, 10, 10, 0.92) 0%, transparent 100%);
+  backdrop-filter: blur(12px);
 }
 
-/* Unavailable badge */
+/* =======================================
+   Unavailable overlay
+   ======================================= */
 .unavailable-overlay {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
 }
 
-/* Player skip overlay animation */
+/* =======================================
+   Player Animations
+   ======================================= */
 @keyframes fadeInOut {
   0% { opacity: 0; transform: translateY(-50%) scale(0.8); }
   20% { opacity: 1; transform: translateY(-50%) scale(1); }
   80% { opacity: 1; transform: translateY(-50%) scale(1); }
   100% { opacity: 0; transform: translateY(-50%) scale(0.8); }
+}
+
+/* =======================================
+   Row Navigation Arrows
+   ======================================= */
+.row-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.row-arrow:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* =======================================
+   Scroll fade edges
+   ======================================= */
+.scroll-fade-right {
+  mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
 }

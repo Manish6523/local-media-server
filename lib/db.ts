@@ -15,6 +15,8 @@ export interface MediaEntry {
   episode_end: number | null;
   omdb_id: string | null;
   poster: string | null;
+  backdrop: string | null;
+  backdrop_url: string | null;
   overview: string | null;
   rating: string | null;
   genres: string | null;
@@ -22,6 +24,11 @@ export interface MediaEntry {
   available: number;
   fetched_at: string | null;
   created_at: string;
+  last_watched_at: string | null;
+  watch_progress: number;
+  is_watched: number;
+  is_favorite: number;
+  omdb_confirmed: number;
 }
 
 export interface ConfigEntry {
@@ -60,13 +67,20 @@ export function getDb(): Database.Database {
       episode_end    INTEGER,
       omdb_id        TEXT,
       poster         TEXT,
+      backdrop       TEXT,
+      backdrop_url   TEXT,
       overview       TEXT,
       rating         TEXT,
       genres         TEXT,
       runtime        INTEGER,
       available      INTEGER DEFAULT 1,
       fetched_at     DATETIME,
-      created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_watched_at DATETIME,
+      watch_progress INTEGER DEFAULT 0,
+      is_watched     INTEGER DEFAULT 0,
+      is_favorite    INTEGER DEFAULT 0,
+      omdb_confirmed INTEGER DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS config (
@@ -74,6 +88,32 @@ export function getDb(): Database.Database {
       value TEXT
     );
   `);
+
+  // Automatic Migrations for new columns
+  const tableInfo = db.prepare("PRAGMA table_info(media)").all() as { name: string }[];
+  const existingColumns = new Set(tableInfo.map((c) => c.name));
+
+  if (!existingColumns.has("last_watched_at")) {
+    db.exec("ALTER TABLE media ADD COLUMN last_watched_at DATETIME;");
+  }
+  if (!existingColumns.has("watch_progress")) {
+    db.exec("ALTER TABLE media ADD COLUMN watch_progress INTEGER DEFAULT 0;");
+  }
+  if (!existingColumns.has("is_watched")) {
+    db.exec("ALTER TABLE media ADD COLUMN is_watched INTEGER DEFAULT 0;");
+  }
+  if (!existingColumns.has("is_favorite")) {
+    db.exec("ALTER TABLE media ADD COLUMN is_favorite INTEGER DEFAULT 0;");
+  }
+  if (!existingColumns.has("omdb_confirmed")) {
+    db.exec("ALTER TABLE media ADD COLUMN omdb_confirmed INTEGER DEFAULT 1;");
+  }
+  if (!existingColumns.has("backdrop")) {
+    db.exec("ALTER TABLE media ADD COLUMN backdrop TEXT;");
+  }
+  if (!existingColumns.has("backdrop_url")) {
+    db.exec("ALTER TABLE media ADD COLUMN backdrop_url TEXT;");
+  }
 
   // Seed default config if empty
   const configCount = db.prepare("SELECT COUNT(*) as count FROM config").get() as { count: number };
@@ -114,7 +154,7 @@ export function searchMedia(query: string): MediaEntry[] {
   return db.prepare("SELECT * FROM media WHERE title LIKE ? ORDER BY title ASC").all(`%${query}%`) as MediaEntry[];
 }
 
-export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at">): number {
+export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_watched_at" | "watch_progress" | "is_watched" | "is_favorite">): number {
   const db = getDb();
 
   const existing = getMediaByFilepath(entry.filepath);
@@ -126,18 +166,22 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at">): numbe
         season = ?, episode_start = ?, episode_end = ?,
         omdb_id = COALESCE(?, omdb_id),
         poster = COALESCE(?, poster),
+        backdrop = COALESCE(?, backdrop),
+        backdrop_url = COALESCE(?, backdrop_url),
         overview = COALESCE(?, overview),
         rating = COALESCE(?, rating),
         genres = COALESCE(?, genres),
         runtime = COALESCE(?, runtime),
         available = ?,
-        fetched_at = COALESCE(?, fetched_at)
+        fetched_at = COALESCE(?, fetched_at),
+        omdb_confirmed = ?
       WHERE filepath = ?
     `).run(
       entry.filename, entry.source, entry.type, entry.title, entry.year,
       entry.season, entry.episode_start, entry.episode_end,
-      entry.omdb_id, entry.poster, entry.overview, entry.rating,
-      entry.genres, entry.runtime, entry.available, entry.fetched_at,
+      entry.omdb_id, entry.poster, entry.backdrop, entry.backdrop_url,
+      entry.overview, entry.rating, entry.genres, entry.runtime,
+      entry.available, entry.fetched_at, entry.omdb_confirmed ?? 1,
       entry.filepath
     );
     return existing.id;
@@ -147,14 +191,15 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at">): numbe
       INSERT INTO media (
         filepath, filename, source, type, title, year,
         season, episode_start, episode_end,
-        omdb_id, poster, overview, rating, genres, runtime,
-        available, fetched_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        omdb_id, poster, backdrop, backdrop_url, overview, rating, genres, runtime,
+        available, fetched_at, omdb_confirmed
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       entry.filepath, entry.filename, entry.source, entry.type, entry.title, entry.year,
       entry.season, entry.episode_start, entry.episode_end,
-      entry.omdb_id, entry.poster, entry.overview, entry.rating,
-      entry.genres, entry.runtime, entry.available, entry.fetched_at
+      entry.omdb_id, entry.poster, entry.backdrop, entry.backdrop_url,
+      entry.overview, entry.rating, entry.genres, entry.runtime,
+      entry.available, entry.fetched_at, entry.omdb_confirmed ?? 1
     );
     return Number(result.lastInsertRowid);
   }
@@ -182,6 +227,11 @@ export function deleteMissingMedia(source: "local" | "hdd", validPaths: string[]
   })();
   
   return deletedCount;
+}
+
+export function clearMediaLibrary(): void {
+  const db = getDb();
+  db.prepare("DELETE FROM media").run();
 }
 
 export function getMediaStats(): { totalMovies: number; totalShows: number; totalFiles: number } {

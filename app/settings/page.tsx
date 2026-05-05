@@ -89,8 +89,15 @@ export default function SettingsPage() {
 
   const clearLibrary = async () => {
     if (!confirm("Are you sure you want to clear the entire library? This will wipe the SQLite database, but your media files will NOT be deleted.")) return;
-    // We would call an API route here if we implemented it. For the sake of UI we pretend it works.
-    alert("Library cleared (not really implemented on backend yet)");
+    try {
+      await fetch("/api/clear-db", { method: "POST" });
+      setStats({ totalMovies: 0, totalShows: 0, totalFiles: 0 });
+      setLastScan(null);
+      alert("Library successfully cleared.");
+    } catch (err) {
+      alert("Failed to clear library.");
+      console.error(err);
+    }
   };
 
   return (

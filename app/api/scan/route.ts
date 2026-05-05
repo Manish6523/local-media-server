@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { scanAllSources } from "@/lib/scanner";
 import { parseFilename } from "@/lib/parser";
 import { fetchOMDB } from "@/lib/omdb";
+import { getBackdropForMovie, getBackdropForShow } from "@/lib/fanart";
 import { getDb, getMediaByFilepath, upsertMedia, setConfig, updateAvailability, getConfig, deleteMissingMedia } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,10 @@ export async function GET() {
     // Track which files from this scan exist to handle availability
     const scannedPaths = new Set(files.map(f => f.filepath));
 
+    // In-memory cache for OMDB results during this scan
+    // Prevents redundant API calls/poster downloads for identical shows
+    const omdbCache = new Map<string, any>();
+
     for (const file of files) {
       try {
         const existing = getMediaByFilepath(file.filepath);
@@ -64,7 +69,36 @@ export async function GET() {
         // Fetch OMDB metadata (only if not already fetched)
         let omdbData = null;
         if (!existing || !existing.omdb_id) {
-          omdbData = await fetchOMDB(parsed.title, parsed.type, parsed.year);
+          const cacheKey = `${parsed.title}-${parsed.type}-${parsed.year || ''}`;
+          if (omdbCache.has(cacheKey)) {
+            omdbData = omdbCache.get(cacheKey);
+          } else {
+            omdbData = await fetchOMDB(parsed.title, parsed.type, parsed.year);
+            omdbCache.set(cacheKey, omdbData);
+          }
+        }
+
+        // Compare titles to detect OMDB mismatches
+        let omdbConfirmed = 1;
+        if (omdbData && omdbData.confirmed_title) {
+          const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const parsedNorm = normalize(parsed.title);
+          const omdbNorm = normalize(omdbData.confirmed_title);
+          
+          if (!parsedNorm.includes(omdbNorm) && !omdbNorm.includes(parsedNorm)) {
+            omdbConfirmed = 0;
+            console.log(`[Scan] Title mismatch! Parsed: "${parsed.title}", OMDB: "${omdbData.confirmed_title}"`);
+          }
+        }
+
+        // Fetch Fanart.tv backdrop if we have an OMDB ID
+        let backdropResult = null;
+        if (omdbData?.omdb_id) {
+          if (parsed.type === "movie") {
+            backdropResult = await getBackdropForMovie(omdbData.omdb_id);
+          } else {
+            backdropResult = await getBackdropForShow(omdbData.omdb_id);
+          }
         }
 
         // Upsert the media entry
@@ -80,12 +114,15 @@ export async function GET() {
           episode_end: parsed.episode_end,
           omdb_id: omdbData?.omdb_id || null,
           poster: omdbData?.poster || null,
+          backdrop: backdropResult?.backdropPath || null,
+          backdrop_url: backdropResult?.backdropUrl || null,
           overview: omdbData?.overview || null,
           rating: omdbData?.rating || null,
           genres: omdbData?.genres || null,
           runtime: omdbData?.runtime || null,
           available: 1,
           fetched_at: omdbData ? new Date().toISOString() : null,
+          omdb_confirmed: omdbConfirmed,
         });
 
         if (existing) {

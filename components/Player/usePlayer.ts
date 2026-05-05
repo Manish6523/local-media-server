@@ -35,15 +35,17 @@ export interface PlayerState {
   subtitleColor: "white" | "yellow";
 }
 
-export function usePlayer(mediaId: string, baseNeedsTranscode: boolean, exactDuration: number) {
+export function usePlayer(mediaId: string, baseNeedsTranscode: boolean, exactDuration: number, initialWatchProgress: number = 0) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipAnimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasResumed = useRef(false);
 
   const [state, setState] = useState<PlayerState>({
     isPlaying: false,
-    currentTime: 0,
+    currentTime: initialWatchProgress,
     duration: exactDuration || 0,
     volume: 1,
     isMuted: false,
@@ -61,7 +63,40 @@ export function usePlayer(mediaId: string, baseNeedsTranscode: boolean, exactDur
     subtitleColor: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_color")) as any || "white",
   });
 
-  const [transcodeStartTime, setTranscodeStartTime] = useState(0);
+  const [transcodeStartTime, setTranscodeStartTime] = useState(initialWatchProgress > 0 && baseNeedsTranscode ? initialWatchProgress : 0);
+  const [showResumeToast, setShowResumeToast] = useState(initialWatchProgress > 0);
+
+  // Resume toast auto-hide
+  useEffect(() => {
+    if (showResumeToast) {
+      const timer = setTimeout(() => setShowResumeToast(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showResumeToast]);
+
+  // Progress saver interval
+  useEffect(() => {
+    if (!state.isPlaying || state.currentTime < 5) {
+      if (progressInterval.current) clearInterval(progressInterval.current);
+      return;
+    }
+
+    progressInterval.current = setInterval(() => {
+      fetch("/api/watch-progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: parseInt(mediaId, 10),
+          currentTime: state.currentTime,
+          duration: state.duration || exactDuration || 1
+        })
+      }).catch(() => {});
+    }, 5000);
+
+    return () => {
+      if (progressInterval.current) clearInterval(progressInterval.current);
+    };
+  }, [state.isPlaying, state.currentTime, state.duration, mediaId, exactDuration]);
 
   // If user selects an alternate audio track on an MP4, we MUST transcode it on the server
   // because native HTML5 over HTTP doesn't easily let you select audio streams dynamically
@@ -312,5 +347,6 @@ export function usePlayer(mediaId: string, baseNeedsTranscode: boolean, exactDur
     setCueText,
     setSubtitleSize,
     setSubtitleColor,
+    showResumeToast,
   };
 }

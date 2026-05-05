@@ -22,10 +22,11 @@ interface NetflixPlayerProps {
   episodeEnd?: number | null;
   filename: string;
   exactDuration: number;
+  initialWatchProgress?: number;
 }
 
 export default function NetflixPlayer({
-  mediaId, title, type, season, episodeStart, episodeEnd, filename, exactDuration
+  mediaId, title, type, season, episodeStart, episodeEnd, filename, exactDuration, initialWatchProgress = 0
 }: NetflixPlayerProps) {
   const router = useRouter();
   
@@ -38,8 +39,8 @@ export default function NetflixPlayer({
     togglePlay, seek, skipBack, skipForward,
     setVolume, toggleMute, toggleFullscreen,
     setActiveSubtitle, setActiveAudioTrack, setCueText,
-    setSubtitleSize, setSubtitleColor,
-  } = usePlayer(mediaId, baseNeedsTranscode, exactDuration);
+    setSubtitleSize, setSubtitleColor, showResumeToast,
+  } = usePlayer(mediaId, baseNeedsTranscode, exactDuration, initialWatchProgress);
 
   const [showSubMenu, setShowSubMenu] = useState(false);
   const [showAudioMenu, setShowAudioMenu] = useState(false);
@@ -260,6 +261,13 @@ export default function NetflixPlayer({
       {state.isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-14 h-14 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Resume toast */}
+      {showResumeToast && initialWatchProgress > 0 && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-medium backdrop-blur-md border border-white/10 animate-in fade-in slide-in-from-top-4 duration-500 z-40 pointer-events-none shadow-xl">
+          Resuming from {formatTime(initialWatchProgress)}
         </div>
       )}
 

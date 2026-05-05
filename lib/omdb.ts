@@ -134,6 +134,7 @@ async function downloadPoster(imdbID: string, url: string): Promise<string> {
 
   // Don't re-download
   if (fs.existsSync(filepath)) {
+    console.log(`Poster already exists: ${imdbID}`);
     return `/posters/${filename}`;
   }
 

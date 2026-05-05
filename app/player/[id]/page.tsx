@@ -15,6 +15,7 @@ interface MediaEntry {
   available: number;
   filename: string;
   exactDuration?: number;
+  watch_progress: number;
 }
 
 export default function PlayerPage() {
@@ -66,6 +67,7 @@ export default function PlayerPage() {
       episodeEnd={media.episode_end}
       filename={media.filename}
       exactDuration={media.exactDuration || 0}
+      initialWatchProgress={media.watch_progress || 0}
     />
   );
 }
