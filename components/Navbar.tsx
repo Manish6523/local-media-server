@@ -3,15 +3,21 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, X, Settings } from "lucide-react";
+import { Search, X, Settings, Users } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const WatchPartyModal = dynamic(() => import("./WatchParty/WatchPartyModal"), { ssr: false });
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+
+  if (pathname.startsWith("/join") || pathname.startsWith("/watch") || pathname.startsWith("/player")) return <></>;
   
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showPartyModal, setShowPartyModal] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -39,7 +45,7 @@ export default function Navbar() {
     { href: "/favorites", label: "WATCHLIST" }
   ];
 
-  return (
+  const navbar = (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
         scrolled
@@ -119,6 +125,19 @@ export default function Navbar() {
 
             <div className="h-4 w-[1px] bg-white/10 hidden md:block" />
 
+            {/* Watch Party */}
+            <button
+              onClick={() => setShowPartyModal(true)}
+              className="group flex items-center gap-2"
+            >
+              <Users className="w-4 h-4 text-white/40 group-hover:text-[#E50914] transition-colors" />
+              <span className="hidden xl:block text-[10px] font-black tracking-[0.2em] text-white/40 group-hover:text-white transition-colors">
+                PARTY
+              </span>
+            </button>
+
+            <div className="h-4 w-[1px] bg-white/10 hidden md:block" />
+
             <Link
               href="/settings"
               className="group flex items-center gap-2"
@@ -132,5 +151,12 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+  );
+
+  return (
+    <>
+      {navbar}
+      <WatchPartyModal isOpen={showPartyModal} onClose={() => setShowPartyModal(false)} />
+    </>
   );
 }

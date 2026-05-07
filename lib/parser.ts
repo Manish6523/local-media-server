@@ -30,6 +30,7 @@ interface EpisodeMatch {
   episodeStart: number;
   episodeEnd: number;
   fullMatch: string;
+  embeddedTitle?: string;
 }
 
 // ─── Episode Detection Patterns ──────────────────────────────────
@@ -153,16 +154,37 @@ function tryEpisodeOnly(name: string): EpisodeMatch | null {
 }
 
 /**
- * Pattern 8: Bracketed episode + separate season elsewhere
- * Matches: [SO] [03 - Hell's Paradise S02], where episode is 03 and season is S02
- * This catches patterns where the episode number is inside brackets before the title
+ * Pattern 8: Bracketed episode + title + season in one bracket group
+ * Matches: [03 - Hell's Paradise S02], [05 - Title S01]
+ * Extracts: episode=03, title="Hell's Paradise", season=02
  */
 function tryBracketedEpisodePlusSeason(name: string): EpisodeMatch | null {
-  // Look for a standalone season marker anywhere in the string
-  const seasonMatch = name.match(/[Ss](\d{1,2})(?!\s?[Ee])/);
-  if (!seasonMatch) return null;
+  // Try to match a single bracket group: [NN - Title SNN]
+  const combined = name.match(/\[(\d{1,3})\s?[-–]\s?(.*?)\s?[Ss](\d{1,2})\]/);
+  if (combined) {
+    const ep = parseInt(combined[1]);
+    if (ep > 200 || ep === 0) return null;
+    return {
+      season: parseInt(combined[3]),
+      episodeStart: ep,
+      episodeEnd: ep,
+      fullMatch: combined[0],
+      embeddedTitle: combined[2].trim(),
+    };
+  }
 
-  // Look for a bracketed standalone episode number
+  // Fallback: episode in brackets, season marker elsewhere
+  // Find ALL Sxx matches and prefer the highest (skip season 0 / release tags)
+  const seasonMatches = [...name.matchAll(/[Ss](\d{1,2})(?!\s?[Ee])/g)];
+  if (seasonMatches.length === 0) return null;
+
+  let bestSeason = 0;
+  for (const sm of seasonMatches) {
+    const s = parseInt(sm[1]);
+    if (s > bestSeason) bestSeason = s;
+  }
+  if (bestSeason === 0) return null;
+
   const epMatch = name.match(/\[(\d{1,3})\s?[-–]/);
   if (!epMatch) return null;
 
@@ -170,10 +192,10 @@ function tryBracketedEpisodePlusSeason(name: string): EpisodeMatch | null {
   if (ep > 200 || ep === 0) return null;
 
   return {
-    season: parseInt(seasonMatch[1]),
+    season: bestSeason,
     episodeStart: ep,
     episodeEnd: ep,
-    fullMatch: epMatch[0] + "..." + seasonMatch[0],
+    fullMatch: epMatch[0],
   };
 }
 
@@ -239,13 +261,24 @@ export function parseFilename(filename: string): ParsedFile {
     episodeStart = episodeInfo.episodeStart;
     episodeEnd = episodeInfo.episodeEnd;
 
-    // Strip all episode/season markers from the title string
-    // Remove the primary matched text
-    titlePart = titlePart.replace(episodeInfo.fullMatch, " ");
+    // If the pattern extracted an embedded title (e.g. [03 - Hell's Paradise S02]),
+    // use that directly instead of trying to extract from the full filename
+    if (episodeInfo.embeddedTitle) {
+      titlePart = episodeInfo.embeddedTitle;
+    } else {
+      // Title = text BEFORE the episode pattern.
+      // If that's empty (pattern is at the start), use text AFTER instead.
+      const matchIdx = name.indexOf(episodeInfo.fullMatch);
+      if (matchIdx > 0) {
+        titlePart = name.substring(0, matchIdx);
+      } else {
+        titlePart = name.substring(matchIdx + episodeInfo.fullMatch.length);
+      }
 
-    // Also strip any remaining standalone Sxx or SxxExx fragments that weren't in fullMatch
-    titlePart = titlePart.replace(/[Ss]\d{1,2}\s?[Ee]\d{1,3}(?:\s?[-–]\s?[Ee]?\d{1,3})?/g, " ");
-    titlePart = titlePart.replace(/(?:^|\s)[Ss]\d{1,2}(?=\s|$|\])/g, " ");
+      // Strip any remaining standalone Sxx or SxxExx fragments
+      titlePart = titlePart.replace(/[Ss]\d{1,2}\s?[Ee]\d{1,3}(?:\s?[-–]\s?[Ee]?\d{1,3})?/g, " ");
+      titlePart = titlePart.replace(/(?:^|\s)[Ss]\d{1,2}(?=\s|$|\])/g, " ");
+    }
   }
 
   // Strip junk bracket/brace/paren patterns

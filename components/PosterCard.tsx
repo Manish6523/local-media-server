@@ -2,11 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Clock, Pencil, HardDrive, AlertTriangle } from "lucide-react";
+import { Play, Star, Clock, Pencil, HardDrive, AlertTriangle, Users } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+
+
+const CreateRoomModal = dynamic(() => import("./WatchParty/CreateRoomModal"), { ssr: false });
 
 interface MediaEntry {
   id: number;
@@ -35,6 +40,9 @@ interface PosterCardProps {
 
 export default function PosterCard({ media, showEpisodeInfo = false }: PosterCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [showWatchParty, setShowWatchParty] = useState(false);
+  const router = useRouter();
+
   const posterSrc = media.poster || "/placeholder.jpg";
   const isUnavailable = !media.available;
 
@@ -74,6 +82,13 @@ export default function PosterCard({ media, showEpisodeInfo = false }: PosterCar
                     className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors border border-white/20"
                   >
                     <Pencil className="w-4 h-4 text-white" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
+                    className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-colors border border-white/20"
+                    title="Watch Party"
+                  >
+                    <Users className="w-4 h-4 text-white" />
                   </button>
                </div>
                <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
@@ -118,6 +133,19 @@ export default function PosterCard({ media, showEpisodeInfo = false }: PosterCar
 
       {isEditing && (
         <EditTitleModal media={media} onClose={() => setIsEditing(false)} />
+      )}
+
+      {showWatchParty && (
+        <CreateRoomModal
+          isOpen={showWatchParty}
+          onClose={() => setShowWatchParty(false)}
+          mediaId={media.id}
+          mediaTitle={media.title}
+          mediaPoster={media.poster}
+          onStartWatching={(roomCode) => {
+            router.push(`/watch/${roomCode}`);
+          }}
+        />
       )}
     </div>
   );

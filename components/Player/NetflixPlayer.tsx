@@ -13,6 +13,14 @@ import SubtitleMenu from "./SubtitleMenu";
 import AudioMenu from "./AudioMenu";
 import SkipOverlay from "./SkipOverlay";
 
+interface WatchPartyMode {
+  isHost: boolean;
+  onPlay: (time: number) => void;
+  onPause: (time: number) => void;
+  onSeek: (time: number) => void;
+  registerVideoRef: (ref: HTMLVideoElement | null) => void;
+}
+
 interface NetflixPlayerProps {
   mediaId: string;
   title: string;
@@ -23,10 +31,12 @@ interface NetflixPlayerProps {
   filename: string;
   exactDuration: number;
   initialWatchProgress?: number;
+  watchPartyMode?: WatchPartyMode;
 }
 
 export default function NetflixPlayer({
-  mediaId, title, type, season, episodeStart, episodeEnd, filename, exactDuration, initialWatchProgress = 0
+  mediaId, title, type, season, episodeStart, episodeEnd, filename, exactDuration, initialWatchProgress = 0,
+  watchPartyMode,
 }: NetflixPlayerProps) {
   const router = useRouter();
   
@@ -54,6 +64,50 @@ export default function NetflixPlayer({
     return cleanup;
   }, [bindVideoEvents]);
 
+
+  // Watch party wrappers — emit socket events on host actions
+  const wpTogglePlay = useCallback(() => {
+    if (watchPartyMode && !watchPartyMode.isHost) return; // Guest can't control
+    togglePlay();
+    if (watchPartyMode?.isHost && videoRef.current) {
+      const v = videoRef.current;
+      // togglePlay will flip the state, so if currently playing, it will pause
+      setTimeout(() => {
+        if (v.paused) {
+          watchPartyMode.onPause(v.currentTime);
+        } else {
+          watchPartyMode.onPlay(v.currentTime);
+        }
+      }, 50);
+    }
+  }, [togglePlay, watchPartyMode]);
+
+  const wpSeek = useCallback((time: number) => {
+    if (watchPartyMode && !watchPartyMode.isHost) return;
+    seek(time);
+    if (watchPartyMode?.isHost) {
+      watchPartyMode.onSeek(time);
+    }
+  }, [seek, watchPartyMode]);
+
+  const wpSkipBack = useCallback(() => {
+    if (watchPartyMode && !watchPartyMode.isHost) return;
+    skipBack();
+    if (watchPartyMode?.isHost && videoRef.current) {
+      setTimeout(() => watchPartyMode.onSeek(videoRef.current!.currentTime), 50);
+    }
+  }, [skipBack, watchPartyMode]);
+
+  const wpSkipForward = useCallback(() => {
+    if (watchPartyMode && !watchPartyMode.isHost) return;
+    skipForward();
+    if (watchPartyMode?.isHost && videoRef.current) {
+      setTimeout(() => watchPartyMode.onSeek(videoRef.current!.currentTime), 50);
+    }
+  }, [skipForward, watchPartyMode]);
+
+  const isGuest = watchPartyMode && !watchPartyMode.isHost;
+
   // Controls auto-hide via mouse movement
   useEffect(() => {
     const handler = () => resetControlsTimer();
@@ -73,9 +127,9 @@ export default function NetflixPlayer({
       if (e.target instanceof HTMLInputElement) return;
 
       switch (e.key) {
-        case " ": case "k": e.preventDefault(); togglePlay(); break;
-        case "ArrowLeft": e.preventDefault(); skipBack(); break;
-        case "ArrowRight": e.preventDefault(); skipForward(); break;
+        case " ": case "k": e.preventDefault(); wpTogglePlay(); break;
+        case "ArrowLeft": e.preventDefault(); wpSkipBack(); break;
+        case "ArrowRight": e.preventDefault(); wpSkipForward(); break;
         case "ArrowUp":
           e.preventDefault();
           setVolume(state.volume + 0.1);
@@ -103,7 +157,7 @@ export default function NetflixPlayer({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [
-    togglePlay, skipBack, skipForward, setVolume, toggleMute,
+    wpTogglePlay, wpSkipBack, wpSkipForward, setVolume, toggleMute,
     toggleFullscreen, setActiveSubtitle, state.volume,
     state.subtitleTracks, state.activeSubtitle, showSubMenu,
     showAudioMenu, router,
@@ -190,7 +244,7 @@ export default function NetflixPlayer({
         lastClickSide.current = clickSide;
         setTimeout(() => {
           if (Date.now() - lastClickTime.current >= 280) {
-            togglePlay();
+            wpTogglePlay();
           }
         }, 300);
       }
@@ -248,7 +302,13 @@ export default function NetflixPlayer({
     >
       {/* Video */}
       <video
-        ref={videoRef}
+        ref={(el) => {
+          // @ts-ignore
+          videoRef.current = el;
+          if (watchPartyMode?.registerVideoRef) {
+            watchPartyMode.registerVideoRef(el);
+          }
+        }}
         key={`${mediaId}-${state.activeAudioTrack}-${needsTranscode}`}
         src={videoSrc}
         className="w-full h-full object-contain"
@@ -337,7 +397,7 @@ export default function NetflixPlayer({
           currentTime={state.currentTime}
           duration={state.duration}
           bufferedEnd={state.bufferedEnd}
-          onSeek={seek}
+          onSeek={wpSeek}
         />
 
         {/* Controls row */}
@@ -345,7 +405,7 @@ export default function NetflixPlayer({
           {/* Left group */}
           <div className="flex items-center gap-1 md:gap-2">
             <button
-              onClick={togglePlay}
+              onClick={wpTogglePlay}
               className="p-1.5 text-white/70 hover:text-white transition-all"
               title={state.isPlaying ? "Pause" : "Play"}
             >
@@ -357,7 +417,7 @@ export default function NetflixPlayer({
             </button>
 
             <button
-              onClick={skipBack}
+              onClick={wpSkipBack}
               className="p-1.5 text-white/70 hover:text-white transition-all relative"
               title="Rewind 10s"
             >
@@ -366,7 +426,7 @@ export default function NetflixPlayer({
             </button>
 
             <button
-              onClick={skipForward}
+              onClick={wpSkipForward}
               className="p-1.5 text-white/70 hover:text-white transition-all relative"
               title="Skip 10s"
             >
