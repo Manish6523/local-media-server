@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
+import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import fs from "fs";
 import { getMediaById } from "@/lib/db";
 
@@ -7,15 +7,47 @@ export const dynamic = "force-dynamic";
 
 // ─── VAAPI Config ────────────────────────────────────────────────
 const VAAPI_DEVICE = "/dev/dri/renderD128";
+const MAX_CONCURRENT = 2; // Max 2 FFmpeg processes (host + guest)
 
 // Read the cached probe result from server.ts startup
 function isVaapiAvailable(): boolean {
   return globalThis.__vaapiAvailable === true;
 }
 
+// ─── Active Process Tracking ─────────────────────────────────────
+// Key: "clientId" (generated per request based on mediaId + client identifier)
+// Each viewer gets exactly ONE process. New seek = kill old + spawn new.
+
+interface ActiveProcess {
+  ffmpeg: ChildProcessWithoutNullStreams;
+  mediaId: string;
+  createdAt: number;
+}
+
+// Track by a client-scoped key: mediaId:audioTrack:clientId
+// For watch party: each viewer (host/guest) has their own clientId
+const activeProcesses = new Map<string, ActiveProcess>();
+
+// Queue for requests when MAX_CONCURRENT is reached
+const pendingQueue: Array<() => void> = [];
+
+function killProcess(key: string, reason: string) {
+  const proc = activeProcesses.get(key);
+  if (proc) {
+    try { proc.ffmpeg.kill("SIGTERM"); } catch { /* already dead */ }
+    activeProcesses.delete(key);
+    console.log(`[Transcode] Killed process for ${key} (${reason}) | Active: ${activeProcesses.size}`);
+  }
+}
+
+function tryDrainQueue() {
+  while (pendingQueue.length > 0 && activeProcesses.size < MAX_CONCURRENT) {
+    const next = pendingQueue.shift();
+    if (next) next();
+  }
+}
+
 // ─── FFmpeg Arg Builders ─────────────────────────────────────────
-// Critical: argument order matters for VAAPI!
-//   -hwaccel → -hwaccel_device → -ss → -i → -map → -c:v → -c:a → -f → pipe:1
 
 function buildVaapiArgs(filepath: string, start: number, audioTrack: number): string[] {
   return [
@@ -29,7 +61,7 @@ function buildVaapiArgs(filepath: string, start: number, audioTrack: number): st
     "-map", `0:a:${audioTrack}`,
     "-vf", "scale_vaapi=format=nv12",
     "-c:v", "h264_vaapi",
-    "-qp", "23",
+    "-qp", "28",
     "-c:a", "aac",
     "-b:a", "128k",
     "-f", "mp4",
@@ -47,20 +79,19 @@ function buildCpuArgs(filepath: string, start: number, audioTrack: number): stri
     "-map", `0:a:${audioTrack}`,
     "-c:v", "libx264",
     "-preset", "ultrafast",
-    "-crf", "23",
+    "-crf", "28",
     "-c:a", "aac",
     "-b:a", "128k",
     "-f", "mp4",
     "-movflags", "frag_keyframe+empty_moov+faststart",
-    "-threads", "0",
     "pipe:1",
   ];
 }
 
 // ─── Route Handler ───────────────────────────────────────────────
-// Every request gets its OWN independent FFmpeg process.
-// No session sharing, no session Map, no joining.
-// Watch party sync is handled by Socket.io seek events, NOT shared streams.
+// Each viewer gets their own independent FFmpeg process.
+// If a viewer seeks, their old process is killed and a new one spawns.
+// Socket.io handles sync — NOT shared FFmpeg streams.
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,6 +99,8 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get("id");
     const audioTrack = parseInt(searchParams.get("audioTrack") || "0", 10);
     const start = parseFloat(searchParams.get("start") || "0");
+    // clientId differentiates host vs guest for the same media
+    const clientId = searchParams.get("clientId") || "solo";
 
     if (!id) {
       return new NextResponse("Missing id parameter", { status: 400 });
@@ -87,30 +120,76 @@ export async function GET(request: NextRequest) {
       return new NextResponse("File not found on disk", { status: 404 });
     }
 
+    // Process key: unique per viewer per media
+    const processKey = `${id}:${audioTrack}:${clientId}`;
+
+    // Kill any existing process for this viewer (they seeked)
+    if (activeProcesses.has(processKey)) {
+      killProcess(processKey, "new seek");
+    }
+
+    // Wait for a slot if we're at max concurrent
+    if (activeProcesses.size >= MAX_CONCURRENT) {
+      console.log(`[Transcode] Max concurrent (${MAX_CONCURRENT}) reached, queuing ${processKey}`);
+      await new Promise<void>((resolve) => {
+        pendingQueue.push(resolve);
+
+        // If the client disconnects while queued, remove from queue
+        request.signal.addEventListener("abort", () => {
+          const idx = pendingQueue.indexOf(resolve);
+          if (idx >= 0) pendingQueue.splice(idx, 1);
+        });
+      });
+
+      // Client may have disconnected while waiting
+      if (request.signal.aborted) {
+        return new NextResponse("Client disconnected", { status: 499 });
+      }
+    }
+
     // Determine encoding strategy from cached startup probe
     const useVaapi = isVaapiAvailable();
     const args = useVaapi
       ? buildVaapiArgs(filepath, start, audioTrack)
       : buildCpuArgs(filepath, start, audioTrack);
 
-    const encoderLabel = useVaapi ? "VAAPI" : "CPU";
-    console.log(`[Transcode] Spawning ${encoderLabel} process for media ${id} @ ${start}s`);
+    const encoderLabel = useVaapi ? "VAAPI (AMD Vega 10)" : "CPU";
+    console.log(`[Transcode] Using ${encoderLabel} for media ${id} @ ${start}s [${processKey}] | Active: ${activeProcesses.size + 1}`);
 
     const ffmpeg = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
 
-    // Log stderr errors (but not progress/info noise)
+    // Register in active processes
+    activeProcesses.set(processKey, {
+      ffmpeg,
+      mediaId: id,
+      createdAt: Date.now(),
+    });
+
+    // Log stderr errors (suppress progress noise)
     ffmpeg.stderr?.on("data", (data: Buffer) => {
       const line = data.toString().trim();
       if (line.includes("Error") || line.includes("error") || line.includes("Invalid")) {
-        console.error(`[Transcode/${encoderLabel}] ${line}`);
+        console.error(`[Transcode/${useVaapi ? "VAAPI" : "CPU"}] ${line}`);
       }
     });
 
+    // Cleanup on process exit
+    const cleanup = () => {
+      if (activeProcesses.get(processKey)?.ffmpeg === ffmpeg) {
+        activeProcesses.delete(processKey);
+        tryDrainQueue();
+      }
+    };
+
+    ffmpeg.on("close", cleanup);
+    ffmpeg.on("error", cleanup);
+
     // Kill FFmpeg when the client disconnects
     request.signal.addEventListener("abort", () => {
-      try {
-        ffmpeg.kill("SIGTERM");
-      } catch { /* already dead */ }
+      if (activeProcesses.get(processKey)?.ffmpeg === ffmpeg) {
+        killProcess(processKey, "client disconnected");
+        tryDrainQueue();
+      }
     });
 
     // Create a ReadableStream that pipes FFmpeg stdout to the response
@@ -120,7 +199,6 @@ export async function GET(request: NextRequest) {
           try {
             controller.enqueue(new Uint8Array(chunk));
           } catch {
-            // Controller closed (client gone), kill ffmpeg
             try { ffmpeg.kill("SIGTERM"); } catch { /* */ }
           }
         });
@@ -138,8 +216,10 @@ export async function GET(request: NextRequest) {
         });
       },
       cancel() {
-        // Client disconnected — kill the FFmpeg process
-        try { ffmpeg.kill("SIGTERM"); } catch { /* already dead */ }
+        if (activeProcesses.get(processKey)?.ffmpeg === ffmpeg) {
+          killProcess(processKey, "stream cancelled");
+          tryDrainQueue();
+        }
       },
     });
 

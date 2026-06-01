@@ -28,6 +28,8 @@ async function probeVaapiAtStartup(): Promise<void> {
   }
 
   return new Promise((resolve) => {
+    let settled = false;
+
     const probe = spawn("ffmpeg", [
       "-hide_banner", "-loglevel", "error",
       "-hwaccel", "vaapi",
@@ -40,7 +42,19 @@ async function probeVaapiAtStartup(): Promise<void> {
     let stderr = "";
     probe.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
 
+    const timeoutHandle = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      probe.kill("SIGKILL");
+      console.log("[Server] VAAPI probe timed out");
+      globalThis.__vaapiAvailable = false;
+      resolve();
+    }, 15000); // 15s — AMD iGPU can be slow to initialize
+
     probe.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutHandle);
       globalThis.__vaapiAvailable = code === 0;
       if (globalThis.__vaapiAvailable) {
         console.log("[Server] AMD Vega 10 VAAPI: ✓ ready");
@@ -51,17 +65,13 @@ async function probeVaapiAtStartup(): Promise<void> {
     });
 
     probe.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutHandle);
       console.log(`[Server] VAAPI probe error: ${err.message}`);
       globalThis.__vaapiAvailable = false;
       resolve();
     });
-
-    setTimeout(() => {
-      probe.kill("SIGKILL");
-      console.log("[Server] VAAPI probe timed out");
-      globalThis.__vaapiAvailable = false;
-      resolve();
-    }, 5000);
   });
 }
 // ─── Types ───────────────────────────────────────────────────────

@@ -108,9 +108,14 @@ export function usePlayer(
   // because native HTML5 over HTTP doesn't easily let you select audio streams dynamically
   const needsTranscode = baseNeedsTranscode || state.activeAudioTrack > 0;
 
+  // Stable client identifier for server-side process tracking
+  // Each usePlayer instance (host / guest) gets a unique ID so the server
+  // can kill old FFmpeg processes when the same viewer seeks
+  const clientIdRef = useRef(Math.random().toString(36).slice(2, 8));
+
   // Build video source URL
   const videoSrc = needsTranscode
-    ? `/api/transcode?id=${mediaId}&audioTrack=${state.activeAudioTrack}&start=${transcodeStartTime}`
+    ? `/api/transcode?id=${mediaId}&audioTrack=${state.activeAudioTrack}&start=${transcodeStartTime}&clientId=${clientIdRef.current}`
     : `/api/stream?id=${mediaId}`;
 
   // Fetch subtitle and audio tracks
