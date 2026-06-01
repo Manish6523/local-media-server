@@ -35,7 +35,13 @@ export interface PlayerState {
   subtitleColor: "white" | "yellow";
 }
 
-export function usePlayer(mediaId: string, baseNeedsTranscode: boolean, exactDuration: number, initialWatchProgress: number = 0) {
+export function usePlayer(
+  mediaId: string, 
+  baseNeedsTranscode: boolean, 
+  exactDuration: number, 
+  initialWatchProgress: number = 0,
+  roomCode?: string | null
+) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

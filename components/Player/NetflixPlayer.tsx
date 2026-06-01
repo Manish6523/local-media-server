@@ -14,11 +14,13 @@ import AudioMenu from "./AudioMenu";
 import SkipOverlay from "./SkipOverlay";
 
 interface WatchPartyMode {
+  roomCode?: string | null;
   isHost: boolean;
   onPlay: (time: number) => void;
   onPause: (time: number) => void;
   onSeek: (time: number) => void;
   registerVideoRef: (ref: HTMLVideoElement | null) => void;
+  registerSeek?: (seekFn: (time: number) => void) => void;
 }
 
 interface NetflixPlayerProps {
@@ -50,7 +52,7 @@ export default function NetflixPlayer({
     setVolume, toggleMute, toggleFullscreen,
     setActiveSubtitle, setActiveAudioTrack, setCueText,
     setSubtitleSize, setSubtitleColor, showResumeToast,
-  } = usePlayer(mediaId, baseNeedsTranscode, exactDuration, initialWatchProgress);
+  } = usePlayer(mediaId, baseNeedsTranscode, exactDuration, initialWatchProgress, watchPartyMode?.roomCode);
 
   const [showSubMenu, setShowSubMenu] = useState(false);
   const [showAudioMenu, setShowAudioMenu] = useState(false);
@@ -89,6 +91,14 @@ export default function NetflixPlayer({
       watchPartyMode.onSeek(time);
     }
   }, [seek, watchPartyMode]);
+
+  // Expose the seek callback to the WatchParty container page so seek events
+  // correctly trigger player-level seeks with proper start time updates.
+  useEffect(() => {
+    if (watchPartyMode?.registerSeek) {
+      watchPartyMode.registerSeek(wpSeek);
+    }
+  }, [watchPartyMode, wpSeek]);
 
   const wpSkipBack = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;

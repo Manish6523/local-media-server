@@ -15,6 +15,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Suppress Turbopack/NFT dynamic filesystem warning for browse-fs route
+  turbopack: {
+    ignoreIssue: [
+      {
+        path: "app/api/browse-fs/route.ts",
+        title: "Encountered unexpected file in NFT list",
+      },
+      {
+        path: "next.config.ts",
+        title: "Encountered unexpected file in NFT list",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
