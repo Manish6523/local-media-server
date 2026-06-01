@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getAllMedia } from "@/lib/db";
 
 export async function GET() {
   try {
-    const db = getDb();
-    const rows = db.prepare("SELECT DISTINCT genres FROM media WHERE genres IS NOT NULL AND genres != ''").all() as { genres: string }[];
+    const all = getAllMedia();
+    const rows = all.filter(m => m.genres && m.genres.trim() !== "");
 
     const genreSet = new Set<string>();
     for (const row of rows) {
+      if (!row.genres) continue;
       const parts = row.genres.split(",");
       for (const part of parts) {
         const trimmed = part.trim();

@@ -71,28 +71,26 @@ export default function NetflixPlayer({
   // Watch party wrappers — emit socket events on host actions
   const wpTogglePlay = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return; // Guest can't control
-    togglePlay();
     if (watchPartyMode?.isHost && videoRef.current) {
       const v = videoRef.current;
-      // togglePlay will flip the state, so if currently playing, it will pause
-      setTimeout(() => {
-        // For transcoded content, v.currentTime is relative to transcode start.
-        // Sync system uses absolute time, so add the offset.
-        const absoluteTime = needsTranscode ? transcodeStartTime + v.currentTime : v.currentTime;
-        if (v.paused) {
-          watchPartyMode.onPause(absoluteTime);
-        } else {
-          watchPartyMode.onPlay(absoluteTime);
-        }
-      }, 50);
+      const absoluteTime = needsTranscode ? transcodeStartTime + v.currentTime : v.currentTime;
+      // Emit intent ONLY; execution happens via scheduled socket event
+      if (!v.paused) {
+        watchPartyMode.onPause(absoluteTime);
+      } else {
+        watchPartyMode.onPlay(absoluteTime);
+      }
+    } else {
+      togglePlay();
     }
   }, [togglePlay, watchPartyMode, needsTranscode, transcodeStartTime]);
 
   const wpSeek = useCallback((time: number) => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
-    seek(time);
     if (watchPartyMode?.isHost) {
       watchPartyMode.onSeek(time);
+    } else {
+      seek(time);
     }
   }, [seek, watchPartyMode]);
 
@@ -114,19 +112,21 @@ export default function NetflixPlayer({
 
   const wpSkipBack = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
-    skipBack();
     if (watchPartyMode?.isHost && videoRef.current) {
       const absoluteTime = needsTranscode ? transcodeStartTime + videoRef.current.currentTime : videoRef.current.currentTime;
-      setTimeout(() => watchPartyMode.onSeek(absoluteTime - 10), 50);
+      watchPartyMode.onSeek(absoluteTime - 10);
+    } else {
+      skipBack();
     }
   }, [skipBack, watchPartyMode, needsTranscode, transcodeStartTime]);
 
   const wpSkipForward = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
-    skipForward();
     if (watchPartyMode?.isHost && videoRef.current) {
       const absoluteTime = needsTranscode ? transcodeStartTime + videoRef.current.currentTime : videoRef.current.currentTime;
-      setTimeout(() => watchPartyMode.onSeek(absoluteTime + 10), 50);
+      watchPartyMode.onSeek(absoluteTime + 10);
+    } else {
+      skipForward();
     }
   }, [skipForward, watchPartyMode, needsTranscode, transcodeStartTime]);
 
@@ -334,7 +334,7 @@ export default function NetflixPlayer({
           }
         }}
         key={`${mediaId}-${state.activeAudioTrack}-${needsTranscode}`}
-        src={videoSrc}
+        src={needsTranscode ? undefined : videoSrc}
         className="w-full h-full object-contain"
         autoPlay
         playsInline
@@ -391,28 +391,28 @@ export default function NetflixPlayer({
       {/* Top bar */}
       <div
         data-controls
-        className={`absolute top-0 left-0 right-0 px-6 pt-5 pb-16 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300 ${
-          state.showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`absolute top-0 left-0 right-0 px-6 pt-6 pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 ${
+          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 max-w-7xl mx-auto">
           <button
             onClick={(e) => { e.stopPropagation(); router.back(); }}
-            className="p-1 text-white/70 hover:text-white transition-all"
+            className="p-2 bg-black/40 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/10"
           >
-            <ArrowLeft className="w-7 h-7" />
+            <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-white font-semibold text-base md:text-lg truncate">
+          <h1 className="text-white font-bold text-lg md:text-xl truncate drop-shadow-md">
             {titleLabel}
           </h1>
         </div>
       </div>
 
-      {/* Bottom controls */}
+      {/* Bottom controls - Floating Pill */}
       <div
         data-controls
-        className={`absolute bottom-0 left-0 right-0 px-6 md:px-8 pb-5 md:pb-6 pt-20 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${
-          state.showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl px-6 py-4 rounded-3xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 ${
+          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -425,38 +425,40 @@ export default function NetflixPlayer({
         />
 
         {/* Controls row */}
-        <div className="flex items-center justify-between mt-1">
+        <div className="flex items-center justify-between mt-3">
           {/* Left group */}
-          <div className="flex items-center gap-1 md:gap-2">
+          <div className="flex items-center gap-2 md:gap-4">
             <button
               onClick={wpTogglePlay}
-              className="p-1.5 text-white/70 hover:text-white transition-all"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-white text-black hover:scale-105 transition-transform"
               title={state.isPlaying ? "Pause" : "Play"}
             >
               {state.isPlaying ? (
-                <Pause className="w-7 h-7" />
+                <Pause className="w-6 h-6 fill-current" />
               ) : (
-                <Play className="w-7 h-7 fill-white" />
+                <Play className="w-6 h-6 fill-current ml-1" />
               )}
             </button>
 
-            <button
-              onClick={wpSkipBack}
-              className="p-1.5 text-white/70 hover:text-white transition-all relative"
-              title="Rewind 10s"
-            >
-              <SkipBack className="w-5 h-5" />
-              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold mt-0.5">10</span>
-            </button>
+            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/10 hidden md:flex">
+              <button
+                onClick={wpSkipBack}
+                className="p-2 text-white/70 hover:text-white transition-all relative"
+                title="Rewind 10s"
+              >
+                <SkipBack className="w-5 h-5" />
+                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+              </button>
 
-            <button
-              onClick={wpSkipForward}
-              className="p-1.5 text-white/70 hover:text-white transition-all relative"
-              title="Skip 10s"
-            >
-              <SkipForward className="w-5 h-5" />
-              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold mt-0.5">10</span>
-            </button>
+              <button
+                onClick={wpSkipForward}
+                className="p-2 text-white/70 hover:text-white transition-all relative"
+                title="Skip 10s"
+              >
+                <SkipForward className="w-5 h-5" />
+                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+              </button>
+            </div>
 
             <VolumeControl
               volume={state.volume}
@@ -465,20 +467,20 @@ export default function NetflixPlayer({
               onToggleMute={toggleMute}
             />
 
-            <span className="text-white/60 text-xs md:text-sm font-mono ml-2 tabular-nums">
-              {formatTime(state.currentTime)} / {formatTime(state.duration)}
+            <span className="text-white/80 text-sm font-medium font-mono ml-2 tabular-nums">
+              {formatTime(state.currentTime)} <span className="text-white/40 mx-1">/</span> {formatTime(state.duration)}
             </span>
           </div>
 
           {/* Right group */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Subtitles */}
             {state.subtitleTracks.length > 0 && (
               <div className="relative" data-menu>
                 <button
                   onClick={() => { setShowSubMenu(!showSubMenu); setShowAudioMenu(false); }}
-                  className={`p-1.5 transition-all ${
-                    state.activeSubtitle !== null ? "text-[#E50914]" : "text-white/70 hover:text-white"
+                  className={`p-2 rounded-full transition-all border ${
+                    state.activeSubtitle !== null ? "bg-primary/20 text-primary border-primary/30" : "bg-white/5 text-white/70 hover:text-white border-white/10 hover:bg-white/10"
                   }`}
                   title="Subtitles"
                 >
@@ -503,12 +505,12 @@ export default function NetflixPlayer({
               <div className="relative" data-menu>
                 <button
                   onClick={() => { setShowAudioMenu(!showAudioMenu); setShowSubMenu(false); }}
-                  className="flex items-center gap-1 p-1.5 text-white/70 hover:text-white transition-all text-xs"
+                  className="flex items-center gap-2 p-2 px-3 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all"
                   title="Audio Track"
                 >
                   <Volume2 className="w-5 h-5" />
-                  <span className="hidden md:inline text-[11px] font-medium uppercase tracking-wide">
-                    {state.audioTracks[state.activeAudioTrack]?.label?.slice(0, 8) || "Audio"}
+                  <span className="hidden md:inline text-[12px] font-bold tracking-wider">
+                    {state.audioTracks[state.activeAudioTrack]?.label?.slice(0, 8) || "AUDIO"}
                   </span>
                 </button>
                 {showAudioMenu && (
@@ -525,7 +527,7 @@ export default function NetflixPlayer({
             {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 text-white/70 hover:text-white transition-all"
+              className="p-2 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all ml-2"
               title={state.isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {state.isFullscreen ? (

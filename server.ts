@@ -270,6 +270,29 @@ app.prepare().then(async () => {
   // Probe VAAPI before anything else
   await probeVaapiAtStartup();
 
+  const CACHE_BASE = "/tmp/filmaro-cache";
+
+  // Cleanup HLS cache on startup
+  if (fs.existsSync(CACHE_BASE)) {
+    try {
+      fs.rmSync(CACHE_BASE, { recursive: true, force: true });
+    } catch (e) {
+      console.error("[Server] Error cleaning HLS cache on startup:", e);
+    }
+  }
+
+  // Also clean up on exit
+  const cleanupAndExit = () => {
+    if (fs.existsSync(CACHE_BASE)) {
+      try {
+        fs.rmSync(CACHE_BASE, { recursive: true, force: true });
+      } catch {}
+    }
+    process.exit(0);
+  };
+  process.on("SIGINT", cleanupAndExit);
+  process.on("SIGTERM", cleanupAndExit);
+
   const httpServer = createServer((req, res) => {
     const parsedUrl = parse(req.url!, true);
     handle(req, res, parsedUrl);
@@ -281,6 +304,10 @@ app.prepare().then(async () => {
   });
 
   io.on("connection", (socket: Socket) => {
+    socket.on("ping", () => {
+      socket.emit("pong", Date.now());
+    });
+
     // ── HOST creates a room ──────────────────────────────────────
     socket.on("create-room", ({ mediaId, hostName }, callback) => {
       const roomCode = generateRoomCode();
@@ -462,22 +489,23 @@ app.prepare().then(async () => {
       }
 
       const now = Date.now();
+      const playAtServerTime = now + 300;
 
       const guestCount = room.members.filter(m => !m.isHost).length;
 
       if (type === "play") {
         room.state = { isPlaying: true, currentTime, updatedAt: now };
         console.log(`[Server] Broadcasting play @ ${currentTime.toFixed(2)} to ${guestCount} guests in ${roomCode}`);
-        socket.to(roomCode).emit("playback-sync", { type: "play", currentTime, serverTime: now });
+        io.to(roomCode).emit("playback-sync", { type: "play", currentTime, serverTime: now, playAtServerTime });
       } else if (type === "pause") {
         room.state = { isPlaying: false, currentTime, updatedAt: now };
         console.log(`[Server] Broadcasting pause @ ${currentTime.toFixed(2)} to ${guestCount} guests in ${roomCode}`);
-        socket.to(roomCode).emit("playback-sync", { type: "pause", currentTime, serverTime: now });
+        io.to(roomCode).emit("playback-sync", { type: "pause", currentTime, serverTime: now, playAtServerTime });
       } else if (type === "seek") {
         room.state = { ...room.state, currentTime, updatedAt: now };
         console.log(`[Server] Broadcasting seek @ ${currentTime.toFixed(2)} to ${guestCount} guests in ${roomCode}`);
         // Broadcast seek to all (including host for confirmation)
-        io.to(roomCode).emit("playback-sync", { type: "seek", currentTime, serverTime: now });
+        io.to(roomCode).emit("playback-sync", { type: "seek", currentTime, serverTime: now, playAtServerTime });
         // Start ready-check: wait for all members to buffer
         startReadyCheck(io, roomCode);
       }

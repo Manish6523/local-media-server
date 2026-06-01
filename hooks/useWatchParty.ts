@@ -58,16 +58,20 @@ interface UseWatchPartyReturn {
   sendMessage: (text: string) => void;
   onSyncTick: (handler: (data: SyncTick) => void) => void;
   offSyncTick: () => void;
-  onPlaybackSync: (handler: (data: { type: string; currentTime: number; serverTime: number }) => void) => void;
+  onPlaybackSync: (handler: (data: { type: string; currentTime: number; serverTime: number; playAtServerTime?: number }) => void) => void;
   offPlaybackSync: () => void;
   onWaitingForReady: (handler: (data: { members: PublicMember[] }) => void) => void;
   offWaitingForReady: () => void;
   onAllReady: (handler: (data: { state: PlaybackState; members: PublicMember[] }) => void) => void;
   offAllReady: () => void;
+  ntpOffset: number;
+  getServerTime: () => number;
+  isProcessingServerEvent: React.MutableRefObject<boolean>;
 }
 
 export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn {
   const socketRef = useRef<Socket | null>(null);
+  const isProcessingServerEvent = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
   const [members, setMembers] = useState<PublicMember[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -76,6 +80,9 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
   const [mediaId, setMediaId] = useState<number | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
   const [waitingForReady, setWaitingForReady] = useState(false);
+  const [ntpOffset, setNtpOffset] = useState<number>(0);
+
+  const getServerTime = useCallback(() => Date.now() + ntpOffset, [ntpOffset]);
 
   const syncTickHandlerRef = useRef<((data: SyncTick) => void) | null>(null);
   const playbackHandlerRef = useRef<((data: { type: string; currentTime: number; serverTime: number }) => void) | null>(null);
@@ -95,7 +102,31 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     socket.off("waiting-for-ready");
     socket.off("all-ready");
 
-    socket.on("connect", () => setIsConnected(true));
+    socket.on("connect", () => {
+      setIsConnected(true);
+      // NTP Clock Sync
+      let pings = 0;
+      let totalOffset = 0;
+      const doPing = () => {
+        if (pings >= 5) return;
+        const t1 = Date.now();
+        socket.emit("ping");
+        socket.once("pong", (t2: number) => {
+          const t3 = Date.now();
+          const offset = t2 - (t1 + t3) / 2;
+          totalOffset += offset;
+          pings++;
+          if (pings === 5) {
+            const avgOffset = totalOffset / 5;
+            setNtpOffset(avgOffset);
+            console.log(`[NTP] Clock sync complete. Offset: ${Math.round(avgOffset)}ms`);
+          } else {
+            setTimeout(doPing, 100);
+          }
+        });
+      };
+      doPing();
+    });
     socket.on("disconnect", () => setIsConnected(false));
 
     socket.on("member-joined", ({ members }: { members: PublicMember[] }) => setMembers(members));
@@ -271,6 +302,10 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
 
   const emitPlayback = useCallback(
     (type: "play" | "pause" | "seek", currentTime: number) => {
+      if (isProcessingServerEvent.current) {
+        console.log(`[WatchParty] Blocked loop-back echo for action: ${type}`);
+        return;
+      }
       if (typeof currentTime !== "number" || !isFinite(currentTime) || currentTime <= 1) return;
       const code = roomCode || sessionStorage.getItem("wp_roomCode");
       if (!code) return;
@@ -318,12 +353,21 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     syncTickHandlerRef.current = null;
   }, []);
 
-  const onPlaybackSync = useCallback((handler: (data: { type: string; currentTime: number; serverTime: number }) => void) => {
+  const onPlaybackSync = useCallback((handler: (data: { type: string; currentTime: number; serverTime: number; playAtServerTime?: number }) => void) => {
     const socket = socketRef.current;
     if (!socket) return;
     if (playbackHandlerRef.current) socket.off("playback-sync", playbackHandlerRef.current);
-    playbackHandlerRef.current = handler;
-    socket.on("playback-sync", handler);
+    
+    const wrappedHandler = (data: any) => {
+      isProcessingServerEvent.current = true;
+      handler(data);
+      setTimeout(() => {
+        isProcessingServerEvent.current = false;
+      }, 1000);
+    };
+
+    playbackHandlerRef.current = wrappedHandler;
+    socket.on("playback-sync", wrappedHandler);
   }, []);
 
   const offPlaybackSync = useCallback(() => {
@@ -390,5 +434,8 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     offWaitingForReady,
     onAllReady,
     offAllReady,
+    ntpOffset,
+    getServerTime,
+    isProcessingServerEvent,
   };
 }

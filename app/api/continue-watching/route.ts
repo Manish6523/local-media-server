@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import { getDb, MediaEntry } from "@/lib/db";
+import { getAllMedia, MediaEntry } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const db = getDb();
-    
-    // Get media where watch progress > 0 AND is_watched = 0
-    // Sort by last watched, limit to 6
-    const continueWatching = db.prepare(`
-      SELECT * FROM media 
-      WHERE watch_progress > 0 AND is_watched = 0 
-      ORDER BY last_watched_at DESC 
-      LIMIT 6
-    `).all() as MediaEntry[];
+    const all = getAllMedia();
+    const continueWatching = all
+      .filter(m => m.watch_progress > 0 && m.is_watched === 0)
+      .sort((a,b) => new Date(b.last_watched_at || 0).getTime() - new Date(a.last_watched_at || 0).getTime())
+      .slice(0, 6);
 
     return NextResponse.json(continueWatching);
   } catch (error) {

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { playbackProgress } from "@/db/schema";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -10,7 +12,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const db = getDb();
+    const { db } = getDb();
     
     // Calculate if it's fully watched (90%+)
     const isWatched = currentTime >= duration * 0.9 ? 1 : 0;
@@ -20,13 +22,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: true, ignored: true });
     }
 
-    db.prepare(`
-      UPDATE media 
-      SET last_watched_at = CURRENT_TIMESTAMP,
-          watch_progress = ?,
-          is_watched = ?
-      WHERE id = ?
-    `).run(Math.floor(currentTime), isWatched, id);
+    db.update(playbackProgress).set({
+      lastWatchedAt: new Date().toISOString(),
+      watchProgress: Math.floor(currentTime),
+      isWatched
+    }).where(eq(playbackProgress.mediaAssetId, id)).run();
 
     return NextResponse.json({ success: true });
   } catch (error) {

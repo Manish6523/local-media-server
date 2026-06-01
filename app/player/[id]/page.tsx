@@ -5,18 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import NetflixPlayer from "@/components/Player/NetflixPlayer";
 
-interface MediaEntry {
-  id: number;
-  type: "movie" | "show";
-  title: string;
-  season: number | null;
-  episode_start: number | null;
-  episode_end: number | null;
-  available: number;
-  filename: string;
-  exactDuration?: number;
-  watch_progress: number;
-}
+import type { MediaEntry } from "@/lib/db";
 
 export default function PlayerPage() {
   const params = useParams();

@@ -5,25 +5,9 @@ import { useSearchParams } from "next/navigation";
 import HeroSection from "@/components/HeroSection";
 import MediaRow from "@/components/MediaRow";
 import PosterCard from "@/components/PosterCard";
+import BentoGrid from "@/components/BentoGrid";
 
-interface MediaEntry {
-  id: number;
-  filename: string;
-  type: "movie" | "show";
-  title: string;
-  year: number | null;
-  season: number | null;
-  episode_start: number | null;
-  episode_end: number | null;
-  poster: string | null;
-  overview: string | null;
-  rating: string | null;
-  genres: string | null;
-  runtime: number | null;
-  available: number;
-  is_favorite?: number;
-  watch_progress?: number;
-}
+import type { MediaEntry } from "@/lib/db";
 
 export default function HomeContent() {
   const searchParams = useSearchParams();
@@ -144,15 +128,12 @@ export default function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-background pb-24 md:pb-0">
       <HeroSection items={carouselItems} />
-      <div className="relative z-10 py-16 space-y-12">
-        {continueWatching.length > 0 && (
-          <MediaRow title="Continue Watching" items={continueWatching} showEpisodeInfo />
-        )}
-        {recentlyAdded.length > 0 && (
-          <MediaRow title="Recently Added" items={recentlyAdded} showEpisodeInfo />
-        )}
+      <div className="relative z-10 -mt-10 mb-8">
+        <BentoGrid continueWatching={continueWatching} recentlyAdded={recentlyAdded} />
+      </div>
+      <div className="relative z-10 pb-16 space-y-12">
         {favorites.length > 0 && (
           <MediaRow title="My Favorites" items={favorites} />
         )}

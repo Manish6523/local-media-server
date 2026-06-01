@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, MediaEntry } from "@/lib/db";
+import { getAllMedia, MediaEntry } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -8,15 +8,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get("limit");
     
-    const db = getDb();
-    
-    let query = "SELECT * FROM media WHERE is_favorite = 1 ORDER BY rating DESC";
-    
-    if (limitParam) {
-      query += ` LIMIT ${parseInt(limitParam, 10)}`;
-    }
-
-    const favorites = db.prepare(query).all() as MediaEntry[];
+    const all = getAllMedia();
+    const favorites = all.filter(m => m.is_favorite === 1);
 
     return NextResponse.json(favorites);
   } catch (error) {

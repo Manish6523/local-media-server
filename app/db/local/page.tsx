@@ -1,14 +1,15 @@
-import { getDb } from "@/lib/db";
+import { getDb, getAllMedia } from "@/lib/db";
+import { config } from "@/db/schema";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
 export default function DatabaseViewerPage() {
-  const db = getDb();
+  const { db } = getDb();
   
   // Fetch data from tables
-  const mediaRows = db.prepare("SELECT * FROM media").all() as any[];
-  const configRows = db.prepare("SELECT * FROM config").all() as any[];
+  const mediaRows = getAllMedia();
+  const configRows = db.select().from(config).all();
 
   // Helper to render a table
   const renderTable = (tableName: string, rows: any[]) => {

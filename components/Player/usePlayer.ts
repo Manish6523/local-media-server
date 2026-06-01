@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Hls from "hls.js";
 
 export interface SubtitleTrack {
   label: string;
@@ -115,8 +116,53 @@ export function usePlayer(
 
   // Build video source URL
   const videoSrc = needsTranscode
-    ? `/api/transcode?id=${mediaId}&audioTrack=${state.activeAudioTrack}&start=${transcodeStartTime}&clientId=${clientIdRef.current}`
+    ? `/api/hls/${mediaId}/${state.activeAudioTrack}/${transcodeStartTime}/playlist.m3u8?clientId=${clientIdRef.current}`
     : `/api/stream?id=${mediaId}`;
+
+  // hls.js integration
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !needsTranscode) return;
+
+    let hls: Hls | null = null;
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+      });
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // We do not auto-play here, the guest sync logic handles that
+        console.log("[HLS] Manifest parsed");
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls?.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls?.recoverMediaError();
+              break;
+            default:
+              hls?.destroy();
+              break;
+          }
+        }
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native Safari support
+      video.src = videoSrc;
+    }
+
+    return () => {
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [videoSrc, needsTranscode]);
 
   // Fetch subtitle and audio tracks
   useEffect(() => {
@@ -224,27 +270,49 @@ export function usePlayer(
     const targetTime = Math.max(0, Math.min(time, state.duration || 0));
     
     if (needsTranscode) {
-      ignorePauseRef.current = true;
-      setTranscodeStartTime(targetTime);
-      setState(s => ({ ...s, currentTime: targetTime, isBuffering: true, bufferedEnd: targetTime }));
+      // In HLS, check if target is within our current buffered ranges.
+      // hls.js manages the native video buffer. If it's buffered, native seek works.
+      // But because our HLS stream starts at transcodeStartTime and goes forward,
+      // the native video element's time is relative to transcodeStartTime.
+      const relativeTarget = targetTime - transcodeStartTime;
       
-      let bufferTimeout: ReturnType<typeof setTimeout>;
-      
-      const onLoaded = () => {
-        clearTimeout(bufferTimeout);
-        setState(s => ({ ...s, isBuffering: false }));
-        v.play().catch(() => {});
-        ignorePauseRef.current = false;
-        v.removeEventListener("loadeddata", onLoaded);
-      };
-      v.addEventListener("loadeddata", onLoaded);
+      let isBuffered = false;
+      for (let i = 0; i < v.buffered.length; i++) {
+        if (relativeTarget >= v.buffered.start(i) && relativeTarget <= v.buffered.end(i)) {
+          isBuffered = true;
+          break;
+        }
+      }
 
-      // Safety timeout — if loadeddata never fires clear spinner anyway
-      bufferTimeout = setTimeout(() => {
-        setState(s => ({ ...s, isBuffering: false }));
-        ignorePauseRef.current = false;
-        v.removeEventListener("loadeddata", onLoaded);
-      }, 8000);
+      // Allow a small forward seek (e.g. 10s) without restarting transcode if it's close to the buffered edge
+      const distanceToEdge = v.buffered.length > 0 ? relativeTarget - v.buffered.end(v.buffered.length - 1) : 100;
+
+      if (isBuffered || (relativeTarget > v.currentTime && distanceToEdge < 15)) {
+        // Native seek within HLS buffer
+        v.currentTime = relativeTarget;
+      } else {
+        // Full transcode seek
+        ignorePauseRef.current = true;
+        setTranscodeStartTime(targetTime);
+        setState(s => ({ ...s, currentTime: targetTime, isBuffering: true, bufferedEnd: targetTime }));
+        
+        let bufferTimeout: ReturnType<typeof setTimeout>;
+        
+        const onPlaying = () => {
+          clearTimeout(bufferTimeout);
+          setState(s => ({ ...s, isBuffering: false }));
+          ignorePauseRef.current = false;
+          v.removeEventListener("playing", onPlaying);
+        };
+        v.addEventListener("playing", onPlaying);
+
+        // Safety timeout
+        bufferTimeout = setTimeout(() => {
+          setState(s => ({ ...s, isBuffering: false }));
+          ignorePauseRef.current = false;
+          v.removeEventListener("playing", onPlaying);
+        }, 8000);
+      }
     } else {
       v.currentTime = targetTime;
     }

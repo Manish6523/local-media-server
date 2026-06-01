@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { playbackProgress } from "@/db/schema";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -10,13 +12,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const db = getDb();
+    const { db } = getDb();
     
-    db.prepare(`
-      UPDATE media 
-      SET is_favorite = ?
-      WHERE id = ?
-    `).run(isFavorite ? 1 : 0, id);
+    db.update(playbackProgress).set({
+      isFavorite: isFavorite ? 1 : 0
+    }).where(eq(playbackProgress.mediaAssetId, id)).run();
 
     return NextResponse.json({ success: true });
   } catch (error) {

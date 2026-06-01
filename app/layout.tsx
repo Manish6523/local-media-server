@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Geist } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/layout/AppShell";
+import { cn } from "@/lib/utils";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "VidLock — Your Personal Media Library",
@@ -20,10 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#141414] text-[#e5e5e5]">
-        <Navbar />
-        <main className="flex-1">{children}</main>
+    <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
+      <body className="min-h-full flex flex-col">
+        <AppShell>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

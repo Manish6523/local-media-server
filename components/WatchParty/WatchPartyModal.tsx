@@ -137,11 +137,11 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
 
   const modal = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => { e.stopPropagation(); onClose(); }}
     >
       <div
-        className="bg-[#141414] border border-white/10 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+        className="bg-black/60 backdrop-blur-2xl border border-white/10 w-full max-w-lg rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden max-h-[85vh] flex flex-col ring-1 ring-white/5 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
