@@ -157,13 +157,16 @@ function startSyncHeartbeat(io: SocketIOServer, roomCode: string) {
     if (r.waitingForReady) return;
 
     const projected = projectedTime(r.state);
+    const guestCount = r.members.filter(m => !m.isHost).length;
+
+    console.log(`[Server] Broadcasting sync-tick @ ${projected.toFixed(2)} (playing=${r.state.isPlaying}) to ${guestCount} guests in ${roomCode}`);
 
     io.to(roomCode).emit("sync-tick", {
       isPlaying: r.state.isPlaying,
       currentTime: projected,
       serverTime: Date.now(),
     });
-  }, 3000); // Every 3 seconds
+  }, 10000); // Every 10 seconds — matches drift correction window
 }
 
 function stopSyncHeartbeat(room: Room) {
@@ -183,19 +186,28 @@ function startReadyCheck(io: SocketIOServer, roomCode: string) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
-  // Mark all members as not ready
+  // Mark all members as not ready, EXCEPT the host
+  // Host initiated the seek so they're already at the right position
   room.waitingForReady = true;
-  for (const m of room.members) m.ready = false;
+  for (const m of room.members) {
+    m.ready = m.isHost; // Host is auto-ready
+  }
 
   // Pause playback while waiting
   room.state.isPlaying = false;
   room.state.updatedAt = Date.now();
 
+  // If host is the only member, skip the ready check entirely
+  if (room.members.every((m) => m.ready)) {
+    completeReadyCheck(io, roomCode);
+    return;
+  }
+
   io.to(roomCode).emit("waiting-for-ready", {
     members: publicMembers(room.members),
   });
 
-  // Timeout: resume anyway after 8 seconds
+  // Timeout: resume anyway after 15 seconds (VAAPI takes 2-3s to init encoder)
   if (room.readyTimeout) clearTimeout(room.readyTimeout);
   room.readyTimeout = setTimeout(() => {
     const r = rooms.get(roomCode);
@@ -203,7 +215,7 @@ function startReadyCheck(io: SocketIOServer, roomCode: string) {
 
     console.log(`[WatchParty] Ready timeout in ${roomCode}, resuming anyway`);
     completeReadyCheck(io, roomCode);
-  }, 8000);
+  }, 15000);
 }
 
 function handleMemberReady(io: SocketIOServer, roomCode: string, socketId: string) {
@@ -211,7 +223,12 @@ function handleMemberReady(io: SocketIOServer, roomCode: string, socketId: strin
   if (!room) return;
 
   const member = room.members.find((m) => m.id === socketId);
-  if (member) member.ready = true;
+  if (member) {
+    member.ready = true;
+    console.log(`[Server] Got ready from ${socketId} (${member.name}) in ${roomCode} | waiting=${room.waitingForReady}`);
+  } else {
+    console.warn(`[Server] Got ready from unknown socket ${socketId} in ${roomCode}`);
+  }
 
   io.to(roomCode).emit("member-ready-update", {
     members: publicMembers(room.members),
@@ -219,6 +236,7 @@ function handleMemberReady(io: SocketIOServer, roomCode: string, socketId: strin
 
   // Check if all members are ready
   if (room.waitingForReady && room.members.every((m) => m.ready)) {
+    console.log(`[Server] All members ready in ${roomCode}, completing ready check`);
     completeReadyCheck(io, roomCode);
   }
 }
@@ -351,7 +369,16 @@ app.prepare().then(async () => {
       // Compute projected state for the joiner
       const currentProjected = projectedTime(room.state);
 
-      console.log(`[WatchParty] ${guestName} joined room ${roomCode}`);
+      console.log(`[WatchParty] ${guestName} joined room ${roomCode} | hostTime=${currentProjected.toFixed(2)} playing=${room.state.isPlaying}`);
+
+      // Immediately emit current playback state to the new guest
+      // so they don't have to wait for the next sync-tick (fix: guest joining mid-playback)
+      socket.emit("playback-sync", {
+        type: room.state.isPlaying ? "play" : "pause",
+        currentTime: currentProjected,
+        serverTime: Date.now(),
+      });
+
       callback({
         success: true,
         mediaId: room.mediaId,
@@ -418,6 +445,7 @@ app.prepare().then(async () => {
 
     // ── Member reports ready (buffered) ──────────────────────────
     socket.on("member-ready", ({ roomCode }) => {
+      console.log(`[Server] Received member-ready from ${socket.id} (${socket.data.name}) for room ${roomCode}`);
       handleMemberReady(io, roomCode, socket.id);
     });
 
@@ -427,16 +455,27 @@ app.prepare().then(async () => {
       if (!room) return;
       if (room.hostId !== socket.id) return; // only host
 
+      // Server-side timestamp validation: reject garbage values
+      if (typeof currentTime !== "number" || !isFinite(currentTime) || currentTime < 0 || currentTime > 86400) {
+        console.warn(`[WatchParty] Rejected invalid timestamp: ${currentTime} from ${socket.data.name}`);
+        return;
+      }
+
       const now = Date.now();
+
+      const guestCount = room.members.filter(m => !m.isHost).length;
 
       if (type === "play") {
         room.state = { isPlaying: true, currentTime, updatedAt: now };
+        console.log(`[Server] Broadcasting play @ ${currentTime.toFixed(2)} to ${guestCount} guests in ${roomCode}`);
         socket.to(roomCode).emit("playback-sync", { type: "play", currentTime, serverTime: now });
       } else if (type === "pause") {
         room.state = { isPlaying: false, currentTime, updatedAt: now };
+        console.log(`[Server] Broadcasting pause @ ${currentTime.toFixed(2)} to ${guestCount} guests in ${roomCode}`);
         socket.to(roomCode).emit("playback-sync", { type: "pause", currentTime, serverTime: now });
       } else if (type === "seek") {
         room.state = { ...room.state, currentTime, updatedAt: now };
+        console.log(`[Server] Broadcasting seek @ ${currentTime.toFixed(2)} to ${guestCount} guests in ${roomCode}`);
         // Broadcast seek to all (including host for confirmation)
         io.to(roomCode).emit("playback-sync", { type: "seek", currentTime, serverTime: now });
         // Start ready-check: wait for all members to buffer

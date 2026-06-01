@@ -271,6 +271,7 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
 
   const emitPlayback = useCallback(
     (type: "play" | "pause" | "seek", currentTime: number) => {
+      if (typeof currentTime !== "number" || !isFinite(currentTime) || currentTime <= 1) return;
       const code = roomCode || sessionStorage.getItem("wp_roomCode");
       if (!code) return;
       // Only host can emit playback events
@@ -283,7 +284,11 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
 
   const emitReady = useCallback(() => {
     const code = roomCode || sessionStorage.getItem("wp_roomCode");
-    if (!code) return;
+    if (!code) {
+      console.warn(`[Guest] emitReady called but no roomCode available`);
+      return;
+    }
+    console.log(`[Guest] Calling emitReady for room ${code} (socket connected: ${socketRef.current?.connected})`);
     socketRef.current?.emit("member-ready", { roomCode: code });
   }, [roomCode]);
 

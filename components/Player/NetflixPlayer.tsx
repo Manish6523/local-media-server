@@ -21,6 +21,7 @@ interface WatchPartyMode {
   onSeek: (time: number) => void;
   registerVideoRef: (ref: HTMLVideoElement | null) => void;
   registerSeek?: (seekFn: (time: number) => void) => void;
+  registerTranscodeStart?: (startTime: number) => void;
 }
 
 interface NetflixPlayerProps {
@@ -75,14 +76,17 @@ export default function NetflixPlayer({
       const v = videoRef.current;
       // togglePlay will flip the state, so if currently playing, it will pause
       setTimeout(() => {
+        // For transcoded content, v.currentTime is relative to transcode start.
+        // Sync system uses absolute time, so add the offset.
+        const absoluteTime = needsTranscode ? transcodeStartTime + v.currentTime : v.currentTime;
         if (v.paused) {
-          watchPartyMode.onPause(v.currentTime);
+          watchPartyMode.onPause(absoluteTime);
         } else {
-          watchPartyMode.onPlay(v.currentTime);
+          watchPartyMode.onPlay(absoluteTime);
         }
       }, 50);
     }
-  }, [togglePlay, watchPartyMode]);
+  }, [togglePlay, watchPartyMode, needsTranscode, transcodeStartTime]);
 
   const wpSeek = useCallback((time: number) => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
@@ -96,25 +100,35 @@ export default function NetflixPlayer({
   // correctly trigger player-level seeks with proper start time updates.
   useEffect(() => {
     if (watchPartyMode?.registerSeek) {
-      watchPartyMode.registerSeek(wpSeek);
+      watchPartyMode.registerSeek(seek);
     }
-  }, [watchPartyMode, wpSeek]);
+  }, [watchPartyMode, seek]);
+
+  // Push transcodeStartTime to the watch party page so guest sync handlers
+  // can convert between absolute and relative time domains.
+  useEffect(() => {
+    if (watchPartyMode?.registerTranscodeStart) {
+      watchPartyMode.registerTranscodeStart(transcodeStartTime);
+    }
+  }, [watchPartyMode, transcodeStartTime]);
 
   const wpSkipBack = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
     skipBack();
     if (watchPartyMode?.isHost && videoRef.current) {
-      setTimeout(() => watchPartyMode.onSeek(videoRef.current!.currentTime), 50);
+      const absoluteTime = needsTranscode ? transcodeStartTime + videoRef.current.currentTime : videoRef.current.currentTime;
+      setTimeout(() => watchPartyMode.onSeek(absoluteTime - 10), 50);
     }
-  }, [skipBack, watchPartyMode]);
+  }, [skipBack, watchPartyMode, needsTranscode, transcodeStartTime]);
 
   const wpSkipForward = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
     skipForward();
     if (watchPartyMode?.isHost && videoRef.current) {
-      setTimeout(() => watchPartyMode.onSeek(videoRef.current!.currentTime), 50);
+      const absoluteTime = needsTranscode ? transcodeStartTime + videoRef.current.currentTime : videoRef.current.currentTime;
+      setTimeout(() => watchPartyMode.onSeek(absoluteTime + 10), 50);
     }
-  }, [skipForward, watchPartyMode]);
+  }, [skipForward, watchPartyMode, needsTranscode, transcodeStartTime]);
 
   const isGuest = watchPartyMode && !watchPartyMode.isHost;
 

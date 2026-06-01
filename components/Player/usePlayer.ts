@@ -182,6 +182,7 @@ export function usePlayer(
     v.addEventListener("canplay", onCanPlay);
     v.addEventListener("canplaythrough", onCanPlay);
     v.addEventListener("playing", onCanPlay);
+    v.addEventListener("seeked", onCanPlay);
     v.addEventListener("progress", onProgress);
     v.addEventListener("volumechange", onVolumeChange);
 
@@ -195,6 +196,7 @@ export function usePlayer(
       v.removeEventListener("canplay", onCanPlay);
       v.removeEventListener("canplaythrough", onCanPlay);
       v.removeEventListener("playing", onCanPlay);
+      v.removeEventListener("seeked", onCanPlay);
       v.removeEventListener("progress", onProgress);
       v.removeEventListener("volumechange", onVolumeChange);
     };
@@ -226,12 +228,23 @@ export function usePlayer(
       setTranscodeStartTime(targetTime);
       setState(s => ({ ...s, currentTime: targetTime, isBuffering: true, bufferedEnd: targetTime }));
       
+      let bufferTimeout: ReturnType<typeof setTimeout>;
+      
       const onLoaded = () => {
+        clearTimeout(bufferTimeout);
+        setState(s => ({ ...s, isBuffering: false }));
         v.play().catch(() => {});
         ignorePauseRef.current = false;
         v.removeEventListener("loadeddata", onLoaded);
       };
       v.addEventListener("loadeddata", onLoaded);
+
+      // Safety timeout — if loadeddata never fires clear spinner anyway
+      bufferTimeout = setTimeout(() => {
+        setState(s => ({ ...s, isBuffering: false }));
+        ignorePauseRef.current = false;
+        v.removeEventListener("loadeddata", onLoaded);
+      }, 8000);
     } else {
       v.currentTime = targetTime;
     }
@@ -359,5 +372,6 @@ export function usePlayer(
     setSubtitleSize,
     setSubtitleColor,
     showResumeToast,
+    updateTranscodeStart: setTranscodeStartTime,
   };
 }

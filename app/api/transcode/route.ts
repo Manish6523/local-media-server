@@ -50,20 +50,29 @@ function tryDrainQueue() {
 // ─── FFmpeg Arg Builders ─────────────────────────────────────────
 
 function buildVaapiArgs(filepath: string, start: number, audioTrack: number): string[] {
+  // Two-pass seek for VAAPI reliability on large offsets:
+  //   -ss [start-10] before -i (fast rough seek in demuxer)
+  //   -ss 10 after -i (accurate fine seek in decoder)
+  // This avoids "Error while opening encoder" on large timestamps
+  const roughSeek = Math.max(0, start - 10);
+  const fineSeek = start > 10 ? 10 : start;
+
   return [
     "-hide_banner",
     "-hwaccel", "vaapi",
     "-hwaccel_device", VAAPI_DEVICE,
     "-hwaccel_output_format", "vaapi",
-    ...(start > 0 ? ["-ss", start.toString()] : []),
+    ...(roughSeek > 0 ? ["-ss", roughSeek.toString()] : []),
     "-i", filepath,
-    "-map", "0:v:0",
+    ...(fineSeek > 0 ? ["-ss", fineSeek.toString()] : []),
+    "-map", "0:V:0",
     "-map", `0:a:${audioTrack}`,
-    "-vf", "scale_vaapi=format=nv12",
+    "-vf", "scale_vaapi=w=-2:h=-2:format=nv12",
     "-c:v", "h264_vaapi",
     "-qp", "28",
     "-c:a", "aac",
     "-b:a", "128k",
+    "-sn",
     "-f", "mp4",
     "-movflags", "frag_keyframe+empty_moov+faststart",
     "pipe:1",
@@ -75,22 +84,29 @@ function buildCpuArgs(filepath: string, start: number, audioTrack: number): stri
     "-hide_banner",
     ...(start > 0 ? ["-ss", start.toString()] : []),
     "-i", filepath,
-    "-map", "0:v:0",
+    "-map", "0:V:0",
     "-map", `0:a:${audioTrack}`,
     "-c:v", "libx264",
     "-preset", "ultrafast",
     "-crf", "28",
     "-c:a", "aac",
     "-b:a", "128k",
+    "-sn",
     "-f", "mp4",
     "-movflags", "frag_keyframe+empty_moov+faststart",
     "pipe:1",
   ];
 }
 
+// ─── Debounce Tracking ───────────────────────────────────────────
+// When rapid seeks come in, we kill the old process immediately but
+// wait 800ms before spawning a new one. If another seek arrives within
+// that window, the timer resets. Only the LAST seek spawns a process.
+const debounceMap = new Map<string, { timer: ReturnType<typeof setTimeout>; cancel: () => void }>();
+
 // ─── Route Handler ───────────────────────────────────────────────
 // Each viewer gets their own independent FFmpeg process.
-// If a viewer seeks, their old process is killed and a new one spawns.
+// If a viewer seeks, their old process is killed and a new one spawns (after debounce).
 // Socket.io handles sync — NOT shared FFmpeg streams.
 
 export async function GET(request: NextRequest) {
@@ -123,25 +139,56 @@ export async function GET(request: NextRequest) {
     // Process key: unique per viewer per media
     const processKey = `${id}:${audioTrack}:${clientId}`;
 
-    // Kill any existing process for this viewer (they seeked)
+    // 1. Kill any existing FFmpeg process for this viewer immediately
     if (activeProcesses.has(processKey)) {
       killProcess(processKey, "new seek");
     }
 
-    // Wait for a slot if we're at max concurrent
+    // 2. Cancel any pending debounce timer for this viewer
+    const pendingDebounce = debounceMap.get(processKey);
+    if (pendingDebounce) {
+      clearTimeout(pendingDebounce.timer);
+      pendingDebounce.cancel(); // Reject the old debounce promise
+      debounceMap.delete(processKey);
+    }
+
+    // 3. Wait 800ms debounce — if another seek arrives, this gets cancelled
+    const debounceResult = await new Promise<"spawn" | "cancelled">((resolve) => {
+      const timer = setTimeout(() => {
+        debounceMap.delete(processKey);
+        resolve("spawn");
+      }, 800);
+
+      debounceMap.set(processKey, {
+        timer,
+        cancel: () => resolve("cancelled"),
+      });
+
+      // If client disconnects during debounce, clean up
+      request.signal.addEventListener("abort", () => {
+        clearTimeout(timer);
+        debounceMap.delete(processKey);
+        resolve("cancelled");
+      });
+    });
+
+    // If debounce was cancelled (newer seek arrived or client disconnected), bail out
+    if (debounceResult === "cancelled" || request.signal.aborted) {
+      return new NextResponse("Debounced", { status: 200 });
+    }
+
+    // 4. Wait for a slot if we're at max concurrent
     if (activeProcesses.size >= MAX_CONCURRENT) {
       console.log(`[Transcode] Max concurrent (${MAX_CONCURRENT}) reached, queuing ${processKey}`);
       await new Promise<void>((resolve) => {
         pendingQueue.push(resolve);
 
-        // If the client disconnects while queued, remove from queue
         request.signal.addEventListener("abort", () => {
           const idx = pendingQueue.indexOf(resolve);
           if (idx >= 0) pendingQueue.splice(idx, 1);
         });
       });
 
-      // Client may have disconnected while waiting
       if (request.signal.aborted) {
         return new NextResponse("Client disconnected", { status: 499 });
       }
