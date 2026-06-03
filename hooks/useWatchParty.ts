@@ -157,9 +157,13 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     });
 
     socket.on("all-ready", ({ state, members }: { state: PlaybackState; members: PublicMember[] }) => {
+      isProcessingServerEvent.current = true;
       setWaitingForReady(false);
       setPlaybackState(state);
       setMembers(members);
+      setTimeout(() => {
+        isProcessingServerEvent.current = false;
+      }, 1500);
     });
 
     if (socket.connected) setIsConnected(true);
@@ -363,7 +367,7 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
       handler(data);
       setTimeout(() => {
         isProcessingServerEvent.current = false;
-      }, 1000);
+      }, 1500);
     };
 
     playbackHandlerRef.current = wrappedHandler;

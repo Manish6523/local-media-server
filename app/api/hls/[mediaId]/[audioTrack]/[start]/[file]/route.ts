@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn, ChildProcess } from "child_process";
+import { spawn, execSync, ChildProcess } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getMediaById } from "@/lib/db";
@@ -22,6 +22,32 @@ interface ActiveTranscode {
 }
 
 const activeTranscodes = new Map<string, ActiveTranscode>();
+
+// Cache ffprobe pixel format results per filepath to avoid re-probing
+const pixelFormatCache = new Map<string, boolean>();
+
+function detect10bit(filepath: string): boolean {
+  const cached = pixelFormatCache.get(filepath);
+  if (cached !== undefined) return cached;
+
+  try {
+    const probeResult = execSync(
+      `ffprobe -v quiet -print_format json -show_streams "${filepath}"`,
+      { encoding: 'utf8', timeout: 10000 }
+    );
+    const streams = JSON.parse(probeResult).streams;
+    const videoStream = streams?.find((s: any) => s.codec_type === 'video');
+    const is10bit = videoStream?.pix_fmt?.includes('10le') ||
+                    videoStream?.pix_fmt?.includes('10be') ||
+                    videoStream?.profile?.toLowerCase()?.includes('10') || false;
+    pixelFormatCache.set(filepath, is10bit);
+    return is10bit;
+  } catch (err) {
+    console.error('[HLS] ffprobe failed, assuming 8-bit:', err);
+    pixelFormatCache.set(filepath, false);
+    return false;
+  }
+}
 
 // Cleanup routine: check every minute, kill processes not accessed in 10 minutes
 setInterval(() => {
@@ -78,31 +104,70 @@ export async function GET(
         fs.mkdirSync(outDir, { recursive: true });
       }
 
+      // Kill stale transcode for the same media/track at a different start position
+      if (!active) {
+        const stalePrefix = `${mediaId}_${audioTrack}_`;
+        for (const [key, transcode] of activeTranscodes.entries()) {
+          if (key.startsWith(stalePrefix) && key !== streamKey) {
+            console.log(`[HLS] Killing stale transcode: ${key} (new seek to ${startSec})`);
+            try { transcode.ffmpeg.kill("SIGTERM"); } catch { }
+            activeTranscodes.delete(key);
+          }
+        }
+      }
+
       if (!active && !fs.existsSync(requestedFilePath)) {
-        console.log(`[HLS] Spawning VAAPI segmenter for ${streamKey}`);
+        const is10bit = detect10bit(media.filepath);
+        console.log(`[HLS] Spawning ${is10bit ? 'Hybrid (CPU→VAAPI)' : 'Full VAAPI'} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
         
-        // Use the exact FFmpeg command order for AMD VAAPI
-        const ffmpegArgs = [
-          "-hide_banner",
-          "-hwaccel", "vaapi",
-          "-hwaccel_device", VAAPI_DEVICE,
-          "-hwaccel_output_format", "vaapi",
-          "-ss", startSec.toString(),
-          "-i", media.filepath,
-          "-map", "0:V:0",
-          "-map", `0:a:${trackNum}`,
-          "-vf", "scale_vaapi=w=-2:h=-2:format=nv12",
-          "-c:v", "h264_vaapi",
-          "-qp", "26",
-          "-c:a", "aac",
-          "-b:a", "128k",
-          "-sn",
-          "-f", "hls",
-          "-hls_time", "3",
-          "-hls_playlist_type", "event",
-          "-hls_segment_filename", path.join(outDir, "seg_%03d.ts"),
-          requestedFilePath
-        ];
+        // Build FFmpeg args based on pixel format
+        let ffmpegArgs: string[];
+
+        if (is10bit) {
+          // 10-bit HEVC: CPU decode → software scale/format to NV12 → GPU encode
+          ffmpegArgs = [
+            "-hide_banner",
+            "-ss", startSec.toString(),
+            "-i", media.filepath,
+            "-map", "0:V:0",
+            "-map", `0:a:${trackNum}`,
+            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=nv12,hwupload",
+            "-vaapi_device", VAAPI_DEVICE,
+            "-c:v", "h264_vaapi",
+            "-qp", "26",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-sn",
+            "-f", "hls",
+            "-hls_time", "3",
+            "-hls_playlist_type", "event",
+            "-hls_segment_filename", path.join(outDir, "seg_%03d.ts"),
+            requestedFilePath
+          ];
+        } else {
+          // 8-bit: Full VAAPI hardware pipeline
+          ffmpegArgs = [
+            "-hide_banner",
+            "-hwaccel", "vaapi",
+            "-hwaccel_device", VAAPI_DEVICE,
+            "-hwaccel_output_format", "vaapi",
+            "-ss", startSec.toString(),
+            "-i", media.filepath,
+            "-map", "0:V:0",
+            "-map", `0:a:${trackNum}`,
+            "-vf", "scale_vaapi=w=-2:h=-2:format=nv12",
+            "-c:v", "h264_vaapi",
+            "-qp", "26",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-sn",
+            "-f", "hls",
+            "-hls_time", "3",
+            "-hls_playlist_type", "event",
+            "-hls_segment_filename", path.join(outDir, "seg_%03d.ts"),
+            requestedFilePath
+          ];
+        }
 
         const ffmpeg = spawn("ffmpeg", ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] });
         
@@ -133,6 +198,24 @@ export async function GET(
 
         if (!fs.existsSync(requestedFilePath)) {
           return new NextResponse("Timeout waiting for playlist generation", { status: 504 });
+        }
+      }
+    }
+
+    // For .ts segment files: wait for FFmpeg to generate them if transcode is active
+    if (file.endsWith(".ts") && !fs.existsSync(requestedFilePath)) {
+      const currentActive = activeTranscodes.get(streamKey);
+      if (currentActive) {
+        currentActive.lastAccessed = Date.now();
+        console.log(`[HLS] Waiting for segment: ${file} (transcode active for ${streamKey})`);
+        let segAttempts = 0;
+        while (!fs.existsSync(requestedFilePath) && segAttempts < 20) {
+          await new Promise((r) => setTimeout(r, 500));
+          segAttempts++;
+        }
+        if (!fs.existsSync(requestedFilePath)) {
+          console.warn(`[HLS] Segment timeout: ${file} not ready after 10s`);
+          return new NextResponse("Segment not ready", { status: 503, headers: { "Retry-After": "2" } });
         }
       }
     }

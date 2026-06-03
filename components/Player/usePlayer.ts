@@ -134,8 +134,27 @@ export function usePlayer(
       hls.loadSource(videoSrc);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // We do not auto-play here, the guest sync logic handles that
         console.log("[HLS] Manifest parsed");
+        setState(s => ({ ...s, isBuffering: false }));
+        if (wasPlayingBeforeSeekRef.current) {
+          wasPlayingBeforeSeekRef.current = false;
+          // Wait for video to have enough data before calling play()
+          const attemptPlay = () => {
+            if (video.readyState >= 3) {
+              // HAVE_FUTURE_DATA — safe to play
+              video.play().catch(err =>
+                console.error('[Player] play() failed:', err)
+              );
+            } else {
+              video.addEventListener('canplay', () => {
+                video.play().catch(err =>
+                  console.error('[Player] play() failed:', err)
+                );
+              }, { once: true });
+            }
+          };
+          setTimeout(attemptPlay, 100);
+        }
       });
       hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
@@ -182,6 +201,7 @@ export function usePlayer(
   }, [mediaId]);
 
   const ignorePauseRef = useRef(false);
+  const wasPlayingBeforeSeekRef = useRef(false);
 
   // ---- Video event bindings ----
   const bindVideoEvents = useCallback(() => {
@@ -292,6 +312,8 @@ export function usePlayer(
         v.currentTime = relativeTarget;
       } else {
         // Full transcode seek
+        const wasPlaying = !v.paused;
+        wasPlayingBeforeSeekRef.current = wasPlaying;
         ignorePauseRef.current = true;
         setTranscodeStartTime(targetTime);
         setState(s => ({ ...s, currentTime: targetTime, isBuffering: true, bufferedEnd: targetTime }));
@@ -302,14 +324,34 @@ export function usePlayer(
           clearTimeout(bufferTimeout);
           setState(s => ({ ...s, isBuffering: false }));
           ignorePauseRef.current = false;
+          wasPlayingBeforeSeekRef.current = false;
           v.removeEventListener("playing", onPlaying);
         };
+
         v.addEventListener("playing", onPlaying);
 
-        // Safety timeout
+        // Safety timeout — if MANIFEST_PARSED play() and onPlaying never fire
         bufferTimeout = setTimeout(() => {
           setState(s => ({ ...s, isBuffering: false }));
           ignorePauseRef.current = false;
+          if (wasPlayingBeforeSeekRef.current) {
+            wasPlayingBeforeSeekRef.current = false;
+            // Last-resort play attempt
+            const attemptPlay = () => {
+              if (v.readyState >= 3) {
+                v.play().catch(err =>
+                  console.error('[Player] play() failed after timeout:', err)
+                );
+              } else {
+                v.addEventListener('canplay', () => {
+                  v.play().catch(err =>
+                    console.error('[Player] play() failed after timeout+canplay:', err)
+                  );
+                }, { once: true });
+              }
+            };
+            setTimeout(attemptPlay, 100);
+          }
           v.removeEventListener("playing", onPlaying);
         }, 8000);
       }

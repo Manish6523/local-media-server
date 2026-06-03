@@ -75,12 +75,15 @@ export default function WatchPartyPage() {
       return sessionStorage.getItem("wp_isHost") === "true";
     })();
 
-  // Host never has an initial load guard
-  useEffect(() => {
-    if (effectiveIsHost) {
-      isInitialLoad.current = false;
-    }
-  }, [effectiveIsHost]);
+  // Host never has an initial load guard.
+  // Guest: immediately block all outbound events until initial sync completes.
+  // This MUST be synchronous (not in a useEffect) to prevent race conditions
+  // where the video element mounts and fires native events before the guard is set.
+  if (effectiveIsHost) {
+    isInitialLoad.current = false;
+  } else {
+    isProcessingServerEvent.current = true;
+  }
 
   // ── Sync Execution Lockout (Echo prevention) ───────────────
   useEffect(() => {
@@ -208,11 +211,15 @@ export default function WatchPartyPage() {
           `[Sync] Executing: ${type} @ ${currentTime.toFixed(2)} (abs), relative=${relativeTime.toFixed(2)}, myAbs=${myAbsoluteTime.toFixed(2)}, diff=${diff.toFixed(2)}, offset=${offset.toFixed(2)}`,
         );
 
+        // Block outbound events while we manipulate the video element
+        isProcessingServerEvent.current = true;
+
         if (type === "seek") {
           setSyncing(true);
           // Full seek = new transcode from this absolute position
           video.pause();
-          transcodeStartTimeRef.current = currentTime; // Update offset
+          // Don't set transcodeStartTimeRef directly — let playerSeekRef
+          // trigger usePlayer.seek() → setTranscodeStartTime → registerTranscodeStart
           if (playerSeekRef.current) {
             playerSeekRef.current(currentTime);
           } else {
@@ -245,7 +252,6 @@ export default function WatchPartyPage() {
             video.currentTime = relativeTime;
           } else {
             // Relative time is outside current buffer — need full transcode seek
-            transcodeStartTimeRef.current = currentTime;
             if (playerSeekRef.current) playerSeekRef.current(currentTime);
           }
           video.play().catch(() => {});
@@ -254,11 +260,15 @@ export default function WatchPartyPage() {
           if (relativeTime >= 0 && relativeTime < (video.duration || Infinity)) {
             video.currentTime = relativeTime;
           } else {
-            transcodeStartTimeRef.current = currentTime;
             if (playerSeekRef.current) playerSeekRef.current(currentTime);
           }
           video.pause();
         }
+
+        // Release guard after video events have settled
+        setTimeout(() => {
+          isProcessingServerEvent.current = false;
+        }, 1500);
       };
 
       if (playAtServerTime) {
@@ -308,10 +318,12 @@ export default function WatchPartyPage() {
         `[Sync] Tick: hostAbs=${currentTime.toFixed(2)}, myAbs=${myAbsoluteTime.toFixed(2)}, drift=${drift.toFixed(2)}, offset=${offset.toFixed(2)}`,
       );
 
+      // Block outbound events during drift correction
+      isProcessingServerEvent.current = true;
+
       if (absDrift > 15) {
         // Very large drift: need full transcode restart at new position
         console.log(`[Sync] LARGE drift=${drift.toFixed(2)}s — full transcode seek to ${currentTime.toFixed(2)}`);
-        transcodeStartTimeRef.current = currentTime;
         if (playerSeekRef.current) {
           playerSeekRef.current(currentTime);
         }
@@ -321,13 +333,8 @@ export default function WatchPartyPage() {
         const relativeTarget = currentTime - offset;
         
         if (relativeTarget >= 0 && relativeTarget < (video.duration || Infinity)) {
-          isProcessingServerEvent.current = true;
           video.currentTime = relativeTarget;
-          setTimeout(() => {
-            isProcessingServerEvent.current = false;
-          }, 1000);
         } else {
-          transcodeStartTimeRef.current = currentTime;
           if (playerSeekRef.current) playerSeekRef.current(currentTime);
         }
       }
@@ -341,6 +348,10 @@ export default function WatchPartyPage() {
         console.log(`[Sync] Pausing playback (host is paused)`);
         video.pause();
       }
+
+      setTimeout(() => {
+        isProcessingServerEvent.current = false;
+      }, 1500);
     });
 
     return () => offSyncTick();
@@ -355,6 +366,9 @@ export default function WatchPartyPage() {
       // Don't process during initial load
       if (isInitialLoad.current) return;
 
+      // Block outbound events while applying all-ready state
+      isProcessingServerEvent.current = true;
+
       if (isValidTimestamp(state.currentTime, video)) {
         // Convert absolute time to relative for in-place adjustment
         const offset = transcodeStartTimeRef.current;
@@ -363,8 +377,7 @@ export default function WatchPartyPage() {
         if (relativeTime >= 0 && relativeTime < (video.duration || Infinity)) {
           video.currentTime = relativeTime;
         } else {
-          // Need full transcode seek
-          transcodeStartTimeRef.current = state.currentTime;
+          // Need full transcode seek — go through player seek
           if (playerSeekRef.current) playerSeekRef.current(state.currentTime);
         }
       }
@@ -372,10 +385,14 @@ export default function WatchPartyPage() {
         video.play().catch(() => {});
       }
       setSyncing(false);
+
+      setTimeout(() => {
+        isProcessingServerEvent.current = false;
+      }, 1500);
     });
 
     return () => offAllReady();
-  }, [onAllReady, offAllReady]);
+  }, [onAllReady, offAllReady, isProcessingServerEvent]);
 
   // ── Initial sync for guests ────────────────────────────────────
   // Guest starts from position 0. Wait for canplay, THEN seek to host position.
@@ -393,6 +410,7 @@ export default function WatchPartyPage() {
     if (targetTime < 5) {
       console.log(`[Guest] targetTime < 5, immediate start, calling emitReady`);
       isInitialLoad.current = false;
+      isProcessingServerEvent.current = false;
       emitReady();
       if (playbackState.isPlaying) video.play().catch(() => {});
       return;
@@ -413,6 +431,7 @@ export default function WatchPartyPage() {
         if (!isInitialLoad.current) return
         console.log(`[Guest] Seeked/Load complete, unblocking sync, calling emitReady`)
         isInitialLoad.current = false
+        isProcessingServerEvent.current = false
         emitReady()
         if (playbackState.isPlaying) vid.play().catch(() => {})
       }
@@ -424,6 +443,7 @@ export default function WatchPartyPage() {
         if (isInitialLoad.current) {
           console.log(`[Guest] Seek timeout fallback, unblocking`)
           isInitialLoad.current = false
+          isProcessingServerEvent.current = false
           emitReady()
           if (playbackState.isPlaying) vid.play().catch(() => {})
         }
@@ -438,7 +458,7 @@ export default function WatchPartyPage() {
     } else if (vid) {
       vid.addEventListener('loadedmetadata', doSeek, { once: true })
     }
-  }, [effectiveIsHost, playbackState, emitReady]);
+  }, [effectiveIsHost, playbackState, emitReady, isProcessingServerEvent]);
 
   if (loading && !media) {
     return (
@@ -481,12 +501,15 @@ export default function WatchPartyPage() {
             roomCode,
             isHost: effectiveIsHost,
             onPlay: (time) => {
+              if (isProcessingServerEvent.current) return;
               if (typeof time === "number" && isFinite(time) && time > 1) emitPlayback("play", time);
             },
             onPause: (time) => {
+              if (isProcessingServerEvent.current) return;
               if (typeof time === "number" && isFinite(time) && time > 1) emitPlayback("pause", time);
             },
             onSeek: (time) => {
+              if (isProcessingServerEvent.current) return;
               if (typeof time === "number" && isFinite(time) && time > 1) emitPlayback("seek", time);
             },
             registerVideoRef,
