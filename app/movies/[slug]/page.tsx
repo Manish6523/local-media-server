@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Info, Share2, ShieldCheck } from "lucide-react";
+import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Info, Share2, ShieldCheck, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import dynamic from "next/dynamic";
+
+const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -14,6 +17,7 @@ export default function MovieDetailPage() {
   const slug = params.slug as string;
   const [movie, setMovie] = useState<MediaEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPartyModal, setShowPartyModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/media?type=movie")
@@ -39,7 +43,7 @@ export default function MovieDetailPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
+    <div className="min-h-screen text-foreground selection:bg-primary/30">
       {/* Immersive Hero Backdrop */}
       <div className="relative h-[65vh] md:h-[85vh] w-full overflow-hidden">
         <Image
@@ -50,8 +54,8 @@ export default function MovieDetailPage() {
           priority
         />
         {/* Layered Cinematic Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-transparent to-transparent" />
         
         {/* Top Navigation Overlay */}
         <div className="absolute top-32 left-0 w-full px-6 md:px-12 lg:px-20 z-20">
@@ -124,7 +128,7 @@ export default function MovieDetailPage() {
             </div>
 
             {/* Technical Quick-Specs */}
-            <div className="hidden lg:block bg-muted/30 border border-border rounded-2xl p-6">
+            <div className="hidden lg:block bg-muted/20 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
                <div className="flex items-center gap-3 mb-4 text-muted-foreground">
                   <ShieldCheck className="w-4 h-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Metadata Verified</span>
@@ -164,6 +168,16 @@ export default function MovieDetailPage() {
                   </div>
                 )}
                 
+                {movie.available && (
+                  <button 
+                    onClick={() => setShowPartyModal(true)}
+                    className="group w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-[#E50914] hover:bg-[#f6121d] text-white px-8 py-6 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-[0_0_40px_rgba(229,9,20,0.4)]"
+                  >
+                    <Users className="w-5 h-5" />
+                    WATCH PARTY
+                  </button>
+                )}
+                
                 <button className="h-16 w-16 flex items-center justify-center rounded-full bg-muted border border-border hover:bg-muted/80 transition-all active:scale-90">
                    <Share2 className="w-6 h-6 text-foreground" />
                 </button>
@@ -181,6 +195,12 @@ export default function MovieDetailPage() {
           </div>
         </div>
       </div>
+
+      <WatchPartyModal 
+        isOpen={showPartyModal} 
+        onClose={() => setShowPartyModal(false)} 
+        initialMedia={movie as any} 
+      />
     </div>
   );
 }

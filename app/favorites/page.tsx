@@ -44,7 +44,7 @@ export default function FavoritesPage() {
   }, [favorites, sortParam]);
 
   return (
-    <div className="min-h-screen bg-background pt-28 px-4 md:px-8 lg:px-14 pb-20">
+    <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-20">
       {/* Clean Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">

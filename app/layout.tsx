@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
-import AppShell from "@/components/layout/AppShell";
+import NavBar from "@/components/layout/NavBar";
 import { BackgroundProvider } from "@/components/BackgroundContext";
 import { cn } from "@/lib/utils";
 
@@ -19,11 +19,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full relative">
+        {/* Aurora gradient background */}
+        <div className="aurora-bg" />
+        
         <BackgroundProvider>
-          <AppShell>
+          <NavBar />
+          <main className="relative z-10 min-h-screen">
             {children}
-          </AppShell>
+          </main>
         </BackgroundProvider>
       </body>
     </html>

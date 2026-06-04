@@ -29,7 +29,15 @@ interface ActiveRoom {
 type Tab = "create" | "join";
 type CreateStep = "browse" | "episodes" | "name" | "ready";
 
-export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function WatchPartyModal({ 
+  isOpen, 
+  onClose,
+  initialMedia 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  initialMedia?: MediaItem | null;
+}) {
   const router = useRouter();
   const { createRoom, listRooms, members, isConnected } = useWatchParty(isOpen);
 
@@ -91,8 +99,13 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
   useEffect(() => {
     if (isOpen) {
       setTab("create");
-      setCreateStep("browse");
-      setSelectedMedia(null);
+      if (initialMedia) {
+        setSelectedMedia(initialMedia);
+        setCreateStep("name");
+      } else {
+        setCreateStep("browse");
+        setSelectedMedia(null);
+      }
       setSelectedSeries(null);
       setHostName("");
       setRoomCode("");
@@ -101,7 +114,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
       setSearchQuery("");
       setBrowseTab("movies");
     }
-  }, [isOpen]);
+  }, [isOpen, initialMedia]);
 
   if (!isOpen || !mounted) return null;
 
@@ -291,7 +304,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                             {m.poster ? (
                               <img src={m.poster} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+                              <div className="w-full h-full bg-white/5 flex items-center justify-center">
                                 <Film className="w-6 h-6 text-white/20" />
                               </div>
                             )}
@@ -319,7 +332,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                             {series.poster ? (
                               <img src={series.poster} alt="" className="w-12 h-16 rounded object-cover shrink-0" />
                             ) : (
-                              <div className="w-12 h-16 bg-zinc-800 rounded flex items-center justify-center shrink-0">
+                              <div className="w-12 h-16 bg-white/5 rounded flex items-center justify-center shrink-0">
                                 <Tv className="w-5 h-5 text-white/20" />
                               </div>
                             )}
@@ -418,7 +431,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                       onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                       placeholder="Your name"
                       autoFocus
-                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-white/50"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors"
                     />
                   </div>
                   <button
@@ -440,10 +453,10 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="text" value={shareLink} readOnly
-                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-white/70 text-xs font-mono truncate"
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white/70 text-xs font-mono truncate"
                     />
                     <button onClick={handleCopy}
-                      className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-white px-3 py-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0"
+                      className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-3 py-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0"
                     >
                       {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                     </button>
@@ -475,7 +488,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
                     placeholder="ABC123"
-                    className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white text-sm font-mono tracking-widest text-center focus:outline-none focus:border-white/50"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm font-mono tracking-widest text-center focus:outline-none focus:border-white/30 transition-colors"
                   />
                 </div>
                 <input
@@ -483,7 +496,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value.slice(0, 20))}
                   placeholder="Your name"
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-white/50"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors"
                 />
                 <button
                   onClick={handleJoin}
@@ -518,7 +531,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                         {room.mediaPoster ? (
                           <img src={room.mediaPoster} alt="" className="w-10 h-14 rounded object-cover shrink-0" />
                         ) : (
-                          <div className="w-10 h-14 bg-zinc-800 rounded flex items-center justify-center shrink-0">
+                          <div className="w-10 h-14 bg-white/10 rounded flex items-center justify-center shrink-0">
                             <Play className="w-4 h-4 text-white/20" />
                           </div>
                         )}

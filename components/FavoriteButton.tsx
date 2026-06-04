@@ -45,15 +45,15 @@ export default function FavoriteButton({ mediaId, initialIsFavorite, className =
   return (
     <button
       onClick={handleClick}
-      className={`p-1.5 rounded-full backdrop-blur-sm transition-all duration-300 ${
+      className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 ${
         isFavorite 
-          ? "bg-black/50 text-[#E50914] hover:bg-black/70 hover:scale-110" 
-          : "bg-black/20 text-white hover:bg-black/50 hover:scale-110 hover:text-[#E50914]"
+          ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 shadow-[0_0_12px_rgba(139,92,246,0.2)] hover:bg-violet-500/30 hover:scale-110" 
+          : "bg-white/10 text-white/60 border border-white/10 hover:text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/20 hover:scale-110"
       } ${isAnimating ? "scale-125" : ""} ${className}`}
       title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
     >
       <Heart
-        className="w-5 h-5 transition-all duration-300"
+        className="w-4 h-4 transition-all duration-300"
         fill={isFavorite ? "currentColor" : "none"}
       />
     </button>

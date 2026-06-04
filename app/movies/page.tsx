@@ -4,9 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import PosterCard from "@/components/PosterCard";
 import { Film, Filter, Users } from "lucide-react";
 import SortDropdown, { SortOption } from "@/components/SortDropdown";
-import dynamic from "next/dynamic";
 
-const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -14,7 +12,6 @@ export default function MoviesPage() {
   const [movies, setMovies] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
-  const [showPartyModal, setShowPartyModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/media?type=movie")
@@ -66,13 +63,6 @@ export default function MoviesPage() {
               {/* <SortDropdown pageKey="movies" onSortChange={setSortParam} /> */}
             </div>
           )}
-          <button
-            onClick={() => setShowPartyModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#E50914] hover:bg-[#f6121d] text-white text-sm font-semibold rounded-full transition-colors"
-          >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Watch Party</span>
-          </button>
         </div>
       </div>
 
@@ -91,8 +81,6 @@ export default function MoviesPage() {
           ))}
         </div>
       )}
-
-      <WatchPartyModal isOpen={showPartyModal} onClose={() => setShowPartyModal(false)} />
     </div>
   );
 }

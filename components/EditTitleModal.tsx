@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Sparkles } from "lucide-react";
 
 interface MediaEntry {
   id: number;
@@ -61,70 +61,73 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-default">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 cursor-default animate-in fade-in duration-200">
       <div 
-        className="bg-[#141414] border border-white/10 rounded-xl w-full max-w-md overflow-hidden shadow-2xl relative"
+        className="glass-heavy w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">Edit Title</h2>
+        <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-violet-400" />
+            Edit Title
+          </h2>
           <button 
             onClick={(e) => { e.preventDefault(); onClose(); }}
-            className="text-white/50 hover:text-white transition-colors p-1"
+            className="text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/[0.06]"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-5 space-y-5">
-          <div className="space-y-1">
-            <p className="text-sm text-white/50">Filename</p>
-            <p className="text-sm text-white font-mono break-all bg-black/50 p-2 rounded border border-white/5">
+          <div className="space-y-1.5">
+            <p className="text-xs text-white/40 font-medium">Filename</p>
+            <p className="text-xs text-white/60 font-mono break-all glass rounded-lg p-3">
               {media.filename}
             </p>
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-medium text-white/80 block">
+            <label className="text-xs font-medium text-white/50 block">
               Title Suggestions
             </label>
             <div className="grid gap-2">
               <button 
                 onClick={(e) => { e.preventDefault(); setCustomTitle(parsedSuggestion); }}
-                className="text-left px-4 py-2 rounded border border-white/10 hover:border-[#00E676] bg-white/5 hover:bg-[#00E676]/10 text-white text-sm transition-all"
+                className="text-left px-4 py-3 rounded-xl glass hover:border-violet-500/20 text-white text-sm transition-all"
               >
-                <span className="text-[#00E676] text-xs font-bold uppercase block mb-0.5">Parsed from Filename</span>
-                {parsedSuggestion || "N/A"}
+                <span className="text-violet-400 text-[10px] font-semibold uppercase block mb-1">Parsed from Filename</span>
+                <span className="text-white/80">{parsedSuggestion || "N/A"}</span>
               </button>
               
               <button 
                 onClick={(e) => { e.preventDefault(); setCustomTitle(media.title); }}
-                className="text-left px-4 py-2 rounded border border-white/10 hover:border-[#00E676] bg-white/5 hover:bg-[#00E676]/10 text-white text-sm transition-all"
+                className="text-left px-4 py-3 rounded-xl glass hover:border-violet-500/20 text-white text-sm transition-all"
               >
-                <span className="text-white/50 text-xs font-bold uppercase block mb-0.5">Current (OMDB)</span>
-                {media.title}
+                <span className="text-white/30 text-[10px] font-semibold uppercase block mb-1">Current (OMDB)</span>
+                <span className="text-white/80">{media.title}</span>
               </button>
             </div>
           </div>
 
           <div className="space-y-2 pt-2">
-            <label className="text-sm font-medium text-white/80 block">
+            <label className="text-xs font-medium text-white/50 block">
               Custom Title
             </label>
             <input 
               type="text" 
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded px-4 py-2 text-white focus:outline-none focus:border-[#00E676]"
+              className="w-full glass rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/30 transition-colors"
               placeholder="Type correct title..."
             />
           </div>
         </div>
 
-        <div className="p-5 border-t border-white/10 flex justify-end gap-3 bg-black/20">
+        <div className="p-5 border-t border-white/[0.06] flex justify-end gap-3">
           <button 
             onClick={(e) => { e.preventDefault(); onClose(); }}
-            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+            className="px-4 py-2.5 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
             disabled={isSaving}
           >
             Cancel
@@ -132,7 +135,7 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
           <button 
             onClick={(e) => { e.preventDefault(); handleSave(); }}
             disabled={isSaving || !customTitle.trim()}
-            className="flex items-center gap-2 bg-[#00E676] hover:bg-[#00E676]/80 text-black px-6 py-2 rounded font-bold text-sm transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-400 hover:to-violet-500 text-white px-6 py-2.5 rounded-xl font-medium text-sm transition-all disabled:opacity-50 shadow-lg shadow-violet-500/20"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Save & Refetch

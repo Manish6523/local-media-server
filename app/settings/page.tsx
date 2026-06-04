@@ -101,7 +101,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen  pt-14 px-4 md:px-8 lg:px-12 pb-16">
+    <div className="min-h-screen  pt-24 px-4 md:px-8 lg:px-12 pb-16">
       <div className="max-w-4xl mx-auto space-y-12">
         
         {/* Header */}

@@ -65,10 +65,10 @@ export default function GenreFilter({ onFilterChange, storageKey }: GenreFilterP
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
       <button
         onClick={clearAll}
-        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
+        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border transition-all duration-300 ${
           active.length === 0
-            ? "bg-[#E50914] text-white border-[#E50914]"
-            : "bg-white/5 text-white/40 border-white/10 hover:border-[#E50914]/50 hover:text-white/70"
+            ? "bg-violet-500/20 text-violet-300 border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+            : "glass text-white/40 hover:text-white/60 hover:border-white/10"
         }`}
       >
         All
@@ -77,10 +77,10 @@ export default function GenreFilter({ onFilterChange, storageKey }: GenreFilterP
         <button
           key={genre}
           onClick={() => toggle(genre)}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
+          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border transition-all duration-300 ${
             active.includes(genre)
-              ? "bg-[#E50914] text-white border-[#E50914]"
-              : "bg-white/5 text-white/40 border-white/10 hover:border-[#E50914]/50 hover:text-white/70"
+              ? "bg-violet-500/20 text-violet-300 border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+              : "glass text-white/40 hover:text-white/60 hover:border-white/10"
           }`}
         >
           {genre}

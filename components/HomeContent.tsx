@@ -83,23 +83,30 @@ export default function HomeContent() {
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className="w-full min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
+          <span className="text-sm text-white/30 font-medium">Loading your library...</span>
+        </div>
       </div>
     );
   }
 
   if (searchQuery) {
     return (
-      <div className="pb-16">
-        <h1 className="text-2xl font-bold text-white mb-6">
-          Search results for &quot;{searchQuery}&quot;
-          <span className="text-white/50 text-lg font-normal ml-3">
-            ({media.length} result{media.length !== 1 ? "s" : ""})
+      <div className="pt-24 md:pt-28 px-4 md:px-8 lg:px-12 pb-28">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-white mb-1">
+            Search results for &quot;{searchQuery}&quot;
+          </h1>
+          <span className="text-sm text-white/30">
+            {media.length} result{media.length !== 1 ? "s" : ""} found
           </span>
-        </h1>
+        </div>
         {media.length === 0 ? (
-          <p className="text-white/50">No results found.</p>
+          <div className="glass rounded-2xl p-16 text-center">
+            <p className="text-white/40">No results found.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5">
             {media.map((item) => (
@@ -112,25 +119,21 @@ export default function HomeContent() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-6 lg:gap-8 h-full">
-      {/* Left Column - Should be below Hero on mobile */}
-      <div className="md:col-span-4 lg:col-span-3 flex flex-col gap-8 order-2 md:order-1">
-        <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
-        
-        {/* Replacing New Trailer with Movies */}
-        <div className="bg-white/5 border border-white/5 rounded-3xl p-5 shadow-xl">
-          <MiniMoviesList items={movies} />
-        </div>
-      </div>
+    <div className="flex flex-col">
+      {/* Hero — full width, no padding */}
+      <HeroFeatured items={carouselItems} />
 
-      {/* Right Column - Should be at the top on mobile */}
-      <div className="md:col-span-8 lg:col-span-9 flex flex-col min-w-0 order-1 md:order-2 gap-0">
-        <HeroFeatured items={carouselItems} />
+      {/* Content sections */}
+      <div className="px-4 md:px-8 lg:px-12 pb-28 space-y-10 -mt-8 relative z-10">
+        {/* Continue Watching */}
+        <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
+
+        {/* Movies */}
+        <MiniMoviesList items={movies} />
+
+        {/* Series */}
         <SeriesRow items={uniqueShows} />
       </div>
-
-      {/* Commented out as requested */}
-      {/* <BentoGrid continueWatching={continueWatching} recentlyAdded={recentlyAdded} /> */}
     </div>
   );
 }

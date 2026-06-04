@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Info, Layers } from "lucide-react";
+import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Info, Layers, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import dynamic from "next/dynamic";
+
+const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -15,6 +18,8 @@ export default function ShowDetailPage() {
   const [episodes, setEpisodes] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSeason, setActiveSeason] = useState<number>(1);
+  const [showPartyModal, setShowPartyModal] = useState(false);
+  const [selectedEpisodeForParty, setSelectedEpisodeForParty] = useState<MediaEntry | null>(null);
 
   useEffect(() => {
     fetch("/api/media?type=show")
@@ -53,7 +58,7 @@ export default function ShowDetailPage() {
     .sort((a, b) => (a.episode_start ?? 0) - (b.episode_start ?? 0));
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
+    <div className="min-h-screen text-foreground selection:bg-primary/30">
       {/* Hero Section */}
       <div className="relative h-[65vh] md:h-[80vh] w-full overflow-hidden">
         <Image
@@ -63,8 +68,8 @@ export default function ShowDetailPage() {
           className="object-cover object-top opacity-50 scale-105 transition-transform duration-1000 group-hover:scale-100"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-transparent to-transparent" />
         
         <div className="absolute bottom-0 left-0 w-full px-6 md:px-12 lg:px-20 pb-16">
           <Link href="/shows" className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all mb-8">
@@ -106,7 +111,7 @@ export default function ShowDetailPage() {
               <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
             </div>
             
-            <div className="bg-muted/30 backdrop-blur-xl rounded-2xl p-8 border border-border">
+            <div className="bg-muted/20 backdrop-blur-xl rounded-2xl p-8 border border-white/10 shadow-xl">
               <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground mb-4 flex items-center gap-2">
                 <Info className="w-4 h-4" /> Storyline
               </h3>
@@ -128,7 +133,7 @@ export default function ShowDetailPage() {
 
           {/* Right Section: Seasons & Episodes */}
           <div className="lg:col-span-8">
-            <div className="sticky top-20 z-30 bg-background/80 backdrop-blur-md py-4 mb-10 border-b border-border flex items-center gap-8 overflow-x-auto no-scrollbar">
+            <div className="sticky top-20 z-30 bg-background/50 backdrop-blur-xl py-4 mb-10 border-b border-white/10 flex items-center gap-8 overflow-x-auto no-scrollbar shadow-sm">
               {seasons.map((season) => (
                 <button
                   key={season}
@@ -148,9 +153,9 @@ export default function ShowDetailPage() {
               {seasonEpisodes.map((ep) => (
                 <div
                   key={ep.id}
-                  className={`group flex flex-col md:flex-row gap-6 p-4 rounded-2xl transition-all border ${
+                  className={`group flex flex-col md:flex-row gap-6 p-4 rounded-2xl transition-all border shadow-lg ${
                     ep.available 
-                    ? "bg-muted/10 border-border hover:bg-muted/30 hover:border-primary/20" 
+                    ? "bg-white/5 backdrop-blur-md border-white/10 hover:bg-white/10 hover:border-white/20" 
                     : "opacity-40 grayscale pointer-events-none border-transparent"
                   }`}
                 >
@@ -195,6 +200,15 @@ export default function ShowDetailPage() {
                     <div className="mt-4 flex items-center gap-4 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {ep.runtime}m</span>
                       <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> MKV</span>
+                      
+                      {ep.available && (
+                        <button 
+                          onClick={() => { setSelectedEpisodeForParty(ep); setShowPartyModal(true); }}
+                          className="flex items-center gap-1.5 ml-auto text-[#E50914] hover:text-[#f6121d] transition-colors"
+                        >
+                          <Users className="w-3.5 h-3.5" /> Watch Party
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -203,6 +217,12 @@ export default function ShowDetailPage() {
           </div>
         </div>
       </div>
+
+      <WatchPartyModal 
+        isOpen={showPartyModal} 
+        onClose={() => { setShowPartyModal(false); setTimeout(() => setSelectedEpisodeForParty(null), 300); }} 
+        initialMedia={selectedEpisodeForParty as any} 
+      />
     </div>
   );
 }

@@ -283,6 +283,12 @@ export function deleteMissingMedia(source: "local" | "hdd", validPaths: string[]
   
   for (const row of rows) {
     if (!validSet.has(row.filepath)) {
+      // Delete child rows first to satisfy foreign key constraints
+      db.delete(schema.episodes).where(eq(schema.episodes.mediaAssetId, row.id)).run();
+      db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, row.id)).run();
+      db.delete(schema.playbackProgress).where(eq(schema.playbackProgress.mediaAssetId, row.id)).run();
+      
+      // Now safe to delete parent
       db.delete(schema.mediaAssets).where(eq(schema.mediaAssets.id, row.id)).run();
       deletedCount++;
     }
@@ -293,11 +299,13 @@ export function deleteMissingMedia(source: "local" | "hdd", validPaths: string[]
 
 export function clearMediaLibrary(): void {
   const { db } = getDb();
+  // Delete child tables first
+  db.delete(schema.playbackProgress).run();
+  db.delete(schema.movies).run();
+  db.delete(schema.episodes).run();
+  // Delete parent tables
   db.delete(schema.mediaAssets).run();
   db.delete(schema.tvShows).run();
-  db.delete(schema.episodes).run();
-  db.delete(schema.movies).run();
-  db.delete(schema.playbackProgress).run();
 }
 
 export function getMediaStats(): { totalMovies: number; totalShows: number; totalFiles: number } {

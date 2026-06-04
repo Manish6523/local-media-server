@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Film, Tv } from "lucide-react";
+import { Film, Tv, Sparkles, Loader2 } from "lucide-react";
 import type { MediaEntry } from "@/lib/db";
 
 export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (o: boolean) => void }) {
@@ -54,15 +54,22 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={setOpen} commandProps={{ shouldFilter: false }}>
       <CommandInput 
-        placeholder="Type a movie or show name..." 
+        placeholder="Search movies, shows..." 
         value={query}
         onValueChange={setQuery}
       />
       <CommandList>
         <CommandEmpty>
-          {loading ? "Searching..." : "No results found."}
+          {loading ? (
+            <div className="flex items-center gap-2 justify-center py-6 text-white/40">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Searching...</span>
+            </div>
+          ) : (
+            <div className="py-6 text-center text-sm text-white/30">No results found.</div>
+          )}
         </CommandEmpty>
         
         {results.length > 0 && (
@@ -71,16 +78,20 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
               <CommandItem
                 key={item.id}
                 onSelect={() => handleSelect(item)}
-                className="flex items-center gap-3 cursor-pointer p-3"
+                className="flex items-center gap-4 cursor-pointer p-2 rounded-xl mx-2 my-1 transition-all duration-200 data-[selected=true]:bg-white/10 data-[selected=true]:scale-[1.01]"
               >
-                {item.type === "movie" ? (
-                  <Film className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <Tv className="w-4 h-4 text-muted-foreground" />
-                )}
-                <div className="flex flex-col">
-                  <span className="font-medium text-foreground">{item.title}</span>
-                  <span className="text-xs text-muted-foreground">{item.year} • {item.type.toUpperCase()}</span>
+                <div className=" h-14 rounded overflow-hidden glass flex items-center justify-center shrink-0 bg-black/20">
+                  {item.poster ? (
+                    <img src={item.poster} alt="" className="w-full h-full object-contain" />
+                  ) : item.type === "movie" ? (
+                    <Film className="w-4 h-4 text-violet-400" />
+                  ) : (
+                    <Tv className="w-4 h-4 text-cyan-400" />
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-medium text-white/90 truncate">{item.title}</span>
+                  <span className="text-xs text-white/30">{item.year} • {item.type === "movie" ? "Movie" : "TV Show"}</span>
                 </div>
               </CommandItem>
             ))}

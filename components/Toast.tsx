@@ -22,10 +22,10 @@ export function useToast() {
 }
 
 const TOAST_COLORS: Record<ToastType, { bg: string; border: string; icon: string }> = {
-  success: { bg: "bg-green-500/10", border: "border-green-500/30", icon: "text-green-500" },
-  error: { bg: "bg-red-500/10", border: "border-red-500/30", icon: "text-red-500" },
-  info: { bg: "bg-blue-500/10", border: "border-blue-500/30", icon: "text-blue-500" },
-  warning: { bg: "bg-yellow-500/10", border: "border-yellow-500/30", icon: "text-yellow-500" },
+  success: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", icon: "text-emerald-400" },
+  error: { bg: "bg-red-500/10", border: "border-red-500/20", icon: "text-red-400" },
+  info: { bg: "bg-violet-500/10", border: "border-violet-500/20", icon: "text-violet-400" },
+  warning: { bg: "bg-amber-500/10", border: "border-amber-500/20", icon: "text-amber-400" },
 };
 
 const TOAST_ICONS: Record<ToastType, typeof CheckCircle> = {
@@ -68,13 +68,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md shadow-xl ${colors.bg} ${colors.border} animate-in slide-in-from-right-5 fade-in duration-300 max-w-sm`}
+              className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-xl shadow-2xl ${colors.bg} ${colors.border} animate-in slide-in-from-right-5 fade-in duration-300 max-w-sm`}
             >
               <Icon className={`w-4 h-4 flex-shrink-0 ${colors.icon}`} />
-              <span className="text-sm text-white font-medium flex-1">{t.message}</span>
+              <span className="text-sm text-white/80 font-medium flex-1">{t.message}</span>
               <button
                 onClick={() => removeToast(t.id)}
-                className="text-white/40 hover:text-white transition-colors flex-shrink-0"
+                className="text-white/30 hover:text-white transition-colors flex-shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

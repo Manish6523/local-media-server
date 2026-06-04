@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Play, Download, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Play, ChevronLeft, ChevronRight, Star, Clock } from "lucide-react";
 import { useBackground } from "@/components/BackgroundContext";
 import type { MediaEntry } from "@/lib/db";
 
@@ -18,84 +16,166 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
     }
   }, [currentIndex, items, setBgImage]);
 
-  if (!items || items.length === 0) return null;
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % items.length);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [items.length]);
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
+  }, [items.length]);
+
+  const handlePrev = useCallback(() => {
+    setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
+  }, [items.length]);
+
+  if (!items || items.length === 0) {
+    return (
+      <div className="relative w-full min-h-[60vh] flex items-center justify-center">
+        <div className="text-center px-8 glass rounded-3xl p-12 max-w-lg">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">VidLock</span>
+          </h1>
+          <p className="text-white/40 mb-6">
+            Your personal offline media library. Scan your files to get started.
+          </p>
+          <Link href="/settings" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 text-white font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/20">
+            <Play className="w-4 h-4 fill-current" />
+            Get Started
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const currentItem = items[currentIndex];
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
-  };
-
   return (
-    <div className="relative w-full aspect-[21/9] min-h-[350px] md:min-h-[400px] rounded-3xl overflow-hidden group border border-white/10 shadow-2xl bg-black">
-      {/* Background Image */}
-      <img
-        key={currentItem.id}
-        src={currentItem.backdrop || currentItem.poster || ""}
-        alt={currentItem.title}
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-[1.02] animate-in fade-in duration-500 opacity-90"
-      />
-      
-      {/* Gradients */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/30 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
+    <div className="relative w-full min-h-[75vh] md:min-h-[85vh] overflow-hidden">
+      {/* Background image with crossfade */}
+      {items.map((item, idx) => (
+        <div
+          key={item.id}
+          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+          style={{ opacity: idx === currentIndex ? 1 : 0 }}
+        >
+          <img
+            src={item.backdrop || item.poster || ""}
+            alt={item.title}
+            className="w-full h-full object-cover object-center scale-105"
+          />
+        </div>
+      ))}
 
-      {/* Top Left Badge */}
-      {/* <div className="absolute top-6 left-8">
-        <Badge variant="secondary" className="bg-black/40 hover:bg-black/40 backdrop-blur-md border-white/10 text-white gap-2 py-1.5 px-3">
-          <span className="text-sm">🔥</span> Trending Now
-        </Badge>
-      </div> */}
+      {/* Gradient overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-background/20 z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/30 to-transparent z-[1]" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-[1]" />
 
       {/* Content */}
-      <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row items-end justify-between gap-6">
-        <div className="flex-1 max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight drop-shadow-md">
+      <div className="relative z-10 flex items-end min-h-[75vh] md:min-h-[85vh] px-4 md:px-8 lg:px-12 pb-20 md:pb-28">
+        <div className="max-w-2xl">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 mb-5 text-xs font-medium text-white/60">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+            Featured
+          </div>
+
+          {/* Title */}
+          <h1
+            key={`title-${currentItem.id}`}
+            className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-[0.95] tracking-tight mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700"
+          >
             {currentItem.title}
           </h1>
-          <p className="text-xs md:text-sm text-white/70 mb-4 font-medium flex items-center gap-2 drop-shadow-sm">
-            <span>{currentItem.year || "Unknown"}</span>
-            <span className="w-1 h-1 rounded-full bg-white/30" />
-            <span>{currentItem.genres?.split(',')[0] || "Drama"}</span>
-            <span className="w-1 h-1 rounded-full bg-white/30" />
-            <span>2h 2m</span> {/* Static for now */}
-          </p>
-          <p className="text-sm text-white/60 line-clamp-2 md:line-clamp-3 mb-6 leading-relaxed max-w-lg drop-shadow-sm">
-            {currentItem.overview || "No description available."}
-          </p>
-          
-          <div className="flex items-center gap-3">
-            <Button render={<Link href={`/player/${currentItem.id}`} />} nativeButton={false} size="lg" className="rounded-full font-semibold gap-2">
+
+          {/* Metadata */}
+          <div className="flex items-center gap-3 text-sm text-white/40 font-medium mb-4 flex-wrap animate-in fade-in slide-in-from-bottom-3 duration-700 delay-100">
+            {currentItem.year && <span>{currentItem.year}</span>}
+            {currentItem.rating && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span className="flex items-center gap-1 text-violet-300">
+                  <Star className="w-3.5 h-3.5 fill-current" />
+                  {currentItem.rating.split('/')[0]}
+                </span>
+              </>
+            )}
+            {currentItem.genres && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span>{currentItem.genres.split(",").slice(0, 2).map(g => g.trim()).join(" / ")}</span>
+              </>
+            )}
+            {currentItem.runtime && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {Math.floor(currentItem.runtime / 60)}h {currentItem.runtime % 60}m
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Overview */}
+          {currentItem.overview && (
+            <p className="text-sm text-white/35 line-clamp-2 max-w-lg leading-relaxed mb-6 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-200">
+              {currentItem.overview}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-300">
+            {currentItem.available === 1 && (
+              <Link
+                href={`/player/${currentItem.id}`}
+                className="inline-flex items-center gap-2.5 px-7 py-3 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 text-white font-semibold text-sm hover:from-violet-400 hover:to-violet-500 transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
+              >
                 <Play className="w-4 h-4 fill-current" />
-                Watch
-            </Button>
-            
+                Watch Now
+              </Link>
+            )}
+            <Link
+              href={`/${currentItem.type === "show" ? "shows" : "movies"}/${encodeURIComponent(currentItem.title.toLowerCase().replace(/\s+/g, "-"))}`}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-full glass text-white/70 text-sm font-medium hover:text-white hover:bg-white/[0.08] transition-all"
+            >
+              Details
+            </Link>
           </div>
         </div>
 
-        {/* Carousel Controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handlePrev}
-            className="rounded-full w-10 h-10 bg-black/40 backdrop-blur-md border-white/10 text-white hover:bg-black/60 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleNext}
-            className="rounded-full w-10 h-10 bg-black/40 backdrop-blur-md border-white/10 text-white hover:bg-black/60 hover:text-white transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
-        </div>
+        {/* Carousel controls */}
+        {items.length > 1 && (
+          <div className="absolute bottom-20 md:bottom-28 right-4 md:right-8 lg:right-12 flex items-center gap-3 z-20">
+            {/* Dots */}
+            <div className="flex items-center gap-1.5 mr-2">
+              {items.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`hero-dot ${idx === currentIndex ? "active" : ""}`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={handlePrev}
+              className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
