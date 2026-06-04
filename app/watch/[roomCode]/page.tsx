@@ -256,12 +256,13 @@ export default function WatchPartyPage() {
           }
           video.play().catch(() => {});
         } else if (type === "pause") {
-          // Set time BEFORE pausing so guest pauses at host's exact frame
+          // Pause only — NEVER trigger a transcode restart.
+          // Only adjust currentTime if the relative position is within the current buffer.
           if (relativeTime >= 0 && relativeTime < (video.duration || Infinity)) {
             video.currentTime = relativeTime;
-          } else {
-            if (playerSeekRef.current) playerSeekRef.current(currentTime);
           }
+          // If relativeTime is out of range, just pause at current position.
+          // Do NOT call playerSeekRef — that would kill the active transcode.
           video.pause();
         }
 

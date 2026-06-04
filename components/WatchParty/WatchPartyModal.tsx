@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, Users, Copy, Check, Loader2, Search, Play, Tv } from "lucide-react";
+import { X, Users, Copy, Check, Loader2, Search, Play, Tv, ChevronLeft, Film } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useWatchParty } from "@/hooks/useWatchParty";
 import MembersList from "./MembersList";
@@ -14,6 +14,7 @@ interface MediaItem {
   poster: string | null;
   season: number | null;
   episode_start: number | null;
+  episode_end: number | null;
 }
 
 interface ActiveRoom {
@@ -26,23 +27,25 @@ interface ActiveRoom {
 }
 
 type Tab = "create" | "join";
-type CreateStep = "pick" | "name" | "ready";
+type CreateStep = "browse" | "episodes" | "name" | "ready";
 
 export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const router = useRouter();
   const { createRoom, listRooms, members, isConnected } = useWatchParty(isOpen);
 
   const [tab, setTab] = useState<Tab>("create");
-  const [createStep, setCreateStep] = useState<CreateStep>("pick");
+  const [createStep, setCreateStep] = useState<CreateStep>("browse");
 
   // Create tab state
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedSeries, setSelectedSeries] = useState<string | null>(null);
   const [hostName, setHostName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [browseTab, setBrowseTab] = useState<"movies" | "series">("movies");
 
   // Join tab state
   const [activeRooms, setActiveRooms] = useState<ActiveRoom[]>([]);
@@ -67,7 +70,6 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
     if (!isOpen || tab !== "join" || !isConnected) return;
     setLoadingRooms(true);
     listRooms().then(async (rooms) => {
-      // Enrich with media titles
       const enriched: ActiveRoom[] = await Promise.all(
         rooms.map(async (r) => {
           try {
@@ -89,22 +91,82 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
   useEffect(() => {
     if (isOpen) {
       setTab("create");
-      setCreateStep("pick");
+      setCreateStep("browse");
       setSelectedMedia(null);
+      setSelectedSeries(null);
       setHostName("");
       setRoomCode("");
       setJoinCode("");
       setJoinName("");
+      setSearchQuery("");
+      setBrowseTab("movies");
     }
   }, [isOpen]);
 
   if (!isOpen || !mounted) return null;
 
-  const filteredMedia = mediaList.filter((m) =>
-    m.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // Split media into movies and series
+  const movies = mediaList.filter((m) => m.type === "movie");
+  const allShows = mediaList.filter((m) => m.type === "show");
+
+  // Group shows by title for the browse view
+  const seriesGrouped = Object.values(
+    allShows.reduce((acc, item) => {
+      if (!acc[item.title]) acc[item.title] = [];
+      acc[item.title].push(item);
+      return acc;
+    }, {} as Record<string, MediaItem[]>)
   );
 
+  const seriesCovers = seriesGrouped.map((episodes) => ({
+    title: episodes[0].title,
+    poster: episodes[0].poster,
+    episodeCount: episodes.length,
+    episodes,
+  }));
+
+  // Filter by search
+  const filteredMovies = movies.filter((m) =>
+    m.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredSeries = seriesCovers.filter((s) =>
+    s.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Get episodes for selected series
+  const selectedSeriesEpisodes = selectedSeries
+    ? allShows
+        .filter((m) => m.title === selectedSeries)
+        .sort((a, b) => {
+          if ((a.season || 0) !== (b.season || 0)) return (a.season || 0) - (b.season || 0);
+          return (a.episode_start || 0) - (b.episode_start || 0);
+        })
+    : [];
+
+  // Group episodes by season
+  const seasonGroups = selectedSeriesEpisodes.reduce((acc, ep) => {
+    const season = ep.season || 1;
+    if (!acc[season]) acc[season] = [];
+    acc[season].push(ep);
+    return acc;
+  }, {} as Record<number, MediaItem[]>);
+
   const shareLink = typeof window !== "undefined" ? `${window.location.origin}/join/${roomCode}` : "";
+
+  const handleSelectMovie = (media: MediaItem) => {
+    setSelectedMedia(media);
+    setCreateStep("name");
+  };
+
+  const handleSelectSeries = (title: string) => {
+    setSelectedSeries(title);
+    setCreateStep("episodes");
+  };
+
+  const handleSelectEpisode = (episode: MediaItem) => {
+    setSelectedMedia(episode);
+    setCreateStep("name");
+  };
 
   const handleCreate = async () => {
     if (!selectedMedia || !hostName.trim()) return;
@@ -179,9 +241,11 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
         <div className="flex-1 overflow-y-auto p-5">
           {tab === "create" ? (
             <>
-              {createStep === "pick" && (
+              {/* ─── STEP: BROWSE ─── */}
+              {createStep === "browse" && (
                 <div className="space-y-4">
                   <p className="text-white/50 text-sm">Choose what to watch</p>
+
                   {/* Search */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -193,52 +257,156 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                       className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-white/30"
                     />
                   </div>
-                  {/* Media grid */}
-                  <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
-                    {filteredMedia.slice(0, 30).map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setSelectedMedia(m)}
-                        className={`relative rounded-lg overflow-hidden aspect-[2/3] border-2 transition-all ${
-                          selectedMedia?.id === m.id
-                            ? "border-[#E50914] ring-2 ring-[#E50914]/30"
-                            : "border-transparent hover:border-white/20"
-                        }`}
-                      >
-                        {m.poster ? (
-                          <img src={m.poster} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                            {m.type === "show" ? <Tv className="w-6 h-6 text-white/20" /> : <Play className="w-6 h-6 text-white/20" />}
-                          </div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
-                          <p className="text-white text-[10px] font-medium line-clamp-2 leading-tight">{m.title}</p>
-                          {m.season && <p className="text-white/40 text-[9px]">S{m.season} E{m.episode_start}</p>}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  {selectedMedia && (
+
+                  {/* Movies / Series tabs */}
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => setCreateStep("name")}
-                      className="w-full bg-[#E50914] hover:bg-[#f6121d] text-white font-medium py-3 rounded-lg transition-colors"
+                      onClick={() => setBrowseTab("movies")}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        browseTab === "movies" ? "bg-[#E50914] text-white" : "bg-white/5 text-white/50 hover:text-white"
+                      }`}
                     >
-                      Next — {selectedMedia.title}
+                      <Film className="w-3.5 h-3.5" /> Movies ({filteredMovies.length})
                     </button>
-                  )}
+                    <button
+                      onClick={() => setBrowseTab("series")}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        browseTab === "series" ? "bg-[#E50914] text-white" : "bg-white/5 text-white/50 hover:text-white"
+                      }`}
+                    >
+                      <Tv className="w-3.5 h-3.5" /> Series ({filteredSeries.length})
+                    </button>
+                  </div>
+
+                  {/* Content grid */}
+                  <div className="max-h-[320px] overflow-y-auto">
+                    {browseTab === "movies" ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {filteredMovies.slice(0, 30).map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => handleSelectMovie(m)}
+                            className="relative rounded-lg overflow-hidden aspect-[2/3] border-2 border-transparent hover:border-[#E50914]/50 transition-all group"
+                          >
+                            {m.poster ? (
+                              <img src={m.poster} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+                                <Film className="w-6 h-6 text-white/20" />
+                              </div>
+                            )}
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                              <p className="text-white text-[10px] font-medium line-clamp-2 leading-tight">{m.title}</p>
+                            </div>
+                            {/* Play overlay */}
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="w-8 h-8 rounded-full bg-[#E50914] flex items-center justify-center">
+                                <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Series — show one card per series */
+                      <div className="space-y-2">
+                        {filteredSeries.map((series) => (
+                          <button
+                            key={series.title}
+                            onClick={() => handleSelectSeries(series.title)}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all text-left"
+                          >
+                            {series.poster ? (
+                              <img src={series.poster} alt="" className="w-12 h-16 rounded object-cover shrink-0" />
+                            ) : (
+                              <div className="w-12 h-16 bg-zinc-800 rounded flex items-center justify-center shrink-0">
+                                <Tv className="w-5 h-5 text-white/20" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{series.title}</p>
+                              <p className="text-white/40 text-xs mt-0.5">{series.episodeCount} episode{series.episodeCount !== 1 ? "s" : ""}</p>
+                            </div>
+                            <ChevronLeft className="w-4 h-4 text-white/30 rotate-180 shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
+              {/* ─── STEP: EPISODES (Series only) ─── */}
+              {createStep === "episodes" && selectedSeries && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setCreateStep("browse"); setSelectedSeries(null); }}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-white/60" />
+                    </button>
+                    <div>
+                      <h3 className="text-white font-medium text-sm">{selectedSeries}</h3>
+                      <p className="text-white/40 text-xs">Select an episode</p>
+                    </div>
+                  </div>
+
+                  <div className="max-h-[360px] overflow-y-auto space-y-4">
+                    {Object.entries(seasonGroups).map(([season, episodes]) => (
+                      <div key={season}>
+                        <h4 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2">
+                          Season {season}
+                        </h4>
+                        <div className="space-y-1">
+                          {episodes.map((ep) => (
+                            <button
+                              key={ep.id}
+                              onClick={() => handleSelectEpisode(ep)}
+                              className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-[#E50914]/10 hover:border-[#E50914]/30 border border-transparent transition-all text-left group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-white/30 text-xs font-mono w-12 shrink-0">
+                                  S{String(ep.season || 1).padStart(2, "0")}E{String(ep.episode_start || 1).padStart(2, "0")}
+                                  {ep.episode_end && ep.episode_end !== ep.episode_start && (
+                                    <span>-E{String(ep.episode_end).padStart(2, "0")}</span>
+                                  )}
+                                </span>
+                                <span className="text-white text-sm font-medium">{ep.title}</span>
+                              </div>
+                              <Play className="w-4 h-4 text-white/20 group-hover:text-[#E50914] transition-colors shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ─── STEP: NAME ─── */}
               {createStep === "name" && (
                 <div className="space-y-5">
                   <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        if (selectedSeries) setCreateStep("episodes");
+                        else setCreateStep("browse");
+                      }}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-white/60" />
+                    </button>
                     {selectedMedia?.poster && (
-                      <img src={selectedMedia.poster} alt="" className="w-12 h-16 rounded object-cover" />
+                      <img src={selectedMedia.poster} alt="" className="w-10 h-14 rounded object-cover" />
                     )}
                     <div>
                       <p className="text-white font-medium text-sm">{selectedMedia?.title}</p>
-                      <button onClick={() => setCreateStep("pick")} className="text-[#E50914] text-xs">Change</button>
+                      {selectedMedia?.season && (
+                        <p className="text-white/40 text-xs">
+                          S{String(selectedMedia.season).padStart(2, "0")}E{String(selectedMedia.episode_start || 1).padStart(2, "0")}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -263,6 +431,7 @@ export default function WatchPartyModal({ isOpen, onClose }: { isOpen: boolean; 
                 </div>
               )}
 
+              {/* ─── STEP: READY ─── */}
               {createStep === "ready" && (
                 <div className="space-y-5">
                   <div className="text-center py-4">

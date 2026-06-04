@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import PosterCard from "@/components/PosterCard";
-import { Tv, Filter, MonitorPlay } from "lucide-react";
+import { Tv, Filter, Users } from "lucide-react";
 import SortDropdown, { SortOption } from "@/components/SortDropdown";
+import dynamic from "next/dynamic";
+
+const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -11,6 +14,7 @@ export default function ShowsPage() {
   const [shows, setShows] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
+  const [showPartyModal, setShowPartyModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/media?type=show")
@@ -54,63 +58,65 @@ export default function ShowsPage() {
   }, [shows, sortParam]);
 
   return (
-    <div className="min-h-screen bg-background pt-32 px-6 md:px-12 lg:px-20 pb-20 selection:bg-primary/30">
-      {/* Editorial Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-px w-12 bg-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Serialized Content</span>
-          </div>
-          <div className="flex items-baseline gap-6">
-            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter uppercase leading-[0.8] text-foreground">
-              Shows
-            </h1>
-            <div className="flex flex-col">
-              <span className="text-2xl font-black text-foreground/10 leading-none">{shows.length}</span>
-              <span className="text-[10px] font-bold text-foreground/10 uppercase tracking-widest">Series</span>
-            </div>
-          </div>
+    <div className="min-h-screen pt-18 px-4 md:px-8 lg:px-14 pb-20">
+      {/* Clean Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+            TV Shows
+          </h1>
+          {!loading && (
+            <span className="text-sm text-white/30 font-medium">{shows.length} series</span>
+          )}
         </div>
-        
-        {!loading && shows.length > 0 && (
-          <div className="flex items-center gap-4 self-start md:self-auto">
-            <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full border border-border backdrop-blur-md">
-              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-              <SortDropdown pageKey="shows" onSortChange={setSortParam} />
+
+        <div className="flex items-center gap-3">
+          {!loading && shows.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 glass-card text-sm">
+              <Filter className="w-3.5 h-3.5 text-white/40" />
+              {/* <SortDropdown pageKey="shows" onSortChange={setSortParam} /> */}
             </div>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => setShowPartyModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#E50914] hover:bg-[#f6121d] text-white text-sm font-semibold rounded-full transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Watch Party</span>
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5">
           {[...Array(14)].map((_, i) => (
-            <div key={i} className="aspect-[2/3] bg-muted rounded-2xl animate-pulse" />
+            <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : sortedShows.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-x-6 gap-y-12">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5">
           {sortedShows.map((show) => (
             <PosterCard key={show.id} media={show} />
           ))}
         </div>
       )}
+
+      <WatchPartyModal isOpen={showPartyModal} onClose={() => setShowPartyModal(false)} />
     </div>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-40 bg-muted/10 rounded-[3rem] border border-border border-dashed">
-      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-        <MonitorPlay className="w-8 h-8 text-primary/40" />
+    <div className="flex flex-col items-center justify-center py-32 glass-card">
+      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-5">
+        <Tv className="w-7 h-7 text-white/20" />
       </div>
-      <h2 className="text-xl font-black uppercase tracking-widest text-foreground mb-2">Broadcast Interrupted</h2>
-      <p className="text-muted-foreground text-sm max-w-xs text-center leading-relaxed font-medium">
-        No TV series discovered in your directories. Update your library paths in settings.
+      <h2 className="text-lg font-bold text-white mb-1">No shows yet</h2>
+      <p className="text-white/40 text-sm max-w-xs text-center">
+        No TV series discovered. Update your library paths in settings.
       </p>
     </div>
   );

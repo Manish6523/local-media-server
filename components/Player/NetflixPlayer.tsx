@@ -47,12 +47,28 @@ export default function NetflixPlayer({
   const baseNeedsTranscode = ext === "mkv" || ext === "avi" || ext === "wmv";
 
   const {
-    videoRef, containerRef, state, videoSrc, needsTranscode, transcodeStartTime,
-    bindVideoEvents, resetControlsTimer,
-    togglePlay, seek, skipBack, skipForward,
-    setVolume, toggleMute, toggleFullscreen,
-    setActiveSubtitle, setActiveAudioTrack, setCueText,
-    setSubtitleSize, setSubtitleColor, showResumeToast,
+    videoRef,
+    containerRef,
+    state,
+    videoSrc,
+    needsTranscode,
+    transcodeStartTime,
+    bindVideoEvents,
+    resetControlsTimer,
+    togglePlay,
+    seek,
+    skipBack,
+    skipForward,
+    setVolume,
+    toggleMute,
+    toggleFullscreen,
+    setActiveSubtitle,
+    setActiveAudioTrack,
+    setCueText,
+    setSubtitleSize,
+    setSubtitleColor,
+    showResumeToast,
+    forceHideControls,
   } = usePlayer(mediaId, baseNeedsTranscode, exactDuration, initialWatchProgress, watchPartyMode?.roomCode);
 
   const [showSubMenu, setShowSubMenu] = useState(false);
@@ -134,7 +150,14 @@ export default function NetflixPlayer({
 
   // Controls auto-hide via mouse movement
   useEffect(() => {
-    const handler = () => resetControlsTimer();
+    const handler = (e: MouseEvent | TouchEvent) => {
+      // If mouse is within the left 50px strip, keep controls hidden immediately
+      if (e instanceof MouseEvent && e.clientX <= 50) {
+        forceHideControls();
+        return;
+      }
+      resetControlsTimer();
+    };
     document.addEventListener("mousemove", handler);
     document.addEventListener("touchstart", handler);
     resetControlsTimer();
@@ -142,7 +165,7 @@ export default function NetflixPlayer({
       document.removeEventListener("mousemove", handler);
       document.removeEventListener("touchstart", handler);
     };
-  }, [resetControlsTimer]);
+  }, [resetControlsTimer, forceHideControls]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -341,9 +364,19 @@ export default function NetflixPlayer({
         crossOrigin="anonymous"
       />
 
+      {/* Desktop-only: transparent auto-hide overlay
+          When mouse hovers and stops on this div, it triggers controls to hide.
+          Mouse movement re-shows them via resetControlsTimer. */}
+      <div
+        data-controls
+        className="hidden md:block absolute top-0 bottom-0 left-0 w-[50px] z-[999] bg-transparent"
+        style={{ pointerEvents: state.showControls ? "auto" : "none" }}
+        onMouseEnter={forceHideControls}
+      />
+
       {/* Buffering spinner */}
       {state.isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="w-14 h-14 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
         </div>
       )}
@@ -360,7 +393,7 @@ export default function NetflixPlayer({
 
       {/* Switching audio overlay */}
       {switchingAudio && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="bg-black/70 backdrop-blur-sm px-6 py-3 rounded-lg flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             <span className="text-white text-sm font-medium">Switching audio...</span>
@@ -370,15 +403,15 @@ export default function NetflixPlayer({
 
       {/* Custom subtitle rendering */}
       {state.currentCueText && (
-        <div className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 ${
-          state.subtitleSize === "small" ? "bottom-16" :
-          state.subtitleSize === "large" ? "bottom-28" : "bottom-24"
+        <div className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 z-20 ${
+          state.subtitleSize === "small" ? "bottom-10 md:bottom-10" :
+          state.subtitleSize === "large" ? "bottom-28 md:bottom-24" : "bottom-24 md:bottom-20"
         }`}>
           <div className="bg-black/70 px-5 py-2 rounded text-center max-w-[80%]">
             <span
               className={`font-medium leading-relaxed drop-shadow-md ${
-                state.subtitleSize === "small" ? "text-[1rem]" :
-                state.subtitleSize === "large" ? "text-[2rem]" : "text-[1.4rem]"
+                state.subtitleSize === "small" ? "text-[0.85rem] md:text-[1rem]" :
+                state.subtitleSize === "large" ? "text-[1.4rem] md:text-[2rem]" : "text-[1.1rem] md:text-[1.4rem]"
               } ${
                 state.subtitleColor === "yellow" ? "text-[#f3f315]" : "text-white"
               }`}
@@ -391,27 +424,107 @@ export default function NetflixPlayer({
       {/* Top bar */}
       <div
         data-controls
-        className={`absolute top-0 left-0 right-0 px-6 pt-6 pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 ${
+        className={`absolute top-0 left-0 right-0 px-4 md:px-6 pt-4 md:pt-6 pb-16 md:pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 z-30 ${
           state.showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
-        <div className="flex items-center gap-4 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 md:gap-4 max-w-7xl mx-auto">
           <button
             onClick={(e) => { e.stopPropagation(); router.back(); }}
             className="p-2 bg-black/40 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/10"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
           </button>
-          <h1 className="text-white font-bold text-lg md:text-xl truncate drop-shadow-md">
+          <h1 className="text-white font-bold text-sm md:text-xl truncate drop-shadow-md flex-1">
             {titleLabel}
           </h1>
         </div>
       </div>
 
-      {/* Bottom controls - Floating Pill */}
+      {/* ═══ MOBILE Bottom Controls ═══ */}
       <div
         data-controls
-        className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl px-6 py-4 rounded-3xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 ${
+        className={`md:hidden absolute bottom-0 left-0 right-0 px-4 pb-6 pt-16 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-all duration-300 z-30 ${
+          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Progress bar */}
+        <ProgressBar
+          currentTime={state.currentTime}
+          duration={state.duration}
+          bufferedEnd={state.bufferedEnd}
+          onSeek={wpSeek}
+        />
+
+        {/* Time */}
+        <div className="flex items-center justify-between mt-2 mb-3">
+          <span className="text-white/60 text-xs font-mono tabular-nums">
+            {formatTime(state.currentTime)}
+          </span>
+          <span className="text-white/40 text-xs font-mono tabular-nums">
+            {formatTime(state.duration)}
+          </span>
+        </div>
+
+        {/* Control buttons */}
+        <div className="flex items-center justify-between">
+          {/* Left: volume */}
+          <VolumeControl
+            volume={state.volume}
+            isMuted={state.isMuted}
+            onVolumeChange={setVolume}
+            onToggleMute={toggleMute}
+          />
+
+          {/* Center: skip back, play/pause, skip forward */}
+          <div className="flex items-center gap-5">
+            <button
+              onClick={wpSkipBack}
+              className="p-2 text-white/70 active:text-white transition-all relative"
+            >
+              <SkipBack className="w-6 h-6" />
+              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+            </button>
+
+            <button
+              onClick={wpTogglePlay}
+              className="w-14 h-14 flex items-center justify-center rounded-full bg-white text-black active:scale-95 transition-transform"
+            >
+              {state.isPlaying ? (
+                <Pause className="w-7 h-7 fill-current" />
+              ) : (
+                <Play className="w-7 h-7 fill-current ml-1" />
+              )}
+            </button>
+
+            <button
+              onClick={wpSkipForward}
+              className="p-2 text-white/70 active:text-white transition-all relative"
+            >
+              <SkipForward className="w-6 h-6" />
+              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+            </button>
+          </div>
+
+          {/* Right: fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 text-white/70 active:text-white transition-all"
+          >
+            {state.isFullscreen ? (
+              <Minimize className="w-5 h-5" />
+            ) : (
+              <Maximize className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ═══ DESKTOP Bottom Controls - Floating Pill ═══ */}
+      <div
+        data-controls
+        className={`hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl px-6 py-4 rounded-3xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 z-30 ${
           state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -427,7 +540,7 @@ export default function NetflixPlayer({
         {/* Controls row */}
         <div className="flex items-center justify-between mt-3">
           {/* Left group */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-4">
             <button
               onClick={wpTogglePlay}
               className="w-12 h-12 flex items-center justify-center rounded-full bg-white text-black hover:scale-105 transition-transform"
@@ -440,14 +553,14 @@ export default function NetflixPlayer({
               )}
             </button>
 
-            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/10 hidden md:flex">
+            <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/10">
               <button
                 onClick={wpSkipBack}
                 className="p-2 text-white/70 hover:text-white transition-all relative"
                 title="Rewind 10s"
               >
                 <SkipBack className="w-5 h-5" />
-                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+                {/* <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span> */}
               </button>
 
               <button
@@ -456,7 +569,7 @@ export default function NetflixPlayer({
                 title="Skip 10s"
               >
                 <SkipForward className="w-5 h-5" />
-                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+                {/* <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span> */}
               </button>
             </div>
 

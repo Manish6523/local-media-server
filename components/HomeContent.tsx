@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import HeroSection from "@/components/HeroSection";
-import MediaRow from "@/components/MediaRow";
 import PosterCard from "@/components/PosterCard";
-import BentoGrid from "@/components/BentoGrid";
+
+import ContinueWatchingList from "./Home/ContinueWatchingList";
+import MiniMoviesList from "./Home/MiniMoviesList";
+import HeroFeatured from "./Home/HeroFeatured";
+import SeriesRow from "./Home/SeriesRow";
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -60,14 +62,7 @@ export default function HomeContent() {
   const movies = media.filter((m) => m.type === "movie");
   const shows = media.filter((m) => m.type === "show");
 
-  const uniqueShows = Object.values(
-    shows.reduce((acc, show) => {
-      if (!acc[show.title]) acc[show.title] = show;
-      return acc;
-    }, {} as Record<string, MediaEntry>)
-  ) as MediaEntry[];
-
-  const featuredItems = media.filter((m) => m.poster && m.overview && m.available);
+  const featuredItems = media.filter((m) => m.backdrop && m.overview && m.available);
   const uniqueFeaturedItems = Object.values(
     featuredItems.reduce((acc, item) => {
       if (!acc[item.title]) acc[item.title] = item;
@@ -75,47 +70,36 @@ export default function HomeContent() {
     }, {} as Record<string, MediaEntry>)
   ) as MediaEntry[];
 
-  // Pick top 5 featured items for the carousel
   const carouselItems = uniqueFeaturedItems.length > 0
     ? [...uniqueFeaturedItems].sort(() => 0.5 - Math.random()).slice(0, 5)
-    : Object.values(
-        media.reduce((acc, item) => {
-          if (!acc[item.title]) acc[item.title] = item;
-          return acc;
-        }, {} as Record<string, MediaEntry>)
-      ).slice(0, 5) as MediaEntry[];
+    : movies.slice(0, 5);
+
+  const uniqueShows = Object.values(
+    shows.reduce((acc, show) => {
+      if (!acc[show.title]) acc[show.title] = show;
+      return acc;
+    }, {} as Record<string, MediaEntry>)
+  ) as MediaEntry[];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
-        <div className="w-full h-[85vh] skeleton" />
-        <div className="px-6 md:px-10 lg:px-14 py-8 space-y-12">
-          {[1, 2, 3].map((i) => (
-            <div key={i}>
-              <div className="h-6 w-48 skeleton rounded mb-4" />
-              <div className="flex gap-4">
-                {[1, 2, 3, 4, 5, 6].map((j) => (
-                  <div key={j} className="w-[180px] aspect-[2/3] skeleton rounded-md flex-shrink-0" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
 
   if (searchQuery) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] pt-24 px-6 md:px-10 lg:px-14 pb-16">
+      <div className="pb-16">
         <h1 className="text-2xl font-bold text-white mb-6">
           Search results for &quot;{searchQuery}&quot;
-          <span className="text-[#808080] text-lg font-normal ml-3">
+          <span className="text-white/50 text-lg font-normal ml-3">
             ({media.length} result{media.length !== 1 ? "s" : ""})
           </span>
         </h1>
         {media.length === 0 ? (
-          <p className="text-[#808080]">No results found.</p>
+          <p className="text-white/50">No results found.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5">
             {media.map((item) => (
@@ -128,18 +112,25 @@ export default function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-0">
-      <HeroSection items={carouselItems} />
-      <div className="relative z-10 -mt-10 mb-8">
-        <BentoGrid continueWatching={continueWatching} recentlyAdded={recentlyAdded} />
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-6 lg:gap-8 h-full">
+      {/* Left Column - Should be below Hero on mobile */}
+      <div className="md:col-span-4 lg:col-span-3 flex flex-col gap-8 order-2 md:order-1">
+        <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
+        
+        {/* Replacing New Trailer with Movies */}
+        <div className="bg-white/5 border border-white/5 rounded-3xl p-5 shadow-xl">
+          <MiniMoviesList items={movies} />
+        </div>
       </div>
-      <div className="relative z-10 pb-16 space-y-12">
-        {favorites.length > 0 && (
-          <MediaRow title="My Favorites" items={favorites} />
-        )}
-        <MediaRow title="Movies" items={movies.slice(0, 15)} />
-        <MediaRow title="TV Shows" items={uniqueShows.slice(0, 15)} />
+
+      {/* Right Column - Should be at the top on mobile */}
+      <div className="md:col-span-8 lg:col-span-9 flex flex-col min-w-0 order-1 md:order-2 gap-0">
+        <HeroFeatured items={carouselItems} />
+        <SeriesRow items={uniqueShows} />
       </div>
+
+      {/* Commented out as requested */}
+      {/* <BentoGrid continueWatching={continueWatching} recentlyAdded={recentlyAdded} /> */}
     </div>
   );
 }

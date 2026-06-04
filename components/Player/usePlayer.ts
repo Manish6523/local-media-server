@@ -277,6 +277,11 @@ export function usePlayer(
     }, 3000);
   }, []);
 
+  const forceHideControls = useCallback(() => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setState((s) => ({ ...s, showControls: false }));
+  }, []);
+
   // ---- Player actions ----
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
@@ -483,5 +488,6 @@ export function usePlayer(
     setSubtitleColor,
     showResumeToast,
     updateTranscodeStart: setTranscodeStartTime,
+    forceHideControls,
   };
 }

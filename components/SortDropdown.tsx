@@ -57,9 +57,9 @@ export default function SortDropdown({ pageKey, onSortChange }: SortDropdownProp
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-[#111] hover:bg-[#1a1a1a] border border-white/10 px-4 py-2 rounded text-sm text-white/90 transition-colors"
+        className="flex items-center gap-2  px-4 py-2 rounded text-sm text-white/90 transition-colors"
       >
-        <span className="text-white/50">Sort by:</span>
+        {/* <span className="text-white/50">Sort by:</span> */}
         <span className="font-medium min-w-[140px] text-left">{SORT_LABELS[currentSort]}</span>
         <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>

@@ -202,12 +202,32 @@ export async function GET(
       }
     }
 
-    // For .ts segment files: wait for FFmpeg to generate them if transcode is active
+    // If playlist was requested but still doesn't exist (race: another request
+    // is spawning FFmpeg), poll for it regardless of activeTranscodes state
+    if (file === "playlist.m3u8" && !fs.existsSync(requestedFilePath)) {
+      console.log(`[HLS] Waiting for playlist from concurrent spawn: ${streamKey}`);
+      let pollAttempts = 0;
+      while (!fs.existsSync(requestedFilePath) && pollAttempts < 100) {
+        await new Promise((r) => setTimeout(r, 200));
+        pollAttempts++;
+      }
+      if (!fs.existsSync(requestedFilePath)) {
+        return new NextResponse("Stream not ready", { status: 503, headers: { "Retry-After": "2" } });
+      }
+    }
+
+    // For .ts segment files: wait for FFmpeg to generate them
+    // Poll regardless of activeTranscodes — the transcode may be registered
+    // by a concurrent request that hasn't finished yet
     if (file.endsWith(".ts") && !fs.existsSync(requestedFilePath)) {
       const currentActive = activeTranscodes.get(streamKey);
       if (currentActive) {
         currentActive.lastAccessed = Date.now();
-        console.log(`[HLS] Waiting for segment: ${file} (transcode active for ${streamKey})`);
+      }
+      // Only poll if there's an active transcode OR the output dir exists
+      // (dir existing means a transcode was recently spawned)
+      if (currentActive || fs.existsSync(outDir)) {
+        console.log(`[HLS] Waiting for segment: ${file} (${streamKey})`);
         let segAttempts = 0;
         while (!fs.existsSync(requestedFilePath) && segAttempts < 20) {
           await new Promise((r) => setTimeout(r, 500));

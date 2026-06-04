@@ -101,7 +101,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#141414] pt-24 px-4 md:px-8 lg:px-12 pb-16">
+    <div className="min-h-screen  pt-14 px-4 md:px-8 lg:px-12 pb-16">
       <div className="max-w-4xl mx-auto space-y-12">
         
         {/* Header */}
@@ -122,7 +122,7 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-white/90 border-b border-white/10 pb-2">Media Sources</h2>
           
-          <Card className="bg-[#1a1a1a] border-white/10">
+          <Card className="bg-black/30 border-white/10">
             <CardContent className="p-6">
               <div className="mb-4">
                 <p className="text-white/60 text-sm mb-4">Your primary media storage — always scanned.</p>
@@ -136,7 +136,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#1a1a1a] border-white/10">
+          <Card className="bg-black/30 border-white/10">
             <CardContent className="p-6">
               <div className="mb-4">
                 <p className="text-white/60 text-sm mb-4">Only scanned when connected (e.g. portable drives).</p>
@@ -165,7 +165,7 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-white/90 border-b border-white/10 pb-2">Library</h2>
           
-          <Card className="bg-[#1a1a1a] border-white/10 overflow-hidden">
+          <Card className="bg-black/30 border-white/10 overflow-hidden">
             <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10 border-b border-white/10">
               <div className="p-4 flex flex-col items-center justify-center">
                 <Film className="w-5 h-5 text-white/40 mb-1" />
