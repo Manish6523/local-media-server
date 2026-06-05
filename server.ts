@@ -293,8 +293,40 @@ app.prepare().then(async () => {
   process.on("SIGINT", cleanupAndExit);
   process.on("SIGTERM", cleanupAndExit);
 
+  const path = await import("path");
+  const MIME_TYPES: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".avif": "image/avif",
+  };
+
   const httpServer = createServer((req, res) => {
     const parsedUrl = parse(req.url!, true);
+    const pathname = parsedUrl.pathname || "";
+
+    // Serve runtime-created images directly from public/ (posters & backdrops)
+    // Next.js production only serves public/ files baked in at build time,
+    // so images downloaded after `next build` need to be served manually.
+    if (pathname.startsWith("/posters/") || pathname.startsWith("/backdrops/")) {
+      const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, "");
+      const filePath = path.join(process.cwd(), "public", safePath);
+
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const ext = path.extname(filePath).toLowerCase();
+        const contentType = MIME_TYPES[ext] || "application/octet-stream";
+        
+        res.writeHead(200, {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        });
+        fs.createReadStream(filePath).pipe(res);
+        return;
+      }
+    }
+
     handle(req, res, parsedUrl);
   });
 
