@@ -40,7 +40,7 @@ export default function SeriesRow({ items }: { items: MediaEntry[] }) {
               >
                 {/* Background Image */}
                 <img
-                  src={item.backdrop || item.poster || ""}
+                  src={item.backdrop || item.poster || undefined}
                   alt={item.title}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />

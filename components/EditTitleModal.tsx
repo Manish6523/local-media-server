@@ -18,6 +18,8 @@ interface EditTitleModalProps {
 
 export default function EditTitleModal({ media, onClose }: EditTitleModalProps) {
   const [customTitle, setCustomTitle] = useState(media.title);
+  const [customPoster, setCustomPoster] = useState("");
+  const [customBackdrop, setCustomBackdrop] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -41,7 +43,11 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
       const res = await fetch(`/api/media/${media.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: customTitle.trim() })
+        body: JSON.stringify({ 
+          title: customTitle.trim(),
+          customPoster: customPoster.trim() || undefined,
+          customBackdrop: customBackdrop.trim() || undefined
+        })
       });
       
       if (res.ok) {
@@ -63,13 +69,13 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 cursor-default animate-in fade-in duration-200">
       <div 
-        className="glass-heavy w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
+        className="glass-heavy w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between p-5 border-b border-white/[0.06] shrink-0">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-violet-400" />
-            Edit Title
+            Edit Media Info
           </h2>
           <button 
             onClick={(e) => { e.preventDefault(); onClose(); }}
@@ -79,7 +85,7 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-5 overflow-y-auto">
           <div className="space-y-1.5">
             <p className="text-xs text-white/40 font-medium">Filename</p>
             <p className="text-xs text-white/60 font-mono break-all glass rounded-lg p-3">
@@ -122,9 +128,35 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
               placeholder="Type correct title..."
             />
           </div>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-xs font-medium text-white/50 block">
+              Custom Poster URL (Optional)
+            </label>
+            <input 
+              type="text" 
+              value={customPoster}
+              onChange={(e) => setCustomPoster(e.target.value)}
+              className="w-full glass rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/30 transition-colors"
+              placeholder="https://example.com/poster.jpg"
+            />
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-xs font-medium text-white/50 block">
+              Custom Backdrop URL (Optional)
+            </label>
+            <input 
+              type="text" 
+              value={customBackdrop}
+              onChange={(e) => setCustomBackdrop(e.target.value)}
+              className="w-full glass rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/30 transition-colors"
+              placeholder="https://example.com/backdrop.jpg"
+            />
+          </div>
         </div>
 
-        <div className="p-5 border-t border-white/[0.06] flex justify-end gap-3">
+        <div className="p-5 border-t border-white/[0.06] flex justify-end gap-3 shrink-0">
           <button 
             onClick={(e) => { e.preventDefault(); onClose(); }}
             className="px-4 py-2.5 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"

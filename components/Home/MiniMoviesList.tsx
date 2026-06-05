@@ -29,7 +29,7 @@ export default function MiniMoviesList({ items, title = "Movies" }: { items: Med
             {/* Poster */}
             <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/[0.06] hover:border-violet-500/20 transition-all duration-300 shadow-lg shadow-black/30">
               <img
-                src={item.poster || item.backdrop || ""}
+                src={item.poster || item.backdrop || undefined}
                 alt={item.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />

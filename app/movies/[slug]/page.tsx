@@ -50,11 +50,11 @@ export default function MovieDetailPage() {
           src={bgImage}
           alt={movie.title}
           fill
-          className="object-cover object-top opacity-50 scale-105 transition-transform duration-1000"
+          className="object-cover object-top opacity-70 scale-105 transition-transform duration-1000"
           priority
         />
         {/* Layered Cinematic Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent backdrop-blur-[2px]" />
+        {/* <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent backdrop-blur-[2px]" /> */}
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-transparent to-transparent" />
         
         {/* Top Navigation Overlay */}

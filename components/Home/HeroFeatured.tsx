@@ -63,7 +63,7 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
           style={{ opacity: idx === currentIndex ? 1 : 0 }}
         >
           <img
-            src={item.backdrop || item.poster || ""}
+            src={item.backdrop || item.poster || undefined}
             alt={item.title}
             className="w-full h-full object-cover object-center scale-105"
           />
@@ -72,8 +72,8 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
 
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-background/20 z-[1]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/30 to-transparent z-[1]" />
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-[1]" />
+      {/* <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/30 to-transparent z-[1]" /> */}
+      {/* <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-[1]" /> */}
 
       {/* Content */}
       <div className="relative z-10 flex items-end min-h-[75vh] md:min-h-[85vh] px-4 md:px-8 lg:px-12 pb-20 md:pb-28">
