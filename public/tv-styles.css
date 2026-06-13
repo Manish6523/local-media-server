@@ -1,0 +1,359 @@
+/* ===================================================
+   VidLock TV — Chromium 38 Compatible Stylesheet
+   No Grid, no gap, no :has/:is/:where, no nesting,
+   no @layer, no oklch/color-mix. Hex/rgb only.
+   =================================================== */
+
+/* Reset */
+*, *:before, *:after {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
+  color: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #E50914;
+}
+
+a:focus {
+  outline: 2px solid #E50914;
+  outline-offset: 2px;
+}
+
+video:focus {
+  outline: none;
+}
+
+img {
+  border: 0;
+}
+
+/* ---- Header / Nav ---- */
+.tv-header {
+  background: #141414;
+  border-bottom: 1px solid #222222;
+  padding: 12px 20px;
+  overflow: hidden;
+}
+
+.tv-header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.tv-logo {
+  float: left;
+  font-size: 24px;
+  font-weight: bold;
+  color: #E50914;
+  line-height: 40px;
+  letter-spacing: 1px;
+}
+
+.tv-nav {
+  float: right;
+  line-height: 40px;
+}
+
+.tv-nav a {
+  display: inline-block;
+  margin-left: 20px;
+  font-size: 14px;
+  color: #b3b3b3;
+  padding: 4px 10px;
+}
+
+.tv-nav a:hover {
+  color: #ffffff;
+}
+
+.nav-link.focused {
+  background: #E50914;
+  color: #ffffff;
+  outline: none;
+}
+
+/* ---- Container ---- */
+.container {
+  overflow: hidden;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ---- Section headers ---- */
+.section-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffffff;
+  margin: 24px 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #E50914;
+  display: inline-block;
+}
+
+/* ---- Row (flex with fallback) ---- */
+.row {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+/* ---- Card ---- */
+.card {
+  float: left;
+  width: 200px;
+  margin: 0 10px 16px 0;
+  background: #141414;
+  border: 3px solid transparent;
+  overflow: hidden;
+  -webkit-transition: border-color 0.2s;
+  transition: border-color 0.2s;
+}
+
+.card.focused {
+  border: 3px solid #E50914;
+  outline: none;
+}
+
+.card:hover {
+  border-color: #E50914;
+}
+
+.card a {
+  display: block;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.card-poster-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.card img {
+  width: 100%;
+  display: block;
+  height: auto;
+}
+
+.card-no-poster {
+  width: 100%;
+  height: 280px;
+  background: #1a1a1a;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  color: #555555;
+  font-size: 48px;
+}
+
+.card-title {
+  padding: 8px;
+  font-size: 14px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-year {
+  padding: 0 8px 8px 8px;
+  font-size: 12px;
+  color: #999999;
+}
+
+.card-type {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 8px 8px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: #E50914;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* ---- Play page ---- */
+.play-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.play-back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: #b3b3b3;
+  font-size: 14px;
+}
+
+.play-back-link:hover {
+  color: #E50914;
+}
+
+.play-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 0 0 16px 0;
+  color: #ffffff;
+}
+
+.play-meta {
+  margin: 0 0 16px 0;
+  color: #999999;
+  font-size: 14px;
+}
+
+.play-video {
+  width: 100%;
+  max-width: 100%;
+  background: #000000;
+  display: block;
+  border: none;
+  outline: none;
+}
+
+.play-video:focus {
+  border: none;
+  outline: none;
+}
+
+/* Fullscreen — remove all borders/outlines */
+.play-video:-webkit-full-screen {
+  border: none;
+  outline: none;
+}
+
+.play-video:fullscreen {
+  border: none;
+  outline: none;
+}
+
+/* Play page back link D-pad focus */
+.play-back-link.focused {
+  color: #E50914;
+  outline: 2px solid #E50914;
+  outline-offset: 2px;
+}
+
+.play-overview {
+  margin: 20px 0;
+  color: #cccccc;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---- Empty state ---- */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666666;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.empty-state-text {
+  font-size: 18px;
+}
+
+/* ---- Footer ---- */
+.tv-footer {
+  text-align: center;
+  padding: 20px;
+  color: #555555;
+  font-size: 12px;
+  border-top: 1px solid #222222;
+  margin-top: 40px;
+}
+
+/* ---- Clearfix ---- */
+.clearfix:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* ---- Search ---- */
+.tv-search {
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.tv-search input {
+  width: 100%;
+  max-width: 400px;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+}
+
+.tv-search input:focus {
+  border-color: #E50914;
+}
+
+/* ---- Filter tabs ---- */
+.tv-filters {
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.tv-filter-btn {
+  display: inline-block;
+  padding: 6px 16px;
+  margin: 0 6px 6px 0;
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #b3b3b3;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tv-filter-btn:hover {
+  border-color: #E50914;
+  color: #ffffff;
+}
+
+.tv-filter-btn-active {
+  background: #E50914;
+  border-color: #E50914;
+  color: #ffffff;
+}
+
+/* ---- Media count badge ---- */
+.tv-count {
+  color: #666666;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
