@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Allow better-sqlite3 native module to work in API routes
+  experimental: {
+    scrollRestoration: true
+  },
+  allowedDevOrigins: ["*",'10.251.238.203',"http://localhost:3000"],
   serverExternalPackages: ["better-sqlite3"],
   images: {
     remotePatterns: [

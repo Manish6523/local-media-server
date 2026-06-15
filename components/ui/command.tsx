@@ -57,12 +57,12 @@ function CommandDialog({
       </DialogHeader>
       <DialogContent
         className={cn(
-          "top-[15vh]! translate-y-0! overflow-hidden rounded-2xl! p-0 shadow-[0_0_80px_rgba(0,0,0,0.8)]! bg-black/60! backdrop-blur-3xl! border-0! ring-1! ring-white/10!",
+          "top-[12vh]! sm:top-[15vh]! translate-y-0! overflow-hidden rounded-t-[2rem]! sm:rounded-[2rem]! p-0 shadow-[0_-10px_60px_rgba(0,0,0,0.5)]! bg-[rgba(10,10,30,0.8)]! backdrop-blur-[40px]! border! border-white/[0.08]! ring-0!",
           className
         )}
         showCloseButton={showCloseButton}
       >
-        <Command className="flex size-full flex-col overflow-hidden" {...commandProps}>
+        <Command className="flex size-full flex-col overflow-hidden bg-transparent" {...commandProps}>
           {children}
         </Command>
       </DialogContent>
@@ -75,16 +75,19 @@ function CommandInput({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div data-slot="command-input-wrapper" className="flex items-center px-4 py-3 border-b border-white/10">
-      <SearchIcon className="mr-3 size-5 shrink-0 opacity-50 text-white/50" />
+    <div data-slot="command-input-wrapper" className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-cyan-400/20 flex items-center justify-center shrink-0">
+        <SearchIcon className="size-4 text-violet-400" />
+      </div>
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(
-          "flex h-8 w-full bg-transparent text-white placeholder:text-white/40 outline-none disabled:cursor-not-allowed disabled:opacity-50 text-sm",
+          "flex h-8 w-full bg-transparent text-white placeholder:text-white/25 outline-none disabled:cursor-not-allowed disabled:opacity-50 text-sm font-medium",
           className
         )}
         {...props}
       />
+      <kbd className="hidden sm:inline-flex items-center px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono text-white/25 shrink-0">ESC</kbd>
     </div>
   )
 }
@@ -97,7 +100,7 @@ function CommandList({
     <CommandPrimitive.List
       data-slot="command-list"
       className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+        "no-scrollbar max-h-80 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none px-2 py-2",
         className
       )}
       {...props}
@@ -126,7 +129,7 @@ function CommandGroup({
     <CommandPrimitive.Group
       data-slot="command-group"
       className={cn(
-        "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground",
+        "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:text-[11px] **:[[cmdk-group-heading]]:font-black **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-widest **:[[cmdk-group-heading]]:text-white/25",
         className
       )}
       {...props}
@@ -156,7 +159,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group/command-item relative flex cursor-default items-center gap-2 rounded-xl px-2.5 py-2 text-sm outline-hidden select-none data-[selected=true]:bg-white/[0.06] data-[selected=true]:border-white/[0.08] border border-transparent transition-all duration-150 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

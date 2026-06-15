@@ -424,18 +424,18 @@ export default function NetflixPlayer({
       {/* Top bar */}
       <div
         data-controls
-        className={`absolute top-0 left-0 right-0 px-4 md:px-6 pt-4 md:pt-6 pb-16 md:pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 z-30 ${
+        className={`absolute top-0 left-0 right-0 px-4 md:px-6 pt-3 landscape:pt-2 md:pt-6 pb-12 landscape:pb-8 md:pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 z-30 ${
           state.showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
         <div className="flex items-center gap-3 md:gap-4 max-w-7xl mx-auto">
           <button
             onClick={(e) => { e.stopPropagation(); router.back(); }}
-            className="p-2 bg-black/40 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/10"
+            className="p-1.5 landscape:p-1 md:p-2 bg-black/40 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/10"
           >
-            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+            <ArrowLeft className="w-5 h-5 landscape:w-4 landscape:h-4 md:w-6 md:h-6" />
           </button>
-          <h1 className="text-white font-bold text-sm md:text-xl truncate drop-shadow-md flex-1">
+          <h1 className="text-white font-bold text-sm landscape:text-xs md:text-xl truncate drop-shadow-md flex-1">
             {titleLabel}
           </h1>
         </div>
@@ -444,80 +444,222 @@ export default function NetflixPlayer({
       {/* ═══ MOBILE Bottom Controls ═══ */}
       <div
         data-controls
-        className={`md:hidden absolute bottom-0 left-0 right-0 px-4 pb-6 pt-16 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-all duration-300 z-30 ${
+        className={`md:hidden absolute bottom-0 left-0 right-0 transition-all duration-300 z-30 ${
           state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Progress bar */}
-        <ProgressBar
-          currentTime={state.currentTime}
-          duration={state.duration}
-          bufferedEnd={state.bufferedEnd}
-          onSeek={wpSeek}
-        />
-
-        {/* Time */}
-        <div className="flex items-center justify-between mt-2 mb-3">
-          <span className="text-white/60 text-xs font-mono tabular-nums">
-            {formatTime(state.currentTime)}
-          </span>
-          <span className="text-white/40 text-xs font-mono tabular-nums">
-            {formatTime(state.duration)}
-          </span>
-        </div>
-
-        {/* Control buttons */}
-        <div className="flex items-center justify-between">
-          {/* Left: volume */}
-          <VolumeControl
-            volume={state.volume}
-            isMuted={state.isMuted}
-            onVolumeChange={setVolume}
-            onToggleMute={toggleMute}
+        {/* ── LANDSCAPE: Ultra-compact single bar ── */}
+        <div className="hidden landscape:flex flex-col px-3 pb-2 pt-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+          {/* Progress bar */}
+          <ProgressBar
+            currentTime={state.currentTime}
+            duration={state.duration}
+            bufferedEnd={state.bufferedEnd}
+            onSeek={wpSeek}
           />
-
-          {/* Center: skip back, play/pause, skip forward */}
-          <div className="flex items-center gap-5">
-            <button
-              onClick={wpSkipBack}
-              className="p-2 text-white/70 active:text-white transition-all relative"
-            >
-              <SkipBack className="w-6 h-6" />
-              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
-            </button>
-
+          
+          {/* Single row: all controls */}
+          <div className="flex items-center gap-2 mt-1.5">
+            {/* Play/Pause */}
             <button
               onClick={wpTogglePlay}
-              className="w-14 h-14 flex items-center justify-center rounded-full bg-white text-black active:scale-95 transition-transform"
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white text-black active:scale-90 transition-transform shrink-0"
             >
               {state.isPlaying ? (
-                <Pause className="w-7 h-7 fill-current" />
+                <Pause className="w-4 h-4 fill-current" />
               ) : (
-                <Play className="w-7 h-7 fill-current ml-1" />
+                <Play className="w-4 h-4 fill-current ml-0.5" />
               )}
             </button>
 
+            {/* Skip controls */}
+            <button onClick={wpSkipBack} className="p-1.5 text-white/60 active:text-white transition-all">
+              <SkipBack className="w-4 h-4" />
+            </button>
+            <button onClick={wpSkipForward} className="p-1.5 text-white/60 active:text-white transition-all">
+              <SkipForward className="w-4 h-4" />
+            </button>
+
+            {/* Volume */}
+            <VolumeControl
+              volume={state.volume}
+              isMuted={state.isMuted}
+              onVolumeChange={setVolume}
+              onToggleMute={toggleMute}
+            />
+
+            {/* Time */}
+            <span className="text-white/50 text-[11px] font-mono tabular-nums ml-auto">
+              {formatTime(state.currentTime)} <span className="text-white/25">/</span> {formatTime(state.duration)}
+            </span>
+
+            {/* Subtitles (landscape) */}
+            {state.subtitleTracks.length > 0 && (
+              <div className="relative" data-menu>
+                <button
+                  onClick={() => { setShowSubMenu(!showSubMenu); setShowAudioMenu(false); }}
+                  className={`p-1.5 rounded-full transition-all ${
+                    state.activeSubtitle !== null ? "text-violet-400" : "text-white/50 active:text-white"
+                  }`}
+                >
+                  <Subtitles className="w-4 h-4" />
+                </button>
+                {showSubMenu && (
+                  <SubtitleMenu
+                    tracks={state.subtitleTracks}
+                    activeIndex={state.activeSubtitle}
+                    state={state}
+                    onSelect={setActiveSubtitle}
+                    onSizeSelect={setSubtitleSize}
+                    onColorSelect={setSubtitleColor}
+                    onClose={() => setShowSubMenu(false)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Audio (landscape) */}
+            {state.audioTracks.length > 1 && (
+              <div className="relative" data-menu>
+                <button
+                  onClick={() => { setShowAudioMenu(!showAudioMenu); setShowSubMenu(false); }}
+                  className="p-1.5 rounded-full text-white/50 active:text-white transition-all"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+                {showAudioMenu && (
+                  <AudioMenu
+                    tracks={state.audioTracks}
+                    activeIndex={state.activeAudioTrack}
+                    onSelect={handleAudioSwitch}
+                    onClose={() => setShowAudioMenu(false)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Fullscreen */}
             <button
-              onClick={wpSkipForward}
-              className="p-2 text-white/70 active:text-white transition-all relative"
+              onClick={toggleFullscreen}
+              className="p-1.5 text-white/50 active:text-white transition-all"
             >
-              <SkipForward className="w-6 h-6" />
-              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold mt-0.5">10</span>
+              {state.isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
           </div>
+        </div>
 
-          {/* Right: fullscreen */}
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 text-white/70 active:text-white transition-all"
-          >
-            {state.isFullscreen ? (
-              <Minimize className="w-5 h-5" />
-            ) : (
-              <Maximize className="w-5 h-5" />
-            )}
-          </button>
+        {/* ── PORTRAIT: Clean vertical layout ── */}
+        <div className="flex landscape:hidden flex-col px-4 pb-5 pt-16 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+          {/* Progress bar */}
+          <ProgressBar
+            currentTime={state.currentTime}
+            duration={state.duration}
+            bufferedEnd={state.bufferedEnd}
+            onSeek={wpSeek}
+          />
+
+          {/* Time */}
+          <div className="flex items-center justify-between mt-2 mb-3">
+            <span className="text-white/60 text-xs font-mono tabular-nums">
+              {formatTime(state.currentTime)}
+            </span>
+            <span className="text-white/40 text-xs font-mono tabular-nums">
+              {formatTime(state.duration)}
+            </span>
+          </div>
+
+          {/* Control buttons row */}
+          <div className="flex items-center justify-between">
+            {/* Left: volume */}
+            <VolumeControl
+              volume={state.volume}
+              isMuted={state.isMuted}
+              onVolumeChange={setVolume}
+              onToggleMute={toggleMute}
+            />
+
+            {/* Center cluster: subs, skip back, play/pause, skip forward, audio */}
+            <div className="flex items-center gap-3">
+              {/* Subtitles */}
+              {state.subtitleTracks.length > 0 && (
+                <div className="relative" data-menu>
+                  <button
+                    onClick={() => { setShowSubMenu(!showSubMenu); setShowAudioMenu(false); }}
+                    className={`p-2 rounded-full transition-all ${
+                      state.activeSubtitle !== null ? "text-violet-400 bg-violet-500/10" : "text-white/50 active:text-white"
+                    }`}
+                  >
+                    <Subtitles className="w-5 h-5" />
+                  </button>
+                  {showSubMenu && (
+                    <SubtitleMenu
+                      tracks={state.subtitleTracks}
+                      activeIndex={state.activeSubtitle}
+                      state={state}
+                      onSelect={setActiveSubtitle}
+                      onSizeSelect={setSubtitleSize}
+                      onColorSelect={setSubtitleColor}
+                      onClose={() => setShowSubMenu(false)}
+                    />
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={wpSkipBack}
+                className="p-2 text-white/60 active:text-white transition-all"
+              >
+                <SkipBack className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={wpTogglePlay}
+                className="w-14 h-14 flex items-center justify-center rounded-full bg-white text-black active:scale-95 transition-transform"
+              >
+                {state.isPlaying ? (
+                  <Pause className="w-7 h-7 fill-current" />
+                ) : (
+                  <Play className="w-7 h-7 fill-current ml-1" />
+                )}
+              </button>
+
+              <button
+                onClick={wpSkipForward}
+                className="p-2 text-white/60 active:text-white transition-all"
+              >
+                <SkipForward className="w-5 h-5" />
+              </button>
+
+              {/* Audio tracks */}
+              {state.audioTracks.length > 1 && (
+                <div className="relative" data-menu>
+                  <button
+                    onClick={() => { setShowAudioMenu(!showAudioMenu); setShowSubMenu(false); }}
+                    className="p-2 rounded-full text-white/50 active:text-white transition-all"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                  {showAudioMenu && (
+                    <AudioMenu
+                      tracks={state.audioTracks}
+                      activeIndex={state.activeAudioTrack}
+                      onSelect={handleAudioSwitch}
+                      onClose={() => setShowAudioMenu(false)}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right: fullscreen */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 text-white/60 active:text-white transition-all"
+            >
+              {state.isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 

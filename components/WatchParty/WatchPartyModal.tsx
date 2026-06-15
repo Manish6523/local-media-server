@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, Users, Copy, Check, Loader2, Search, Play, Tv, ChevronLeft, Film } from "lucide-react";
+import { X, Users, Copy, Check, Loader2, Search, Play, Tv, ChevronLeft, Film, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useWatchParty } from "@/hooks/useWatchParty";
 import MembersList from "./MembersList";
@@ -212,62 +212,71 @@ export default function WatchPartyModal({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
       onClick={(e) => { e.stopPropagation(); onClose(); }}
     >
       <div
-        className="bg-black/60 backdrop-blur-2xl border border-white/10 w-full max-w-lg rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden max-h-[85vh] flex flex-col ring-1 ring-white/5 animate-in zoom-in-95 duration-200"
+        className="glass-heavy w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden max-h-[90vh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 shadow-[0_-10px_60px_rgba(0,0,0,0.5)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10 shrink-0">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#E50914]" />
-            Watch Party
-          </h2>
-          <button onClick={onClose} className="p-1 text-zinc-400 hover:text-white transition-colors">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Users className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight">Watch Party</h2>
+              <p className="text-[11px] text-white/30 font-medium">Watch together in sync</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-white/10 shrink-0">
+        <div className="flex mx-5 mt-4 mb-1 p-1 gap-1 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
           <button
             onClick={() => setTab("create")}
-            className={`flex-1 py-3 text-xs font-bold tracking-wider transition-colors ${
-              tab === "create" ? "text-white border-b-2 border-[#E50914]" : "text-white/40 hover:text-white/60"
+            className={`flex-1 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all duration-200 ${
+              tab === "create"
+                ? "bg-white text-black shadow-lg shadow-white/10"
+                : "text-white/35 hover:text-white/60"
             }`}
           >
-            CREATE ROOM
+            CREATE
           </button>
           <button
             onClick={() => setTab("join")}
-            className={`flex-1 py-3 text-xs font-bold tracking-wider transition-colors ${
-              tab === "join" ? "text-white border-b-2 border-[#E50914]" : "text-white/40 hover:text-white/60"
+            className={`flex-1 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all duration-200 ${
+              tab === "join"
+                ? "bg-white text-black shadow-lg shadow-white/10"
+                : "text-white/35 hover:text-white/60"
             }`}
           >
-            JOIN ROOM
+            JOIN
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4">
           {tab === "create" ? (
             <>
               {/* ─── STEP: BROWSE ─── */}
               {createStep === "browse" && (
                 <div className="space-y-4">
-                  <p className="text-white/50 text-sm">Choose what to watch</p>
+                  <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Choose what to watch</p>
 
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search movies & shows..."
-                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-white/30"
+                      className="w-full glass-card pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
                     />
                   </div>
 
@@ -275,46 +284,52 @@ export default function WatchPartyModal({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setBrowseTab("movies")}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                        browseTab === "movies" ? "bg-[#E50914] text-white" : "bg-white/5 text-white/50 hover:text-white"
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all duration-200 ${
+                        browseTab === "movies"
+                          ? "bg-white text-black shadow-md shadow-white/10"
+                          : "glass-card text-white/40 hover:text-white/70"
                       }`}
                     >
-                      <Film className="w-3.5 h-3.5" /> Movies ({filteredMovies.length})
+                      <Film className="w-3.5 h-3.5" /> Movies
+                      <span className="opacity-50">({filteredMovies.length})</span>
                     </button>
                     <button
                       onClick={() => setBrowseTab("series")}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                        browseTab === "series" ? "bg-[#E50914] text-white" : "bg-white/5 text-white/50 hover:text-white"
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all duration-200 ${
+                        browseTab === "series"
+                          ? "bg-white text-black shadow-md shadow-white/10"
+                          : "glass-card text-white/40 hover:text-white/70"
                       }`}
                     >
-                      <Tv className="w-3.5 h-3.5" /> Series ({filteredSeries.length})
+                      <Tv className="w-3.5 h-3.5" /> Series
+                      <span className="opacity-50">({filteredSeries.length})</span>
                     </button>
                   </div>
 
                   {/* Content grid */}
-                  <div className="max-h-[320px] overflow-y-auto">
+                  <div className="max-h-[300px] overflow-y-auto no-scrollbar">
                     {browseTab === "movies" ? (
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-2.5">
                         {filteredMovies.slice(0, 30).map((m) => (
                           <button
                             key={m.id}
                             onClick={() => handleSelectMovie(m)}
-                            className="relative rounded-lg overflow-hidden aspect-[2/3] border-2 border-transparent hover:border-[#E50914]/50 transition-all group"
+                            className="relative rounded-xl overflow-hidden aspect-[2/3] border border-white/[0.06] hover:border-white/30 hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-1 transition-all duration-300 group"
                           >
                             {m.poster ? (
                               <img src={m.poster} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                                <Film className="w-6 h-6 text-white/20" />
+                                <Film className="w-6 h-6 text-white/15" />
                               </div>
                             )}
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
-                              <p className="text-white text-[10px] font-medium line-clamp-2 leading-tight">{m.title}</p>
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent p-2.5 pt-8">
+                              <p className="text-white text-[10px] font-bold tracking-wide line-clamp-2 leading-tight">{m.title}</p>
                             </div>
                             {/* Play overlay */}
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="w-8 h-8 rounded-full bg-[#E50914] flex items-center justify-center">
-                                <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg backdrop-blur-sm scale-90 group-hover:scale-100 transition-transform">
+                                <Play className="w-4 h-4 text-black fill-black ml-0.5" />
                               </div>
                             </div>
                           </button>
@@ -327,20 +342,20 @@ export default function WatchPartyModal({
                           <button
                             key={series.title}
                             onClick={() => handleSelectSeries(series.title)}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all text-left"
+                            className="w-full flex items-center gap-3.5 p-3 rounded-xl glass-card hover:bg-white/[0.06] hover:border-white/15 transition-all text-left group"
                           >
                             {series.poster ? (
-                              <img src={series.poster} alt="" className="w-12 h-16 rounded object-cover shrink-0" />
+                              <img src={series.poster} alt="" className="w-12 h-16 rounded-lg object-cover shrink-0 border border-white/[0.06]" />
                             ) : (
-                              <div className="w-12 h-16 bg-white/5 rounded flex items-center justify-center shrink-0">
-                                <Tv className="w-5 h-5 text-white/20" />
+                              <div className="w-12 h-16 bg-white/5 rounded-lg flex items-center justify-center shrink-0 border border-white/[0.06]">
+                                <Tv className="w-5 h-5 text-white/15" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-white text-sm font-medium truncate">{series.title}</p>
-                              <p className="text-white/40 text-xs mt-0.5">{series.episodeCount} episode{series.episodeCount !== 1 ? "s" : ""}</p>
+                              <p className="text-white text-sm font-semibold truncate">{series.title}</p>
+                              <p className="text-white/30 text-xs mt-0.5 font-medium">{series.episodeCount} episode{series.episodeCount !== 1 ? "s" : ""}</p>
                             </div>
-                            <ChevronLeft className="w-4 h-4 text-white/30 rotate-180 shrink-0" />
+                            <ChevronLeft className="w-4 h-4 text-white/20 rotate-180 shrink-0 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
                           </button>
                         ))}
                       </div>
@@ -355,31 +370,32 @@ export default function WatchPartyModal({
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => { setCreateStep("browse"); setSelectedSeries(null); }}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                      className="p-2 rounded-full glass-card hover:bg-white/10 transition-all"
                     >
-                      <ChevronLeft className="w-4 h-4 text-white/60" />
+                      <ChevronLeft className="w-4 h-4 text-white/50" />
                     </button>
                     <div>
-                      <h3 className="text-white font-medium text-sm">{selectedSeries}</h3>
-                      <p className="text-white/40 text-xs">Select an episode</p>
+                      <h3 className="text-white font-bold text-sm tracking-tight">{selectedSeries}</h3>
+                      <p className="text-white/30 text-[11px] font-medium">Select an episode</p>
                     </div>
                   </div>
 
-                  <div className="max-h-[360px] overflow-y-auto space-y-4">
+                  <div className="max-h-[340px] overflow-y-auto no-scrollbar space-y-5">
                     {Object.entries(seasonGroups).map(([season, episodes]) => (
                       <div key={season}>
-                        <h4 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2">
+                        <h4 className="text-[11px] font-black text-white/30 uppercase tracking-widest mb-2.5 flex items-center gap-2">
+                          <span className="w-5 h-[1px] bg-white/10" />
                           Season {season}
                         </h4>
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           {episodes.map((ep) => (
                             <button
                               key={ep.id}
                               onClick={() => handleSelectEpisode(ep)}
-                              className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-[#E50914]/10 hover:border-[#E50914]/30 border border-transparent transition-all text-left group"
+                              className="w-full flex items-center justify-between p-3 rounded-xl glass-card hover:bg-white/[0.06] hover:border-white/15 transition-all text-left group"
                             >
                               <div className="flex items-center gap-3">
-                                <span className="text-white/30 text-xs font-mono w-12 shrink-0">
+                                <span className="text-white/20 text-[11px] font-mono font-bold w-14 shrink-0">
                                   S{String(ep.season || 1).padStart(2, "0")}E{String(ep.episode_start || 1).padStart(2, "0")}
                                   {ep.episode_end && ep.episode_end !== ep.episode_start && (
                                     <span>-E{String(ep.episode_end).padStart(2, "0")}</span>
@@ -387,7 +403,7 @@ export default function WatchPartyModal({
                                 </span>
                                 <span className="text-white text-sm font-medium">{ep.title}</span>
                               </div>
-                              <Play className="w-4 h-4 text-white/20 group-hover:text-[#E50914] transition-colors shrink-0" />
+                              <Play className="w-4 h-4 text-white/15 group-hover:text-white/50 transition-colors shrink-0" />
                             </button>
                           ))}
                         </div>
@@ -400,46 +416,52 @@ export default function WatchPartyModal({
               {/* ─── STEP: NAME ─── */}
               {createStep === "name" && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <button
                       onClick={() => {
                         if (selectedSeries) setCreateStep("episodes");
                         else setCreateStep("browse");
                       }}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                      className="p-2 rounded-full glass-card hover:bg-white/10 transition-all"
                     >
-                      <ChevronLeft className="w-4 h-4 text-white/60" />
+                      <ChevronLeft className="w-4 h-4 text-white/50" />
                     </button>
                     {selectedMedia?.poster && (
-                      <img src={selectedMedia.poster} alt="" className="w-10 h-14 rounded object-cover" />
+                      <img src={selectedMedia.poster} alt="" className="w-11 h-16 rounded-lg object-cover border border-white/[0.06]" />
                     )}
                     <div>
-                      <p className="text-white font-medium text-sm">{selectedMedia?.title}</p>
+                      <p className="text-white font-bold text-sm tracking-tight">{selectedMedia?.title}</p>
                       {selectedMedia?.season && (
-                        <p className="text-white/40 text-xs">
-                          S{String(selectedMedia.season).padStart(2, "0")}E{String(selectedMedia.episode_start || 1).padStart(2, "0")}
+                        <p className="text-white/30 text-xs font-medium mt-0.5">
+                          Season {selectedMedia.season} · Episode {selectedMedia.episode_start || 1}
                         </p>
                       )}
                     </div>
                   </div>
+
                   <div>
-                    <p className="text-white/50 text-sm mb-2">Enter your name</p>
+                    <label className="text-white/40 text-xs font-bold uppercase tracking-wider block mb-2">Your name</label>
                     <input
                       type="text"
                       value={hostName}
                       onChange={(e) => setHostName(e.target.value.slice(0, 20))}
                       onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                      placeholder="Your name"
+                      placeholder="Enter your name..."
                       autoFocus
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors"
+                      className="w-full glass-card px-4 py-3.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                     />
                   </div>
+
                   <button
                     onClick={handleCreate}
                     disabled={!hostName.trim() || creating}
-                    className="w-full bg-[#E50914] hover:bg-[#f6121d] disabled:opacity-50 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-white hover:bg-white/90 disabled:opacity-40 disabled:hover:bg-white text-black font-bold py-3.5 rounded-full transition-all flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)]"
                   >
-                    {creating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : "Create Room"}
+                    {creating ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4" /> Create Room</>
+                    )}
                   </button>
                 </div>
               )}
@@ -447,31 +469,39 @@ export default function WatchPartyModal({
               {/* ─── STEP: READY ─── */}
               {createStep === "ready" && (
                 <div className="space-y-5">
-                  <div className="text-center py-4">
-                    <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Room Code</p>
-                    <p className="text-white text-4xl font-mono font-bold tracking-[0.3em] select-all">{roomCode}</p>
+                  {/* Room code card */}
+                  <div className="relative overflow-hidden rounded-2xl glass-card p-6 text-center">
+                    {/* Subtle gradient glow behind the code */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.06] via-transparent to-cyan-500/[0.06]" />
+                    <p className="text-white/30 text-[11px] font-bold uppercase tracking-widest mb-3 relative">Room Code</p>
+                    <p className="text-white text-4xl font-black tracking-[0.3em] select-all relative bg-gradient-to-r from-white via-white to-white/70 bg-clip-text">{roomCode}</p>
                   </div>
+
+                  {/* Share link */}
                   <div className="flex items-center gap-2">
                     <input type="text" value={shareLink} readOnly
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white/70 text-xs font-mono truncate"
+                      className="flex-1 glass-card px-3.5 py-3 text-white/50 text-xs font-mono truncate focus:outline-none"
                     />
                     <button onClick={handleCopy}
-                      className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-3 py-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0"
+                      className="glass-card hover:bg-white/10 text-white px-4 py-3 text-xs font-bold flex items-center gap-1.5 transition-all shrink-0"
                     >
-                      {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+                      {copied ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                     </button>
                   </div>
-                  <div>
-                    <p className="text-white/40 text-xs mb-2">
+
+                  {/* Members */}
+                  <div className="glass-card p-4 rounded-xl">
+                    <p className="text-white/30 text-[11px] font-bold uppercase tracking-widest mb-3">
                       {members.length <= 1 ? "Waiting for friends..." : `${members.length} in room`}
                     </p>
                     <MembersList members={members} />
                   </div>
+
                   <button
                     onClick={() => { onClose(); router.push(`/watch/${roomCode}`); }}
-                    className="w-full bg-[#E50914] hover:bg-[#f6121d] text-white font-medium py-3 rounded-lg transition-colors"
+                    className="w-full bg-white hover:bg-white/90 text-black font-bold py-3.5 rounded-full transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2.5"
                   >
-                    Start Watching
+                    <Play className="w-4 h-4 fill-black" /> Start Watching
                   </button>
                 </div>
               )}
@@ -481,65 +511,73 @@ export default function WatchPartyModal({
             <div className="space-y-5">
               {/* Manual code entry */}
               <div className="space-y-3">
-                <p className="text-white/50 text-sm">Enter a room code</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
-                    placeholder="ABC123"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm font-mono tracking-widest text-center focus:outline-none focus:border-white/30 transition-colors"
-                  />
-                </div>
+                <label className="text-white/40 text-xs font-bold uppercase tracking-wider">Room Code</label>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+                  placeholder="ABC123"
+                  className="w-full glass-card px-4 py-3.5 text-white text-lg font-mono font-bold tracking-[0.3em] text-center placeholder:text-white/15 focus:outline-none focus:border-white/20 transition-colors"
+                />
+                <label className="text-white/40 text-xs font-bold uppercase tracking-wider block mt-1">Your Name</label>
                 <input
                   type="text"
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value.slice(0, 20))}
-                  placeholder="Your name"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors"
+                  placeholder="Enter your name..."
+                  className="w-full glass-card px-4 py-3.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                 />
                 <button
                   onClick={handleJoin}
                   disabled={!joinCode.trim() || !joinName.trim()}
-                  className="w-full bg-[#E50914] hover:bg-[#f6121d] disabled:opacity-50 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-white hover:bg-white/90 disabled:opacity-40 disabled:hover:bg-white text-black font-bold py-3.5 rounded-full transition-all flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)]"
                 >
-                  <Users className="w-4 h-4" /> Join
+                  <Users className="w-4 h-4" /> Join Room
                 </button>
               </div>
 
               {/* Active rooms */}
-              <div className="border-t border-white/10 pt-4">
-                <p className="text-white/50 text-xs uppercase tracking-wider mb-3">Active Rooms</p>
+              <div className="pt-2">
+                <p className="text-white/30 text-[11px] font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="w-4 h-[1px] bg-white/10" />
+                  Active Rooms
+                  <span className="flex-1 h-[1px] bg-white/10" />
+                </p>
                 {loadingRooms ? (
-                  <div className="flex justify-center py-6">
-                    <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+                  <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
+                    <p className="text-white/20 text-xs">Scanning for rooms...</p>
                   </div>
                 ) : activeRooms.length === 0 ? (
-                  <p className="text-white/20 text-sm text-center py-6">No active rooms right now</p>
+                  <div className="glass-card p-6 text-center rounded-xl">
+                    <Users className="w-8 h-8 text-white/10 mx-auto mb-2" />
+                    <p className="text-white/20 text-sm font-medium">No active rooms right now</p>
+                    <p className="text-white/10 text-xs mt-1">Create one or enter a code above</p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {activeRooms.map((room) => (
                       <button
                         key={room.roomCode}
                         onClick={() => handleJoinRoom(room.roomCode)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors border ${
+                        className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-200 ${
                           joinCode === room.roomCode
-                            ? "bg-white/10 border-[#E50914]/50"
-                            : "bg-white/5 border-transparent hover:bg-white/10"
+                            ? "glass-glow bg-white/[0.06]"
+                            : "glass-card hover:bg-white/[0.06]"
                         }`}
                       >
                         {room.mediaPoster ? (
-                          <img src={room.mediaPoster} alt="" className="w-10 h-14 rounded object-cover shrink-0" />
+                          <img src={room.mediaPoster} alt="" className="w-10 h-14 rounded-lg object-cover shrink-0 border border-white/[0.06]" />
                         ) : (
-                          <div className="w-10 h-14 bg-white/10 rounded flex items-center justify-center shrink-0">
-                            <Play className="w-4 h-4 text-white/20" />
+                          <div className="w-10 h-14 bg-white/5 rounded-lg flex items-center justify-center shrink-0 border border-white/[0.06]">
+                            <Play className="w-4 h-4 text-white/15" />
                           </div>
                         )}
                         <div className="flex-1 text-left min-w-0">
-                          <p className="text-white text-sm font-medium truncate">{room.mediaTitle}</p>
-                          <p className="text-white/40 text-xs">Hosted by {room.hostName} · {room.memberCount} watching</p>
+                          <p className="text-white text-sm font-semibold truncate">{room.mediaTitle}</p>
+                          <p className="text-white/30 text-xs font-medium mt-0.5">Hosted by {room.hostName} · {room.memberCount} watching</p>
                         </div>
-                        <span className="text-white/30 text-xs font-mono shrink-0">{room.roomCode}</span>
+                        <span className="text-white/20 text-[11px] font-mono font-bold shrink-0 glass-card px-2 py-1 rounded-md">{room.roomCode}</span>
                       </button>
                     ))}
                   </div>

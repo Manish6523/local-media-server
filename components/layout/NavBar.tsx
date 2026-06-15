@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles } from "lucide-react";
+import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize } from "lucide-react";
 import dynamic from "next/dynamic";
 import CommandMenu from "./CommandMenu";
 
@@ -14,12 +14,21 @@ export default function NavBar() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
     { href: "/favorites", label: "Favorites", icon: Heart },
+  ];
+
+  // Primary mobile links (always visible)
+  const primaryMobileLinks = [
+    { href: "/", label: "Home", icon: Home },
+    { href: "/movies", label: "Movies", icon: Film },
+    { href: "/shows", label: "Shows", icon: Tv },
   ];
 
   useEffect(() => {
@@ -39,6 +48,28 @@ export default function NavBar() {
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Track fullscreen state
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  // Close expanded tray on route change
+  useEffect(() => {
+    setMobileExpanded(false);
+  }, [pathname]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
   }, []);
 
   // Don't show nav on player/watch/join routes
@@ -125,8 +156,63 @@ export default function NavBar() {
       </header>
 
       {/* ═══ MOBILE BOTTOM NAV ═══ */}
+      {/* Backdrop overlay when expanded */}
+      {mobileExpanded && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setMobileExpanded(false)}
+        />
+      )}
+
       <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-sm">
-        <div className="glass-heavy rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-2xl shadow-black/40">
+        {/* ── Secondary Tray (slides up) ── */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            mobileExpanded ? "max-h-20 opacity-100 mb-2" : "max-h-0 opacity-0 mb-0"
+          }`}
+        >
+          <div className="glass-heavy rounded-2xl px-4 py-2.5 flex items-center justify-evenly shadow-2xl shadow-black/40">
+            {/* Favourites */}
+            <Link
+              href="/favorites"
+              onClick={() => setMobileExpanded(false)}
+              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${
+                pathname === "/favorites"
+                  ? "text-violet-400"
+                  : "text-white/40 hover:text-white/70 active:text-white"
+              }`}
+            >
+              <Heart className="w-5 h-5" />
+              <span className="text-[10px] font-medium tracking-wide">Watchlist</span>
+            </Link>
+
+            {/* Watch Party */}
+            <button
+              onClick={() => { setMobileExpanded(false); setShowPartyModal(true); }}
+              className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-white/40 hover:text-white/70 active:text-white transition-all"
+            >
+              <Users className="w-5 h-5" />
+              <span className="text-[10px] font-medium tracking-wide">Party</span>
+            </button>
+
+            {/* Fullscreen */}
+            <button
+              onClick={() => { toggleFullscreen(); setMobileExpanded(false); }}
+              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${
+                isFullscreen
+                  ? "text-violet-400"
+                  : "text-white/40 hover:text-white/70 active:text-white"
+              }`}
+            >
+              <Maximize className="w-5 h-5" />
+              <span className="text-[10px] font-medium tracking-wide">Fullscreen</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Primary Row (always visible) ── */}
+        <div className="glass-heavy rounded-2xl px-3 py-2.5 flex items-center justify-between shadow-2xl shadow-black/40">
+          {/* Search */}
           <button
             onClick={() => setIsCommandOpen(true)}
             className="p-2.5 rounded-xl text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
@@ -134,7 +220,8 @@ export default function NavBar() {
             <Search className="w-5 h-5" />
           </button>
 
-          {navLinks.map((link) => {
+          {/* Primary nav links: Home, Movies, Shows */}
+          {primaryMobileLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
               <Link
@@ -154,16 +241,17 @@ export default function NavBar() {
             );
           })}
 
-          <Link
-            href="/settings"
-            className={`p-2.5 rounded-xl transition-all ${
-              pathname === "/settings"
-                ? "text-violet-400 bg-violet-500/10"
+          {/* Expand / Collapse toggle */}
+          <button
+            onClick={() => setMobileExpanded((v) => !v)}
+            className={`p-2.5 rounded-xl transition-all duration-300 ${
+              mobileExpanded
+                ? "text-violet-400 bg-violet-500/10 rotate-180"
                 : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
             }`}
           >
-            <Settings className="w-5 h-5" />
-          </Link>
+            <ChevronUp className="w-5 h-5" />
+          </button>
         </div>
       </div>
 

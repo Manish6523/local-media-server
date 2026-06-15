@@ -133,7 +133,7 @@ export default function ShowDetailPage() {
 
           {/* Right Section: Seasons & Episodes */}
           <div className="lg:col-span-8">
-            <div className="sticky top-20 z-30 bg-background/50 backdrop-blur-xl py-4 mb-10 border-b border-white/10 flex items-center gap-8 overflow-x-auto no-scrollbar shadow-sm">
+            <div className="sticky sm:top-15 top-0 z-30 bg-background/50 backdrop-blur-xl py-4 mb-10 border-b border-white/10 flex items-center gap-8 overflow-x-auto no-scrollbar shadow-sm">
               {seasons.map((season) => (
                 <button
                   key={season}
@@ -160,7 +160,7 @@ export default function ShowDetailPage() {
                   }`}
                 >
                   <div className="relative w-full md:w-64 aspect-video rounded-xl overflow-hidden shadow-lg flex-shrink-0">
-                    <Image src={ep.poster || "/placeholder.jpg"} alt="ep" fill className="object-cover" />
+                    <Image src={ep.backdrop||ep.poster || "/placeholder.jpg"} alt="ep" fill className="object-cover" />
                     
                     {ep.available ? (
                       <Link href={`/player/${ep.id}`} className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -190,7 +190,8 @@ export default function ShowDetailPage() {
                         <h3 className="text-xl font-black italic tracking-tighter uppercase mb-1">
                           E{ep.episode_start} <span className="text-muted-foreground mx-2">—</span> {ep.title}
                         </h3>
-                        <p className="text-xs font-mono text-muted-foreground truncate max-w-md">{ep.filename}</p>
+                        <p className="text-xs sm:hidden block font-mono text-muted-foreground truncate max-w-md">{ep.filename.slice(0, 40)}...</p>
+                        <p className="text-xs hidden sm:block font-mono text-muted-foreground truncate max-w-md">{ep.filename}</p>
                       </div>
                       {!ep.available && (
                         <Badge className="bg-destructive/10 text-destructive border-none text-[10px] font-bold">OFFLINE</Badge>
@@ -204,9 +205,9 @@ export default function ShowDetailPage() {
                       {ep.available && (
                         <button 
                           onClick={() => { setSelectedEpisodeForParty(ep); setShowPartyModal(true); }}
-                          className="flex items-center gap-1.5 ml-auto text-[#E50914] hover:text-[#f6121d] transition-colors"
+                          className="flex items-center gap-1.5 border-2 border-white/10 rounded-lg p-1.5 md:px-2 md:py-2 ml-auto text-[#E50914] hover:text-[#f6121d] transition-colors"
                         >
-                          <Users className="w-3.5 h-3.5" /> Watch Party
+                          <Users className="w-3.5 h-3.5" /> <span className="hidden md:block">Watch Party</span>
                         </button>
                       )}
                     </div>

@@ -44,7 +44,7 @@ export default function FavoritesPage() {
   }, [favorites, sortParam]);
 
   return (
-    <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-20">
+    <div className="min-h-screen pt-14 px-4 md:px-8 lg:px-14 pb-20">
       {/* Clean Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -59,7 +59,7 @@ export default function FavoritesPage() {
         {!loading && favorites.length > 0 && (
           <div className="flex items-center gap-2 px-3 py-2 glass-card text-sm">
             <Filter className="w-3.5 h-3.5 text-white/40" />
-            <SortDropdown pageKey="favorites" onSortChange={setSortParam} />
+            {/* <SortDropdown pageKey="favorites" onSortChange={setSortParam} /> */}
           </div>
         )}
       </div>

@@ -19,13 +19,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
-      <body className="min-h-full relative">
+      <body className="min-h-full relative" suppressHydrationWarning>
         {/* Aurora gradient background */}
         <div className="aurora-bg" />
         
         <BackgroundProvider>
           <NavBar />
-          <main className="relative z-10 min-h-screen">
+          <main className="relative z-10 min-h-screen pb-28 md:pb-0">
             {children}
           </main>
         </BackgroundProvider>

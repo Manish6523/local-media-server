@@ -141,7 +141,7 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
             )}
             <Link
               href={`/${currentItem.type === "show" ? "shows" : "movies"}/${encodeURIComponent(currentItem.title.toLowerCase().replace(/\s+/g, "-"))}`}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-full glass text-white/70 text-sm font-medium hover:text-white hover:bg-white/[0.08] transition-all"
+              className="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-full glass text-white/70 text-sm font-medium hover:text-white hover:bg-white/[0.08] transition-all"
             >
               Details
             </Link>
@@ -152,7 +152,7 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
         {items.length > 1 && (
           <div className="absolute bottom-20 md:bottom-28 right-4 md:right-8 lg:right-12 flex items-center gap-3 z-20">
             {/* Dots */}
-            <div className="flex items-center gap-1.5 mr-2">
+            <div className="hidden sm:flex items-center gap-1.5 mr-2">
               {items.map((_, idx) => (
                 <button
                   key={idx}
