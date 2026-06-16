@@ -3,8 +3,15 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Play, Pause, SkipBack, SkipForward,
-  Maximize, Minimize, Subtitles, Volume2,
+  ArrowLeft,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Maximize,
+  Minimize,
+  Subtitles,
+  Volume2,
 } from "lucide-react";
 import { usePlayer } from "./usePlayer";
 import ProgressBar from "./ProgressBar";
@@ -38,11 +45,19 @@ interface NetflixPlayerProps {
 }
 
 export default function NetflixPlayer({
-  mediaId, title, type, season, episodeStart, episodeEnd, filename, exactDuration, initialWatchProgress = 0,
+  mediaId,
+  title,
+  type,
+  season,
+  episodeStart,
+  episodeEnd,
+  filename,
+  exactDuration,
+  initialWatchProgress = 0,
   watchPartyMode,
 }: NetflixPlayerProps) {
   const router = useRouter();
-  
+
   const ext = filename.split(".").pop()?.toLowerCase();
   const baseNeedsTranscode = ext === "mkv" || ext === "avi" || ext === "wmv";
 
@@ -69,7 +84,13 @@ export default function NetflixPlayer({
     setSubtitleColor,
     showResumeToast,
     forceHideControls,
-  } = usePlayer(mediaId, baseNeedsTranscode, exactDuration, initialWatchProgress, watchPartyMode?.roomCode);
+  } = usePlayer(
+    mediaId,
+    baseNeedsTranscode,
+    exactDuration,
+    initialWatchProgress,
+    watchPartyMode?.roomCode,
+  );
 
   const [showSubMenu, setShowSubMenu] = useState(false);
   const [showAudioMenu, setShowAudioMenu] = useState(false);
@@ -83,13 +104,14 @@ export default function NetflixPlayer({
     return cleanup;
   }, [bindVideoEvents]);
 
-
   // Watch party wrappers — emit socket events on host actions
   const wpTogglePlay = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return; // Guest can't control
     if (watchPartyMode?.isHost && videoRef.current) {
       const v = videoRef.current;
-      const absoluteTime = needsTranscode ? transcodeStartTime + v.currentTime : v.currentTime;
+      const absoluteTime = needsTranscode
+        ? transcodeStartTime + v.currentTime
+        : v.currentTime;
       // Emit intent ONLY; execution happens via scheduled socket event
       if (!v.paused) {
         watchPartyMode.onPause(absoluteTime);
@@ -101,14 +123,17 @@ export default function NetflixPlayer({
     }
   }, [togglePlay, watchPartyMode, needsTranscode, transcodeStartTime]);
 
-  const wpSeek = useCallback((time: number) => {
-    if (watchPartyMode && !watchPartyMode.isHost) return;
-    if (watchPartyMode?.isHost) {
-      watchPartyMode.onSeek(time);
-    } else {
-      seek(time);
-    }
-  }, [seek, watchPartyMode]);
+  const wpSeek = useCallback(
+    (time: number) => {
+      if (watchPartyMode && !watchPartyMode.isHost) return;
+      if (watchPartyMode?.isHost) {
+        watchPartyMode.onSeek(time);
+      } else {
+        seek(time);
+      }
+    },
+    [seek, watchPartyMode],
+  );
 
   // Expose the seek callback to the WatchParty container page so seek events
   // correctly trigger player-level seeks with proper start time updates.
@@ -129,7 +154,9 @@ export default function NetflixPlayer({
   const wpSkipBack = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
     if (watchPartyMode?.isHost && videoRef.current) {
-      const absoluteTime = needsTranscode ? transcodeStartTime + videoRef.current.currentTime : videoRef.current.currentTime;
+      const absoluteTime = needsTranscode
+        ? transcodeStartTime + videoRef.current.currentTime
+        : videoRef.current.currentTime;
       watchPartyMode.onSeek(absoluteTime - 10);
     } else {
       skipBack();
@@ -139,7 +166,9 @@ export default function NetflixPlayer({
   const wpSkipForward = useCallback(() => {
     if (watchPartyMode && !watchPartyMode.isHost) return;
     if (watchPartyMode?.isHost && videoRef.current) {
-      const absoluteTime = needsTranscode ? transcodeStartTime + videoRef.current.currentTime : videoRef.current.currentTime;
+      const absoluteTime = needsTranscode
+        ? transcodeStartTime + videoRef.current.currentTime
+        : videoRef.current.currentTime;
       watchPartyMode.onSeek(absoluteTime + 10);
     } else {
       skipForward();
@@ -174,9 +203,19 @@ export default function NetflixPlayer({
       if (e.target instanceof HTMLInputElement) return;
 
       switch (e.key) {
-        case " ": case "k": e.preventDefault(); wpTogglePlay(); break;
-        case "ArrowLeft": e.preventDefault(); wpSkipBack(); break;
-        case "ArrowRight": e.preventDefault(); wpSkipForward(); break;
+        case " ":
+        case "k":
+          e.preventDefault();
+          wpTogglePlay();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          wpSkipBack();
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          wpSkipForward();
+          break;
         case "ArrowUp":
           e.preventDefault();
           setVolume(state.volume + 0.1);
@@ -185,8 +224,14 @@ export default function NetflixPlayer({
           e.preventDefault();
           setVolume(state.volume - 0.1);
           break;
-        case "m": e.preventDefault(); toggleMute(); break;
-        case "f": e.preventDefault(); toggleFullscreen(); break;
+        case "m":
+          e.preventDefault();
+          toggleMute();
+          break;
+        case "f":
+          e.preventDefault();
+          toggleFullscreen();
+          break;
         case "c":
           e.preventDefault();
           if (state.subtitleTracks.length > 0) {
@@ -204,10 +249,19 @@ export default function NetflixPlayer({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [
-    wpTogglePlay, wpSkipBack, wpSkipForward, setVolume, toggleMute,
-    toggleFullscreen, setActiveSubtitle, state.volume,
-    state.subtitleTracks, state.activeSubtitle, showSubMenu,
-    showAudioMenu, router,
+    wpTogglePlay,
+    wpSkipBack,
+    wpSkipForward,
+    setVolume,
+    toggleMute,
+    toggleFullscreen,
+    setActiveSubtitle,
+    state.volume,
+    state.subtitleTracks,
+    state.activeSubtitle,
+    showSubMenu,
+    showAudioMenu,
+    router,
   ]);
 
   // Subtitle track management — use hidden mode + cuechange
@@ -227,18 +281,20 @@ export default function NetflixPlayer({
       track.kind = "subtitles";
       track.label = sub.label;
       track.srclang = sub.language;
-      
+
       let trackUrl = sub.url;
       if (needsTranscode && transcodeStartTime > 0) {
-        trackUrl += (trackUrl.includes("?") ? "&" : "?") + `start=${transcodeStartTime}`;
+        trackUrl +=
+          (trackUrl.includes("?") ? "&" : "?") + `start=${transcodeStartTime}`;
       }
       track.src = trackUrl;
-      
+
       v.appendChild(track);
 
       // Set mode
       if (v.textTracks[idx]) {
-        v.textTracks[idx].mode = state.activeSubtitle === idx ? "hidden" : "disabled";
+        v.textTracks[idx].mode =
+          state.activeSubtitle === idx ? "hidden" : "disabled";
       }
     });
 
@@ -268,7 +324,15 @@ export default function NetflixPlayer({
         v.textTracks[i].removeEventListener("cuechange", handleCueChange);
       }
     };
-  }, [videoRef, state.subtitleTracks, state.activeSubtitle, setCueText, state.activeAudioTrack, needsTranscode, transcodeStartTime]);
+  }, [
+    videoRef,
+    state.subtitleTracks,
+    state.activeSubtitle,
+    setCueText,
+    state.activeAudioTrack,
+    needsTranscode,
+    transcodeStartTime,
+  ]);
 
   // Handle click to play/pause and double-click to skip
   const handleVideoClick = useCallback(
@@ -278,9 +342,13 @@ export default function NetflixPlayer({
 
       const now = Date.now();
       const rect = containerRef.current?.getBoundingClientRect();
-      const clickSide: "left" | "right" = rect && e.clientX < rect.left + rect.width / 2 ? "left" : "right";
+      const clickSide: "left" | "right" =
+        rect && e.clientX < rect.left + rect.width / 2 ? "left" : "right";
 
-      if (now - lastClickTime.current < 300 && lastClickSide.current === clickSide) {
+      if (
+        now - lastClickTime.current < 300 &&
+        lastClickSide.current === clickSide
+      ) {
         // Double click
         if (clickSide === "left") skipBack();
         else skipForward();
@@ -296,7 +364,7 @@ export default function NetflixPlayer({
         }, 300);
       }
     },
-    [containerRef, skipBack, skipForward, togglePlay]
+    [containerRef, skipBack, skipForward, togglePlay],
   );
 
   // Close menus on outside click
@@ -319,7 +387,7 @@ export default function NetflixPlayer({
       setActiveAudioTrack(index);
       setTimeout(() => setSwitchingAudio(false), 3000);
     },
-    [state.activeAudioTrack, setActiveAudioTrack]
+    [state.activeAudioTrack, setActiveAudioTrack],
   );
 
   const formatTime = (s: number) => {
@@ -332,13 +400,14 @@ export default function NetflixPlayer({
       : `${m}:${String(sec).padStart(2, "0")}`;
   };
 
-  const titleLabel = type === "show" && season
-    ? `${title} — S${String(season).padStart(2, "0")}${
-        episodeStart === episodeEnd
-          ? `E${String(episodeStart).padStart(2, "0")}`
-          : `E${String(episodeStart).padStart(2, "0")}–E${String(episodeEnd).padStart(2, "0")}`
-      }`
-    : title;
+  const titleLabel =
+    type === "show" && season
+      ? `${title} — S${String(season).padStart(2, "0")}${
+          episodeStart === episodeEnd
+            ? `E${String(episodeStart).padStart(2, "0")}`
+            : `E${String(episodeStart).padStart(2, "0")}–E${String(episodeEnd).padStart(2, "0")}`
+        }`
+      : title;
 
   return (
     <div
@@ -396,24 +465,36 @@ export default function NetflixPlayer({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="bg-black/70 backdrop-blur-sm px-6 py-3 rounded-lg flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            <span className="text-white text-sm font-medium">Switching audio...</span>
+            <span className="text-white text-sm font-medium">
+              Switching audio...
+            </span>
           </div>
         </div>
       )}
 
       {/* Custom subtitle rendering */}
       {state.currentCueText && (
-        <div className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 z-20 ${
-          state.subtitleSize === "small" ? "bottom-10 md:bottom-10" :
-          state.subtitleSize === "large" ? "bottom-28 md:bottom-24" : "bottom-24 md:bottom-20"
-        }`}>
+        <div
+          className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 z-20 ${
+            state.subtitleSize === "small"
+              ? "bottom-10 md:bottom-10"
+              : state.subtitleSize === "large"
+                ? "bottom-28 md:bottom-24"
+                : "bottom-24 md:bottom-20"
+          }`}
+        >
           <div className="bg-black/70 px-5 py-2 rounded text-center max-w-[80%]">
             <span
               className={`font-medium leading-relaxed drop-shadow-md ${
-                state.subtitleSize === "small" ? "text-[0.85rem] md:text-[1rem]" :
-                state.subtitleSize === "large" ? "text-[1.4rem] md:text-[2rem]" : "text-[1.1rem] md:text-[1.4rem]"
+                state.subtitleSize === "small"
+                  ? "text-[0.85rem] md:text-[1rem]"
+                  : state.subtitleSize === "large"
+                    ? "text-[1.4rem] md:text-[2rem]"
+                    : "text-[1.1rem] md:text-[1.4rem]"
               } ${
-                state.subtitleColor === "yellow" ? "text-[#f3f315]" : "text-white"
+                state.subtitleColor === "yellow"
+                  ? "text-[#f3f315]"
+                  : "text-white"
               }`}
               dangerouslySetInnerHTML={{ __html: state.currentCueText }}
             />
@@ -424,18 +505,23 @@ export default function NetflixPlayer({
       {/* Top bar */}
       <div
         data-controls
-        className={`absolute top-0 left-0 right-0 px-4 md:px-6 pt-3 landscape:pt-2 md:pt-6 pb-12 landscape:pb-8 md:pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 z-30 ${
-          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+        className={`absolute top-0 left-0 right-0 px-6 pt-6 pb-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300 ${
+          state.showControls
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
-        <div className="flex items-center gap-3 md:gap-4 max-w-7xl mx-auto">
+        <div className="flex items-center gap-4 max-w-7xl mx-auto">
           <button
-            onClick={(e) => { e.stopPropagation(); router.back(); }}
-            className="p-1.5 landscape:p-1 md:p-2 bg-black/40 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.back();
+            }}
+            className="p-2 bg-black/40 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/10"
           >
-            <ArrowLeft className="w-5 h-5 landscape:w-4 landscape:h-4 md:w-6 md:h-6" />
+            <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-white font-bold text-sm landscape:text-xs md:text-xl truncate drop-shadow-md flex-1">
+          <h1 className="text-white font-bold text-lg md:text-xl truncate drop-shadow-md">
             {titleLabel}
           </h1>
         </div>
@@ -445,7 +531,9 @@ export default function NetflixPlayer({
       <div
         data-controls
         className={`md:hidden absolute bottom-0 left-0 right-0 transition-all duration-300 z-30 ${
-          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+          state.showControls
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-4 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -458,7 +546,7 @@ export default function NetflixPlayer({
             bufferedEnd={state.bufferedEnd}
             onSeek={wpSeek}
           />
-          
+
           {/* Single row: all controls */}
           <div className="flex items-center gap-2 mt-1.5">
             {/* Play/Pause */}
@@ -474,10 +562,16 @@ export default function NetflixPlayer({
             </button>
 
             {/* Skip controls */}
-            <button onClick={wpSkipBack} className="p-1.5 text-white/60 active:text-white transition-all">
+            <button
+              onClick={wpSkipBack}
+              className="p-1.5 text-white/60 active:text-white transition-all"
+            >
               <SkipBack className="w-4 h-4" />
             </button>
-            <button onClick={wpSkipForward} className="p-1.5 text-white/60 active:text-white transition-all">
+            <button
+              onClick={wpSkipForward}
+              className="p-1.5 text-white/60 active:text-white transition-all"
+            >
               <SkipForward className="w-4 h-4" />
             </button>
 
@@ -491,16 +585,23 @@ export default function NetflixPlayer({
 
             {/* Time */}
             <span className="text-white/50 text-[11px] font-mono tabular-nums ml-auto">
-              {formatTime(state.currentTime)} <span className="text-white/25">/</span> {formatTime(state.duration)}
+              {formatTime(state.currentTime)}{" "}
+              <span className="text-white/25">/</span>{" "}
+              {formatTime(state.duration)}
             </span>
 
             {/* Subtitles (landscape) */}
             {state.subtitleTracks.length > 0 && (
               <div className="relative" data-menu>
                 <button
-                  onClick={() => { setShowSubMenu(!showSubMenu); setShowAudioMenu(false); }}
+                  onClick={() => {
+                    setShowSubMenu(!showSubMenu);
+                    setShowAudioMenu(false);
+                  }}
                   className={`p-1.5 rounded-full transition-all ${
-                    state.activeSubtitle !== null ? "text-violet-400" : "text-white/50 active:text-white"
+                    state.activeSubtitle !== null
+                      ? "text-violet-400"
+                      : "text-white/50 active:text-white"
                   }`}
                 >
                   <Subtitles className="w-4 h-4" />
@@ -523,7 +624,10 @@ export default function NetflixPlayer({
             {state.audioTracks.length > 1 && (
               <div className="relative" data-menu>
                 <button
-                  onClick={() => { setShowAudioMenu(!showAudioMenu); setShowSubMenu(false); }}
+                  onClick={() => {
+                    setShowAudioMenu(!showAudioMenu);
+                    setShowSubMenu(false);
+                  }}
                   className="p-1.5 rounded-full text-white/50 active:text-white transition-all"
                 >
                   <Volume2 className="w-4 h-4" />
@@ -544,7 +648,11 @@ export default function NetflixPlayer({
               onClick={toggleFullscreen}
               className="p-1.5 text-white/50 active:text-white transition-all"
             >
-              {state.isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              {state.isFullscreen ? (
+                <Minimize className="w-4 h-4" />
+              ) : (
+                <Maximize className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -585,9 +693,14 @@ export default function NetflixPlayer({
               {state.subtitleTracks.length > 0 && (
                 <div className="relative" data-menu>
                   <button
-                    onClick={() => { setShowSubMenu(!showSubMenu); setShowAudioMenu(false); }}
+                    onClick={() => {
+                      setShowSubMenu(!showSubMenu);
+                      setShowAudioMenu(false);
+                    }}
                     className={`p-2 rounded-full transition-all ${
-                      state.activeSubtitle !== null ? "text-violet-400 bg-violet-500/10" : "text-white/50 active:text-white"
+                      state.activeSubtitle !== null
+                        ? "text-violet-400 bg-violet-500/10"
+                        : "text-white/50 active:text-white"
                     }`}
                   >
                     <Subtitles className="w-5 h-5" />
@@ -635,7 +748,10 @@ export default function NetflixPlayer({
               {state.audioTracks.length > 1 && (
                 <div className="relative" data-menu>
                   <button
-                    onClick={() => { setShowAudioMenu(!showAudioMenu); setShowSubMenu(false); }}
+                    onClick={() => {
+                      setShowAudioMenu(!showAudioMenu);
+                      setShowSubMenu(false);
+                    }}
                     className="p-2 rounded-full text-white/50 active:text-white transition-all"
                   >
                     <Volume2 className="w-5 h-5" />
@@ -657,7 +773,11 @@ export default function NetflixPlayer({
               onClick={toggleFullscreen}
               className="p-2 text-white/60 active:text-white transition-all"
             >
-              {state.isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              {state.isFullscreen ? (
+                <Minimize className="w-5 h-5" />
+              ) : (
+                <Maximize className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -667,7 +787,9 @@ export default function NetflixPlayer({
       <div
         data-controls
         className={`hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl px-6 py-4 rounded-3xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 z-30 ${
-          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
+          state.showControls
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -723,7 +845,9 @@ export default function NetflixPlayer({
             />
 
             <span className="text-white/80 text-sm font-medium font-mono ml-2 tabular-nums">
-              {formatTime(state.currentTime)} <span className="text-white/40 mx-1">/</span> {formatTime(state.duration)}
+              {formatTime(state.currentTime)}{" "}
+              <span className="text-white/40 mx-1">/</span>{" "}
+              {formatTime(state.duration)}
             </span>
           </div>
 
@@ -733,9 +857,14 @@ export default function NetflixPlayer({
             {state.subtitleTracks.length > 0 && (
               <div className="relative" data-menu>
                 <button
-                  onClick={() => { setShowSubMenu(!showSubMenu); setShowAudioMenu(false); }}
+                  onClick={() => {
+                    setShowSubMenu(!showSubMenu);
+                    setShowAudioMenu(false);
+                  }}
                   className={`p-2 rounded-full transition-all border ${
-                    state.activeSubtitle !== null ? "bg-primary/20 text-primary border-primary/30" : "bg-white/5 text-white/70 hover:text-white border-white/10 hover:bg-white/10"
+                    state.activeSubtitle !== null
+                      ? "bg-primary/20 text-primary border-primary/30"
+                      : "bg-white/5 text-white/70 hover:text-white border-white/10 hover:bg-white/10"
                   }`}
                   title="Subtitles"
                 >
@@ -759,13 +888,19 @@ export default function NetflixPlayer({
             {state.audioTracks.length > 1 && (
               <div className="relative" data-menu>
                 <button
-                  onClick={() => { setShowAudioMenu(!showAudioMenu); setShowSubMenu(false); }}
+                  onClick={() => {
+                    setShowAudioMenu(!showAudioMenu);
+                    setShowSubMenu(false);
+                  }}
                   className="flex items-center gap-2 p-2 px-3 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all"
                   title="Audio Track"
                 >
                   <Volume2 className="w-5 h-5" />
                   <span className="hidden md:inline text-[12px] font-bold tracking-wider">
-                    {state.audioTracks[state.activeAudioTrack]?.label?.slice(0, 8) || "AUDIO"}
+                    {state.audioTracks[state.activeAudioTrack]?.label?.slice(
+                      0,
+                      8,
+                    ) || "AUDIO"}
                   </span>
                 </button>
                 {showAudioMenu && (

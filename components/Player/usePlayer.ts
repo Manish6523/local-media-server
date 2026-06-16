@@ -54,8 +54,8 @@ export function usePlayer(
     isPlaying: false,
     currentTime: initialWatchProgress,
     duration: exactDuration || 0,
-    volume: 1,
-    isMuted: false,
+    volume: typeof window !== "undefined" ? parseFloat(localStorage.getItem("vidlock_volume") || "1") : 1,
+    isMuted: typeof window !== "undefined" ? localStorage.getItem("vidlock_muted") === "true" : false,
     isBuffering: true,
     bufferedEnd: 0,
     isFullscreen: false,
@@ -207,6 +207,12 @@ export function usePlayer(
   const bindVideoEvents = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
+
+    // Apply saved volume preferences to the video element
+    const savedVolume = parseFloat(localStorage.getItem("vidlock_volume") || "1");
+    const savedMuted = localStorage.getItem("vidlock_muted") === "true";
+    v.volume = savedVolume;
+    v.muted = savedMuted;
 
     const onPlay = () => setState((s) => ({ ...s, isPlaying: true }));
     const onPause = () => {
@@ -390,14 +396,17 @@ export function usePlayer(
   const setVolume = useCallback((vol: number) => {
     const v = videoRef.current;
     if (!v) return;
-    v.volume = Math.max(0, Math.min(1, vol));
+    const clamped = Math.max(0, Math.min(1, vol));
+    v.volume = clamped;
     if (vol > 0 && v.muted) v.muted = false;
+    localStorage.setItem("vidlock_volume", clamped.toString());
   }, []);
 
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
     v.muted = !v.muted;
+    localStorage.setItem("vidlock_muted", v.muted.toString());
   }, []);
 
   const toggleFullscreen = useCallback(() => {
