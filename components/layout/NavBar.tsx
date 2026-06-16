@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize } from "lucide-react";
+import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode } from "lucide-react";
 import dynamic from "next/dynamic";
 import CommandMenu from "./CommandMenu";
 
 const WatchPartyModal = dynamic(() => import("../WatchParty/WatchPartyModal"), { ssr: false });
+const QRModal = dynamic(() => import("../QRModal"), { ssr: false });
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -16,6 +17,8 @@ export default function NavBar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [isLocalNetwork, setIsLocalNetwork] = useState(true);
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -63,6 +66,18 @@ export default function NavBar() {
   useEffect(() => {
     setMobileExpanded(false);
   }, [pathname]);
+
+  // Check if running on local network
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const local =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.");
+    setIsLocalNetwork(local);
+  }, []);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -142,6 +157,16 @@ export default function NavBar() {
             <Users className="w-4 h-4" />
           </button>
 
+          {isLocalNetwork && (
+            <button
+              onClick={() => setShowQRModal(true)}
+              className="p-2.5 rounded-full glass text-white/50 hover:text-white hover:border-cyan-500/20 transition-all"
+              title="Scan QR Code"
+            >
+              <QrCode className="w-4 h-4" />
+            </button>
+          )}
+
           <Link
             href="/settings"
             className={`p-2.5 rounded-full glass transition-all ${
@@ -194,6 +219,17 @@ export default function NavBar() {
               <Users className="w-5 h-5" />
               <span className="text-[10px] font-medium tracking-wide">Party</span>
             </button>
+
+            {/* QR Code */}
+            {isLocalNetwork && (
+              <button
+                onClick={() => { setMobileExpanded(false); setShowQRModal(true); }}
+                className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-white/40 hover:text-white/70 active:text-white transition-all"
+              >
+                <QrCode className="w-5 h-5" />
+                <span className="text-[10px] font-medium tracking-wide">Scan</span>
+              </button>
+            )}
 
             {/* Fullscreen */}
             <button
@@ -257,6 +293,7 @@ export default function NavBar() {
 
       <CommandMenu open={isCommandOpen} setOpen={setIsCommandOpen} />
       <WatchPartyModal isOpen={showPartyModal} onClose={() => setShowPartyModal(false)} />
+      <QRModal isOpen={showQRModal} onClose={() => setShowQRModal(false)} />
     </>
   );
 }
