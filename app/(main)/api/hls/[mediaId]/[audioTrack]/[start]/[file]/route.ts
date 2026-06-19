@@ -3,10 +3,9 @@ import { spawn, execSync, ChildProcess } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getMediaById } from "@/lib/db";
+import { getDetectedGPU, type GPUCapability } from "@/lib/gpu-detect";
 
 export const dynamic = "force-dynamic";
-
-const VAAPI_DEVICE = "/dev/dri/renderD128";
 const CACHE_BASE = "/tmp/filmaro-cache";
 
 // Ensure base cache dir exists
@@ -47,6 +46,76 @@ function detect10bit(filepath: string): boolean {
     pixelFormatCache.set(filepath, false);
     return false;
   }
+}
+
+// ─── Dynamic HLS FFmpeg Arg Builder ──────────────────────────────
+
+function buildHlsArgs(
+  gpu: GPUCapability,
+  filepath: string,
+  startSec: number,
+  trackNum: number,
+  is10bit: boolean,
+  outDir: string,
+  playlistPath: string,
+): string[] {
+  const args: string[] = ["-hide_banner"];
+
+  // ── Hardware acceleration (decode) ──────────────────────────────
+  // For VAAPI: use full hardware decode for BOTH 8-bit and 10-bit.
+  // AMD Vega 10 supports HEVC Main10 hardware decode.
+  // The 10→8-bit conversion happens on GPU via scale_vaapi=format=nv12.
+  if (gpu.type === "vaapi" && gpu.device) {
+    args.push("-hwaccel", "vaapi", "-hwaccel_device", gpu.device, "-hwaccel_output_format", "vaapi");
+  } else if (gpu.type === "nvenc") {
+    args.push("-hwaccel", "cuda", "-hwaccel_output_format", "cuda");
+  } else if (gpu.type === "qsv") {
+    args.push("-hwaccel", "qsv", "-hwaccel_output_format", "qsv");
+  }
+
+  // ── Input + seek ────────────────────────────────────────────────
+  args.push("-ss", startSec.toString(), "-i", filepath);
+  args.push("-map", "0:V:0", "-map", `0:a:${trackNum}`);
+
+  // ── Video filter (GPU-side) ─────────────────────────────────────
+  if (gpu.type === "vaapi") {
+    if (is10bit) {
+      // 10-bit→8-bit conversion entirely on GPU: scale_vaapi converts
+      // P010/P010LE (10-bit) to NV12 (8-bit) in VAAPI surface memory.
+      // No CPU-side format conversion or hwupload needed.
+      args.push("-vf", "scale_vaapi=format=nv12");
+    } else {
+      args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
+    }
+  } else if (is10bit && gpu.type === "cpu") {
+    // CPU fallback: software scale for 10-bit
+    args.push("-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2");
+  }
+
+  // ── Encoder + quality ───────────────────────────────────────────
+  args.push("-c:v", gpu.encoder);
+  if (gpu.type === "nvenc") {
+    args.push("-preset", "p4", "-rc", "vbr", "-cq", "26");
+  } else if (gpu.type === "vaapi") {
+    args.push("-qp", "26");
+  } else if (gpu.type === "qsv") {
+    args.push("-preset", "medium", "-global_quality", "26");
+  } else {
+    args.push("-preset", "ultrafast", "-crf", "26");
+  }
+
+  // ── Audio + HLS output ──────────────────────────────────────────
+  args.push(
+    "-c:a", "aac", "-b:a", "128k",
+    "-sn",
+    "-f", "hls",
+    "-hls_time", "3",
+    "-hls_playlist_type", "event",
+    "-hls_segment_filename", path.join(outDir, "seg_%03d.ts"),
+    playlistPath,
+  );
+
+  return args;
 }
 
 // Cleanup routine: check every minute, kill processes not accessed in 10 minutes
@@ -118,56 +187,12 @@ export async function GET(
 
       if (!active && !fs.existsSync(requestedFilePath)) {
         const is10bit = detect10bit(media.filepath);
-        console.log(`[HLS] Spawning ${is10bit ? 'Hybrid (CPU→VAAPI)' : 'Full VAAPI'} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
+        const gpu = getDetectedGPU();
+        console.log(`[HLS] Spawning ${gpu.label}${is10bit ? ' (10-bit)' : ''} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
         
-        // Build FFmpeg args based on pixel format
-        let ffmpegArgs: string[];
-
-        if (is10bit) {
-          // 10-bit HEVC: CPU decode → software scale/format to NV12 → GPU encode
-          ffmpegArgs = [
-            "-hide_banner",
-            "-ss", startSec.toString(),
-            "-i", media.filepath,
-            "-map", "0:V:0",
-            "-map", `0:a:${trackNum}`,
-            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=nv12,hwupload",
-            "-vaapi_device", VAAPI_DEVICE,
-            "-c:v", "h264_vaapi",
-            "-qp", "26",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-sn",
-            "-f", "hls",
-            "-hls_time", "3",
-            "-hls_playlist_type", "event",
-            "-hls_segment_filename", path.join(outDir, "seg_%03d.ts"),
-            requestedFilePath
-          ];
-        } else {
-          // 8-bit: Full VAAPI hardware pipeline
-          ffmpegArgs = [
-            "-hide_banner",
-            "-hwaccel", "vaapi",
-            "-hwaccel_device", VAAPI_DEVICE,
-            "-hwaccel_output_format", "vaapi",
-            "-ss", startSec.toString(),
-            "-i", media.filepath,
-            "-map", "0:V:0",
-            "-map", `0:a:${trackNum}`,
-            "-vf", "scale_vaapi=w=-2:h=-2:format=nv12",
-            "-c:v", "h264_vaapi",
-            "-qp", "26",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-sn",
-            "-f", "hls",
-            "-hls_time", "3",
-            "-hls_playlist_type", "event",
-            "-hls_segment_filename", path.join(outDir, "seg_%03d.ts"),
-            requestedFilePath
-          ];
-        }
+        // Build FFmpeg args dynamically based on detected GPU
+        const ffmpegArgs = buildHlsArgs(gpu, media.filepath, startSec, trackNum, is10bit, outDir, requestedFilePath);
+        console.log(`[HLS] Full command: ffmpeg ${ffmpegArgs.join(" ")}`);
 
         const ffmpeg = spawn("ffmpeg", ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] });
         

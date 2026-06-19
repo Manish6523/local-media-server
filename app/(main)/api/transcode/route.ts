@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import fs from "fs";
 import { getMediaById } from "@/lib/db";
+import { getDetectedGPU, type GPUCapability } from "@/lib/gpu-detect";
 
 export const dynamic = "force-dynamic";
 
-// ─── VAAPI Config ────────────────────────────────────────────────
-const VAAPI_DEVICE = "/dev/dri/renderD128";
 const MAX_CONCURRENT = 2; // Max 2 FFmpeg processes (host + guest)
-
-// Read the cached probe result from server.ts startup
-function isVaapiAvailable(): boolean {
-  return globalThis.__vaapiAvailable === true;
-}
 
 // ─── Active Process Tracking ─────────────────────────────────────
 // Key: "clientId" (generated per request based on mediaId + client identifier)
@@ -47,55 +41,61 @@ function tryDrainQueue() {
   }
 }
 
-// ─── FFmpeg Arg Builders ─────────────────────────────────────────
+// ─── Dynamic FFmpeg Arg Builders ─────────────────────────────────
 
-function buildVaapiArgs(filepath: string, start: number, audioTrack: number): string[] {
-  // Two-pass seek for VAAPI reliability on large offsets:
+function buildGpuArgs(filepath: string, start: number, audioTrack: number, gpu: GPUCapability): string[] {
+  // Two-pass seek for reliability on large offsets:
   //   -ss [start-10] before -i (fast rough seek in demuxer)
   //   -ss 10 after -i (accurate fine seek in decoder)
-  // This avoids "Error while opening encoder" on large timestamps
   const roughSeek = Math.max(0, start - 10);
   const fineSeek = start > 10 ? 10 : start;
 
-  return [
-    "-hide_banner",
-    "-hwaccel", "vaapi",
-    "-hwaccel_device", VAAPI_DEVICE,
-    "-hwaccel_output_format", "vaapi",
-    ...(roughSeek > 0 ? ["-ss", roughSeek.toString()] : []),
-    "-i", filepath,
-    ...(fineSeek > 0 ? ["-ss", fineSeek.toString()] : []),
-    "-map", "0:V:0",
-    "-map", `0:a:${audioTrack}`,
-    "-vf", "scale_vaapi=w=-2:h=-2:format=nv12",
-    "-c:v", "h264_vaapi",
-    "-qp", "28",
-    "-c:a", "aac",
-    "-b:a", "128k",
-    "-sn",
-    "-f", "mp4",
-    "-movflags", "frag_keyframe+empty_moov+faststart",
-    "pipe:1",
-  ];
-}
+  const args: string[] = ["-hide_banner"];
 
-function buildCpuArgs(filepath: string, start: number, audioTrack: number): string[] {
-  return [
-    "-hide_banner",
-    ...(start > 0 ? ["-ss", start.toString()] : []),
-    "-i", filepath,
-    "-map", "0:V:0",
-    "-map", `0:a:${audioTrack}`,
-    "-c:v", "libx264",
-    "-preset", "ultrafast",
-    "-crf", "28",
-    "-c:a", "aac",
-    "-b:a", "128k",
+  // Hardware acceleration flags
+  if (gpu.type === "vaapi" && gpu.device) {
+    args.push("-hwaccel", "vaapi", "-hwaccel_device", gpu.device, "-hwaccel_output_format", "vaapi");
+  } else if (gpu.type === "nvenc") {
+    args.push("-hwaccel", "cuda", "-hwaccel_output_format", "cuda");
+  } else if (gpu.type === "qsv") {
+    args.push("-hwaccel", "qsv", "-hwaccel_output_format", "qsv");
+  }
+
+  // Seeking
+  if (roughSeek > 0) args.push("-ss", roughSeek.toString());
+  args.push("-i", filepath);
+  if (fineSeek > 0) args.push("-ss", fineSeek.toString());
+
+  // Stream selection
+  args.push("-map", "0:V:0", "-map", `0:a:${audioTrack}`);
+
+  // Video filter (hardware-specific)
+  if (gpu.type === "vaapi") {
+    args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
+  }
+
+  // Encoder + quality settings
+  args.push("-c:v", gpu.encoder);
+  if (gpu.type === "nvenc") {
+    args.push("-preset", "p4", "-rc", "vbr", "-cq", "28");
+  } else if (gpu.type === "vaapi") {
+    args.push("-qp", "28");
+  } else if (gpu.type === "qsv") {
+    args.push("-preset", "medium", "-global_quality", "28");
+  } else {
+    args.push("-preset", "ultrafast", "-crf", "28");
+  }
+
+  // Audio + output
+  args.push(
+    "-c:a", "aac", "-b:a", "128k",
     "-sn",
     "-f", "mp4",
     "-movflags", "frag_keyframe+empty_moov+faststart",
     "pipe:1",
-  ];
+  );
+
+  return args;
 }
 
 // ─── Debounce Tracking ───────────────────────────────────────────
@@ -194,14 +194,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Determine encoding strategy from cached startup probe
-    const useVaapi = isVaapiAvailable();
-    const args = useVaapi
-      ? buildVaapiArgs(filepath, start, audioTrack)
-      : buildCpuArgs(filepath, start, audioTrack);
+    // Determine encoding strategy from cached startup detection
+    const gpu = getDetectedGPU();
+    const args = buildGpuArgs(filepath, start, audioTrack, gpu);
 
-    const encoderLabel = useVaapi ? "VAAPI (AMD Vega 10)" : "CPU";
-    console.log(`[Transcode] Using ${encoderLabel} for media ${id} @ ${start}s [${processKey}] | Active: ${activeProcesses.size + 1}`);
+    console.log(`[Transcode] Using ${gpu.label} for media ${id} @ ${start}s [${processKey}] | Active: ${activeProcesses.size + 1}`);
 
     const ffmpeg = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
 
@@ -216,7 +213,7 @@ export async function GET(request: NextRequest) {
     ffmpeg.stderr?.on("data", (data: Buffer) => {
       const line = data.toString().trim();
       if (line.includes("Error") || line.includes("error") || line.includes("Invalid")) {
-        console.error(`[Transcode/${useVaapi ? "VAAPI" : "CPU"}] ${line}`);
+        console.error(`[Transcode/${gpu.label}] ${line}`);
       }
     });
 

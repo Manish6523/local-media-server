@@ -118,6 +118,7 @@ export default function WatchPartyPage() {
     const wpIsHost = sessionStorage.getItem("wp_isHost");
     const wpName = sessionStorage.getItem("wp_name");
     const wpRoomCode = sessionStorage.getItem("wp_roomCode");
+    const alreadyJoined = sessionStorage.getItem("wp_already_joined");
 
     if (wpIsHost === "true" && wpRoomCode === roomCode) {
       // Host: rejoin to update socket ID after navigation
@@ -139,7 +140,22 @@ export default function WatchPartyPage() {
       return;
     }
 
-    // Guest — join room (only once!)
+    if (alreadyJoined === "true" && wpRoomCode === roomCode) {
+      // Guest: already joined in lobby, just rejoin to update socket ID
+      joinAttempted.current = true;
+      (async () => {
+        const result = await rejoinRoom(roomCode, wpName);
+        if (result.success) {
+          setJoined(true);
+          sessionStorage.removeItem("wp_already_joined");
+        } else {
+          setError(result.error || "Failed to rejoin room");
+        }
+      })();
+      return;
+    }
+
+    // Guest — normal join room (only once!)
     joinAttempted.current = true;
     (async () => {
       const result = await joinRoom(roomCode, wpName);

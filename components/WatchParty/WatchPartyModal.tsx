@@ -39,7 +39,7 @@ export default function WatchPartyModal({
   initialMedia?: MediaItem | null;
 }) {
   const router = useRouter();
-  const { createRoom, listRooms, members, isConnected } = useWatchParty(isOpen);
+  const { createRoom, listRooms, members, isConnected, emitPartyStart } = useWatchParty(isOpen);
 
   const [tab, setTab] = useState<Tab>("create");
   const [createStep, setCreateStep] = useState<CreateStep>("browse");
@@ -107,10 +107,12 @@ export default function WatchPartyModal({
         setSelectedMedia(null);
       }
       setSelectedSeries(null);
-      setHostName("");
+      // Pre-fill name from previous session
+      const savedName = typeof window !== "undefined" ? sessionStorage.getItem("wp_name") || "" : "";
+      setHostName(savedName);
       setRoomCode("");
       setJoinCode("");
-      setJoinName("");
+      setJoinName(savedName);
       setSearchQuery("");
       setBrowseTab("movies");
     }
@@ -188,6 +190,8 @@ export default function WatchPartyModal({
     if (result.success && result.roomCode) {
       setRoomCode(result.roomCode);
       setCreateStep("ready");
+      sessionStorage.setItem("wp_name", hostName.trim());
+      sessionStorage.setItem("wp_isHost", "true");
     }
     setCreating(false);
   };
@@ -498,7 +502,7 @@ export default function WatchPartyModal({
                   </div>
 
                   <button
-                    onClick={() => { onClose(); router.push(`/watch/${roomCode}`); }}
+                    onClick={() => { emitPartyStart(roomCode); onClose(); router.push(`/watch/${roomCode}`); }}
                     className="w-full bg-white hover:bg-white/90 text-black font-bold py-3.5 rounded-full transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2.5"
                   >
                     <Play className="w-4 h-4 fill-black" /> Start Watching

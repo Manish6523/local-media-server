@@ -9,71 +9,9 @@ const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-// ─── VAAPI Startup Probe ─────────────────────────────────────────
-// Probe once at boot, cache forever. The transcode route reads this.
-const VAAPI_DEVICE = "/dev/dri/renderD128";
-
-// Exported via globalThis so the API route can read it
-declare global {
-  // eslint-disable-next-line no-var
-  var __vaapiAvailable: boolean;
-}
-globalThis.__vaapiAvailable = false;
-
-async function probeVaapiAtStartup(): Promise<void> {
-  if (!fs.existsSync(VAAPI_DEVICE)) {
-    console.log("[Server] VAAPI device not found, GPU encoding disabled");
-    globalThis.__vaapiAvailable = false;
-    return;
-  }
-
-  return new Promise((resolve) => {
-    let settled = false;
-
-    const probe = spawn("ffmpeg", [
-      "-hide_banner", "-loglevel", "error",
-      "-hwaccel", "vaapi",
-      "-hwaccel_device", VAAPI_DEVICE,
-      "-f", "lavfi", "-i", "nullsrc=s=320x240:d=0.1",
-      "-t", "1",
-      "-f", "null", "-",
-    ], { stdio: ["pipe", "pipe", "pipe"] });
-
-    let stderr = "";
-    probe.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
-
-    const timeoutHandle = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      probe.kill("SIGKILL");
-      console.log("[Server] VAAPI probe timed out");
-      globalThis.__vaapiAvailable = false;
-      resolve();
-    }, 15000); // 15s — AMD iGPU can be slow to initialize
-
-    probe.on("close", (code) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutHandle);
-      globalThis.__vaapiAvailable = code === 0;
-      if (globalThis.__vaapiAvailable) {
-        console.log("[Server] AMD Vega 10 VAAPI: ✓ ready");
-      } else {
-        console.log(`[Server] VAAPI probe failed (code ${code}): ${stderr.slice(0, 200)}`);
-      }
-      resolve();
-    });
-
-    probe.on("error", (err) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutHandle);
-      console.log(`[Server] VAAPI probe error: ${err.message}`);
-      globalThis.__vaapiAvailable = false;
-      resolve();
-    });
-  });
-}
+// ─── GPU Detection ───────────────────────────────────────────────
+// Probe once at boot via lib/gpu-detect.ts — supports NVENC, VAAPI, QSV, CPU fallback.
+import { detectBestEncoder } from "./lib/gpu-detect";
 // ─── Types ───────────────────────────────────────────────────────
 
 interface Member {
@@ -156,8 +94,12 @@ function startSyncHeartbeat(io: SocketIOServer, roomCode: string) {
     // Don't send sync ticks while waiting for ready
     if (r.waitingForReady) return;
 
-    const projected = projectedTime(r.state);
+    // Skip broadcast when no guests or paused
     const guestCount = r.members.filter(m => !m.isHost).length;
+    if (guestCount === 0) return;
+    if (!r.state.isPlaying) return;
+
+    const projected = projectedTime(r.state);
 
     console.log(`[Server] Broadcasting sync-tick @ ${projected.toFixed(2)} (playing=${r.state.isPlaying}) to ${guestCount} guests in ${roomCode}`);
 
@@ -267,8 +209,8 @@ function completeReadyCheck(io: SocketIOServer, roomCode: string) {
 // ─── Boot ────────────────────────────────────────────────────────
 
 app.prepare().then(async () => {
-  // Probe VAAPI before anything else
-  await probeVaapiAtStartup();
+  // Detect best GPU encoder (NVENC → VAAPI → QSV → CPU)
+  await detectBestEncoder();
 
   const CACHE_BASE = "/tmp/filmaro-cache";
 
@@ -491,6 +433,23 @@ app.prepare().then(async () => {
         socket.data.roomCode = roomCode;
         socket.data.name = name;
 
+        // System message
+        const sysMsg: ChatMessage = {
+          id: Date.now(),
+          name,
+          text: `${name} joined the room`,
+          timestamp: Date.now(),
+          isSystem: true,
+        };
+        room.messages.push(sysMsg);
+        io.to(roomCode).emit("new-message", sysMsg);
+
+        // Notify others
+        socket.to(roomCode).emit("member-joined", {
+          name,
+          members: publicMembers(room.members),
+        });
+
         callback({
           success: true,
           mediaId: room.mediaId,
@@ -559,6 +518,19 @@ app.prepare().then(async () => {
       if (room.messages.length > 200) room.messages.shift();
 
       io.to(roomCode).emit("new-message", message);
+    });
+
+    // ── HOST signals party start (lobby → player) ────────────────
+    socket.on("party-started", ({ roomCode }) => {
+      console.log(`[Server] party-started received from: ${socket.id}`);
+      console.log(`[Server] Room exists: ${rooms.has(roomCode)}`);
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      console.log(`[Server] Is host: ${room.hostId === socket.id} (hostId=${room.hostId}, socketId=${socket.id})`);
+      if (room.hostId !== socket.id) return; // only host can start
+
+      console.log(`[Server] Broadcasting party-started to room ${roomCode} (${room.members.length} members)`);
+      io.to(roomCode).emit("party-started", { roomCode });
     });
 
     // ── Disconnect ───────────────────────────────────────────────

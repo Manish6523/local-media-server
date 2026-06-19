@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FolderPicker from "@/components/FolderPicker";
@@ -23,11 +23,15 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [osPlatform, setOsPlatform] = useState<string>("");
   const [hddExists, setHddExists] = useState<boolean | null>(null);
+  const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/system-info")
       .then(r => r.json())
-      .then(data => setOsPlatform(data.platform))
+      .then(data => {
+        setOsPlatform(data.platform);
+        if (data.gpu) setGpuInfo(data.gpu);
+      })
       .catch(console.error);
 
     fetch("/api/media?stats=true")
@@ -114,6 +118,47 @@ export default function SettingsPage() {
             {saving ? "Saving..." : (saved ? <><Check className="w-4 h-4 mr-2" /> Saved</> : "Save Changes")}
           </Button>
         </div>
+
+        {/* Section 0 - Hardware Acceleration */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
+            <Zap className="w-5 h-5 text-amber-400" />
+            Hardware Acceleration
+          </h2>
+
+          <div className="glass-card overflow-hidden">
+            <div className="p-6 md:p-8">
+              {gpuInfo ? (
+                <div className="flex items-center gap-4">
+                  <div className={`w-3 h-3 rounded-full ${
+                    gpuInfo.type !== "cpu"
+                      ? "bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]"
+                      : "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]"
+                  }`} />
+                  <div className="flex items-center gap-3">
+                    {gpuInfo.type !== "cpu" ? (
+                      <Zap className="w-5 h-5 text-green-400" />
+                    ) : (
+                      <Cpu className="w-5 h-5 text-amber-400" />
+                    )}
+                    <div>
+                      <p className="text-white font-bold">{gpuInfo.label}</p>
+                      <p className="text-white/40 text-xs mt-0.5">
+                        Encoder: <span className="text-white/60 font-mono">{gpuInfo.encoder}</span>
+                        {gpuInfo.type === "cpu" && " — No GPU acceleration (slower transcoding)"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-white/20 animate-pulse" />
+                  <span className="text-white/50 text-sm">Detecting hardware encoder...</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         {/* Section 1 - Media Sources */}
         <section className="space-y-6">

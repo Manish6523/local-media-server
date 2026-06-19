@@ -64,6 +64,9 @@ interface UseWatchPartyReturn {
   offWaitingForReady: () => void;
   onAllReady: (handler: (data: { state: PlaybackState; members: PublicMember[] }) => void) => void;
   offAllReady: () => void;
+  emitPartyStart: (roomCode: string) => void;
+  onPartyStarted: (handler: (data: { roomCode: string }) => void) => void;
+  offPartyStarted: () => void;
   ntpOffset: number;
   getServerTime: () => number;
   isProcessingServerEvent: React.MutableRefObject<boolean>;
@@ -88,6 +91,7 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
   const playbackHandlerRef = useRef<((data: { type: string; currentTime: number; serverTime: number }) => void) | null>(null);
   const waitingHandlerRef = useRef<((data: { members: PublicMember[] }) => void) | null>(null);
   const allReadyHandlerRef = useRef<((data: { state: PlaybackState; members: PublicMember[] }) => void) | null>(null);
+  const partyStartedHandlerRef = useRef<((data: { roomCode: string }) => void) | null>(null);
 
   const attachListeners = useCallback((socket: Socket) => {
     // Remove existing listeners to prevent duplicates
@@ -340,6 +344,13 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     [roomCode]
   );
 
+  const emitPartyStart = useCallback((code: string) => {
+    console.log(`[WatchParty] Emitting party-started: ${code}`);
+    console.log(`[WatchParty] Socket connected: ${socketRef.current?.connected}`);
+    if (!socketRef.current?.connected) return;
+    socketRef.current.emit("party-started", { roomCode: code });
+  }, []);
+
   // ── Event Registration ──────────────────────────────────────────
 
   const onSyncTick = useCallback((handler: (data: SyncTick) => void) => {
@@ -411,6 +422,21 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     allReadyHandlerRef.current = null;
   }, []);
 
+  const onPartyStarted = useCallback((handler: (data: { roomCode: string }) => void) => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    if (partyStartedHandlerRef.current) socket.off("party-started", partyStartedHandlerRef.current);
+    partyStartedHandlerRef.current = handler;
+    socket.on("party-started", handler);
+  }, []);
+
+  const offPartyStarted = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket || !partyStartedHandlerRef.current) return;
+    socket.off("party-started", partyStartedHandlerRef.current);
+    partyStartedHandlerRef.current = null;
+  }, []);
+
   return {
     socket: socketRef.current,
     isConnected,
@@ -438,6 +464,9 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     offWaitingForReady,
     onAllReady,
     offAllReady,
+    emitPartyStart,
+    onPartyStarted,
+    offPartyStarted,
     ntpOffset,
     getServerTime,
     isProcessingServerEvent,
