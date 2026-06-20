@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchMedia } from "@/lib/db";
+import { searchMedia, getShowOfflineMedia } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    const results = searchMedia(query);
+    let results = searchMedia(query);
+    if (!getShowOfflineMedia()) results = results.filter(m => m.available === 1);
 
     // Deduplicate shows — return one entry per unique title
     const seen = new Set<string>();

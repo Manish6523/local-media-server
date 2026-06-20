@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import fs from "fs";
-import { getAllMedia, getMediaById, getMediaByType, searchMedia, getMediaStats, getConfig } from "@/lib/db";
+import { getAllMedia, getMediaById, getMediaByType, searchMedia, getMediaStats, getConfig, getShowOfflineMedia } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,11 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const search = searchParams.get("search");
     const stats = searchParams.get("stats");
+
+    const showOffline = getShowOfflineMedia();
+    console.log('[Media API] showOfflineMedia setting:', showOffline);
+    const hddPath = getConfig("hdd_path");
+    const hddConnected = hddPath ? fs.existsSync(hddPath) : false;
 
     // Return stats
     if (stats === "true") {
@@ -50,23 +55,39 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ ...media, exactDuration });
+      const available = media.source === 'hdd' ? (hddConnected ? 1 : 0) : 1;
+      return NextResponse.json({ ...media, exactDuration, available });
     }
 
     // Search
     if (search) {
-      const results = searchMedia(search);
+      let results = searchMedia(search);
+      results = results.map(item => ({
+        ...item,
+        available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
+      }));
+      if (!showOffline) results = results.filter(m => m.available === 1);
       return NextResponse.json(results);
     }
 
     // Filter by type
     if (type === "movie" || type === "show") {
-      const results = getMediaByType(type);
+      let results = getMediaByType(type);
+      results = results.map(item => ({
+        ...item,
+        available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
+      }));
+      if (!showOffline) results = results.filter(m => m.available === 1);
       return NextResponse.json(results);
     }
 
     // Return all media
-    const all = getAllMedia();
+    let all = getAllMedia();
+    all = all.map(item => ({
+      ...item,
+      available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
+    }));
+    if (!showOffline) all = all.filter(m => m.available === 1);
     return NextResponse.json(all);
   } catch (err) {
     console.error("[Media API] Error:", err);

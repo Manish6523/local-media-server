@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FolderPicker from "@/components/FolderPicker";
@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [osPlatform, setOsPlatform] = useState<string>("");
   const [hddExists, setHddExists] = useState<boolean | null>(null);
   const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
+  const [showOfflineMedia, setShowOfflineMedia] = useState(true);
 
   useEffect(() => {
     fetch("/api/system-info")
@@ -41,6 +42,13 @@ export default function SettingsPage() {
         setLastScan(data.lastScan);
         setLocalPath(data.localPath || "");
         setHddPath(data.hddPath || "");
+      })
+      .catch(console.error);
+
+    fetch("/api/config")
+      .then(r => r.json())
+      .then(data => {
+        if (data.showOfflineMedia !== undefined) setShowOfflineMedia(data.showOfflineMedia);
       })
       .catch(console.error);
   }, []);
@@ -100,6 +108,20 @@ export default function SettingsPage() {
     } catch (err) {
       alert("Failed to clear library.");
       console.error(err);
+    }
+  };
+
+  const handleOfflineToggle = async (newValue: boolean) => {
+    setShowOfflineMedia(newValue);
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showOfflineMedia: newValue }),
+      });
+    } catch (err) {
+      console.error(err);
+      setShowOfflineMedia(!newValue); // revert on failure
     }
   };
 
@@ -202,6 +224,38 @@ export default function SettingsPage() {
                   </span>
                 </div>
               )}
+
+              {/* Show offline media toggle */}
+              <div className="mt-6 pt-6 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {showOfflineMedia ? (
+                      <Eye className="w-4 h-4 text-white/50" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-white/50" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-white">Show offline HDD media</p>
+                      <p className="text-xs text-white/40 mt-0.5">Display movies/shows from disconnected drives as unavailable</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleOfflineToggle(!showOfflineMedia)}
+                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                      showOfflineMedia ? "bg-emerald-500" : "bg-zinc-700"
+                    }`}
+                    role="switch"
+                    aria-checked={showOfflineMedia}
+                    id="show-offline-toggle"
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
+                        showOfflineMedia ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>

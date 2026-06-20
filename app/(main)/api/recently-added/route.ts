@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
-import { getAllMedia, MediaEntry } from "@/lib/db";
+import fs from "fs";
+import { getAllMedia, MediaEntry, getShowOfflineMedia, getConfig } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const all = getAllMedia();
+    const showOffline = getShowOfflineMedia();
+    const hddPath = getConfig("hdd_path");
+    const hddConnected = hddPath ? fs.existsSync(hddPath) : false;
+
+    let all = getAllMedia();
+    all = all.map(item => ({
+      ...item,
+      available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
+    }));
+    if (!showOffline) all = all.filter(m => m.available === 1);
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     
     const recent = all

@@ -332,3 +332,14 @@ export function setConfig(key: string, value: string | null): void {
   const { db } = getDb();
   db.insert(schema.config).values({ key, value }).onConflictDoUpdate({ target: schema.config.key, set: { value } }).run();
 }
+
+// ---- Show offline media setting ----
+
+export function getShowOfflineMedia(): boolean {
+  const val = getConfig("show_offline_media");
+  return val === null ? true : val === "true"; // default: show offline media
+}
+
+export function setShowOfflineMedia(show: boolean): void {
+  setConfig("show_offline_media", show.toString());
+}
