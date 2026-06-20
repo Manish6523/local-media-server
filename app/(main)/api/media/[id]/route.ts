@@ -10,7 +10,9 @@ async function downloadCustomImage(url: string, type: "posters" | "backdrops", i
     const dir = path.join(process.cwd(), "public", type);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const filename = `custom_${id}.jpg`;
+    // Use a timestamp suffix so each edit gets a unique filename
+    const timestamp = Date.now();
+    const filename = `custom_${id}_${timestamp}.jpg`;
     const filepath = path.join(dir, filename);
 
     const controller = new AbortController();
@@ -23,7 +25,22 @@ async function downloadCustomImage(url: string, type: "posters" | "backdrops", i
     const buffer = await res.arrayBuffer();
     fs.writeFileSync(filepath, Buffer.from(buffer));
     
-    console.log(`[Custom Image] Downloaded custom ${type} for ID ${id}`);
+    console.log(`[Custom Image] Downloaded custom ${type} for ID ${id}: ${filename}`);
+    
+    // Clean up old custom images for this ID (including pre-patch un-timestamped ones)
+    const allFiles = fs.readdirSync(dir);
+    const oldFiles = allFiles.filter(f => 
+      (f.startsWith(`custom_${id}_`) || f === `custom_${id}.jpg`) && f !== filename
+    );
+    for (const oldFile of oldFiles) {
+      try {
+        fs.unlinkSync(path.join(dir, oldFile));
+        console.log(`[Custom Image] Cleaned up old file: ${oldFile}`);
+      } catch (e) {
+        console.error(`[Custom Image] Failed to delete old file ${oldFile}:`, e);
+      }
+    }
+
     return `/${type}/${filename}`;
   } catch (error) {
     console.error(`[Custom Image] Download failed for ${url}:`, error);

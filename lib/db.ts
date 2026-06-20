@@ -343,3 +343,15 @@ export function getShowOfflineMedia(): boolean {
 export function setShowOfflineMedia(show: boolean): void {
   setConfig("show_offline_media", show.toString());
 }
+
+export function getShowMetadataByTitle(title: string): any {
+  const { sqliteDb } = getDb();
+  const row = sqliteDb.prepare(
+    `SELECT omdb_id, title as confirmed_title, poster, backdrop, 
+            backdrop_url, overview, rating, genres
+     FROM tv_shows 
+     WHERE LOWER(title) = ? AND omdb_id IS NOT NULL 
+     LIMIT 1`
+  ).get(title.toLowerCase());
+  return row;
+}
