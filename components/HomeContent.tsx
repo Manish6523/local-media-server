@@ -124,7 +124,7 @@ export default function HomeContent() {
       <HeroFeatured items={carouselItems} />
 
       {/* Content sections */}
-      <div className="px-4 md:px-8 lg:px-12 pb-28 space-y-10 -mt-8 relative z-10">
+      <div className="relative z-10 w-full px-5 md:px-10 lg:px-14 pb-32 pt-16 -mt-20 bg-gradient-to-b from-transparent via-[#050505]/95 to-[#050505] space-y-16">
         {/* Continue Watching */}
         <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
 

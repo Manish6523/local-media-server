@@ -48,7 +48,7 @@ export default function AdminPinGate({ children }: { children: React.ReactNode }
   if (!needsPin) return <>{children}</>
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[200] flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-200 flex items-center justify-center">
       <div className={`flex flex-col items-center gap-6 ${error ? 'animate-shake' : ''}`}>
         <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
           <Lock size={32} className="text-white" />

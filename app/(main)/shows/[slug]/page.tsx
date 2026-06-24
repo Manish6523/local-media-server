@@ -1,16 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Info, Layers, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import {
+  Play,
+  Star,
+  Clock,
+  Menu,
+  X,
+  ExternalLink,
+  Users,
+  HardDrive,
+  ArrowLeft,
+  Tag,
+  Tv,
+  Film,
+  Calendar,
+} from "lucide-react";
+import { useBackground } from "@/components/BackgroundContext";
 import dynamic from "next/dynamic";
 
-const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
+const WatchPartyModal = dynamic(
+  () => import("@/components/WatchParty/WatchPartyModal"),
+  { ssr: false },
+);
 
 import type { MediaEntry } from "@/lib/db";
+
+/* Split title into two parts for the two-tone effect */
+function splitTitle(title: string): [string, string] {
+  const words = title.split(/\s+/);
+  if (words.length === 1) return [title, ""];
+  if (words.length === 2) return [words[0], " " + words[1]];
+  const mid = Math.ceil(words.length / 2);
+  return [words.slice(0, mid).join(" "), " " + words.slice(mid).join(" ")];
+}
 
 export default function ShowDetailPage() {
   const params = useParams();
@@ -19,7 +45,12 @@ export default function ShowDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeSeason, setActiveSeason] = useState<number>(1);
   const [showPartyModal, setShowPartyModal] = useState(false);
-  const [selectedEpisodeForParty, setSelectedEpisodeForParty] = useState<MediaEntry | null>(null);
+  const [selectedEpisodeForParty, setSelectedEpisodeForParty] =
+    useState<MediaEntry | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [hoveredEp, setHoveredEp] = useState<number | null>(null);
+  const { setBgImage } = useBackground();
+  const seasonScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/media?type=show")
@@ -27,20 +58,35 @@ export default function ShowDetailPage() {
       .then((data: MediaEntry[]) => {
         const filtered = data.filter(
           (m: MediaEntry) =>
-            m.title.toLowerCase().replace(/\s+/g, "-") === decodeURIComponent(slug)
+            m.title.toLowerCase().replace(/\s+/g, "-") ===
+            decodeURIComponent(slug),
         );
         setEpisodes(filtered);
-
         if (filtered.length > 0) {
-          const seasons = [...new Set(filtered.map((e: MediaEntry) => e.season).filter(Boolean))].sort(
-            (a, b) => (a ?? 0) - (b ?? 0)
-          );
+          setBgImage(filtered[0].backdrop || filtered[0].poster || null);
+          const seasons = [
+            ...new Set(
+              filtered.map((e: MediaEntry) => e.season).filter(Boolean),
+            ),
+          ].sort((a, b) => (a ?? 0) - (b ?? 0));
           if (seasons.length > 0) setActiveSeason(seasons[0] ?? 1);
         }
       })
       .catch(() => setEpisodes([]))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, setBgImage]);
+
+  // Lock body scroll when menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
 
   if (loading) return <LoadingSkeleton />;
   if (episodes.length === 0) return <NotFound />;
@@ -49,180 +95,604 @@ export default function ShowDetailPage() {
   const posterSrc = show.poster || "/placeholder.jpg";
   const bgImage = show.backdrop || show.poster || "/placeholder.jpg";
 
-  const seasons = [...new Set(episodes.map((e) => e.season).filter(Boolean))].sort(
-    (a, b) => (a ?? 0) - (b ?? 0)
-  );
+  const seasons = [
+    ...new Set(episodes.map((e) => e.season).filter(Boolean)),
+  ].sort((a, b) => (a ?? 0) - (b ?? 0));
 
   const seasonEpisodes = episodes
     .filter((e) => e.season === activeSeason)
     .sort((a, b) => (a.episode_start ?? 0) - (b.episode_start ?? 0));
 
+  const [titleA, titleB] = splitTitle(show.title);
+  const firstAvailable = seasonEpisodes.find((ep) => ep.available);
+  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(show.title + " trailer")}`;
+
   return (
-    <div className="min-h-screen text-foreground selection:bg-primary/30">
-      {/* Hero Section */}
-      <div className="relative h-[65vh] md:h-[80vh] w-full overflow-hidden">
-        <Image
-          src={bgImage}
-          alt={show.title}
-          fill
-          className="object-cover object-top opacity-50 scale-105 transition-transform duration-1000 group-hover:scale-100"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent backdrop-blur-[2px]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-transparent to-transparent" />
-        
-        <div className="absolute bottom-0 left-0 w-full px-6 md:px-12 lg:px-20 pb-16">
-          <Link href="/shows" className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all mb-8">
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold tracking-[0.2em] uppercase">Return to Library</span>
-          </Link>
-          
-          <div className="max-w-4xl">
-            <div className="flex items-center gap-3 mb-4">
-              <Badge className="bg-primary text-primary-foreground border-none rounded-none px-3 font-black tracking-tighter">TV SERIES</Badge>
-              <span className="text-muted-foreground font-mono text-sm tracking-widest">{show.year}</span>
-            </div>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase mb-6 leading-[0.9]">
-              {show.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-6 text-sm font-bold tracking-widest text-muted-foreground">
-              <div className="flex items-center gap-2 text-primary">
-                <Star className="w-4 h-4 fill-current" />
-                {show.rating?.replace("/10", "") || "N/A"}
-              </div>
-              <div className="flex items-center gap-2 text-foreground">
-                <Clock className="w-4 h-4" />
-                {show.runtime}M / EP
-              </div>
-              <div className="uppercase">{show.genres}</div>
-            </div>
-          </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* ─── Immersive Background ────────────────────────────── */}
+      <div className="fixed inset-0 z-0">
+        {/* Desktop Backdrop */}
+        <div className="hidden md:block absolute inset-0">
+          <Image
+            src={bgImage}
+            alt={show.title}
+            fill
+            className="object-cover object-top opacity-60 scale-105"
+            sizes="100vw"
+            priority
+          />
         </div>
+        {/* Mobile Poster */}
+        <div className="md:hidden absolute inset-0">
+          <Image
+            src={posterSrc}
+            alt={show.title}
+            fill
+            className="object-cover object-top opacity-60 scale-105"
+            sizes="100vw"
+            priority
+          />
+        </div>
+        {/* Cinematic gradients matching shows page */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/10 to-black/40 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/20 z-[1]" />
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 px-6 md:px-12 lg:px-20 pb-32 -mt-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          
-          {/* Left Sidebar: Poster & Meta */}
-          <div className="lg:col-span-4 flex flex-col gap-8">
-            <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden shadow-2xl border border-white/5 group">
-              <Image src={posterSrc} alt={show.title} fill className="object-cover" />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+      {/* ─── Content Layer ───────────────────────────────────── */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* ─── Top Bar ───────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10">
+          {/* Left: Back + Show Title */}
+          <Link href="/shows" className="group flex items-center gap-3">
+            <ArrowLeft className="w-4 h-4 text-white/30 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-white/40 text-[11px] font-semibold tracking-[0.25em] uppercase">
+              {show.title}
+            </span>
+          </Link>
+
+          {/* Center: Hamburger */}
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="absolute left-1/2 -translate-x-1/2 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/[0.06] transition-all"
+          >
+            <div className="flex flex-col gap-[5px] items-center">
+              <span className="block w-5 h-[1.5px] bg-white/50" />
+              <span className="block w-3.5 h-[1.5px] bg-white/50" />
             </div>
-            
-            <div className="bg-muted/20 backdrop-blur-xl rounded-2xl p-8 border border-white/10 shadow-xl">
-              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground mb-4 flex items-center gap-2">
-                <Info className="w-4 h-4" /> Storyline
-              </h3>
-              <p className="text-foreground leading-relaxed italic">
-                {show.overview || "No description available for this series."}
-              </p>
-              <div className="mt-8 pt-8 border-t border-border flex justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Total Seasons</p>
-                  <p className="text-2xl font-black">{seasons.length}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Files Found</p>
-                  <p className="text-2xl font-black">{episodes.length}</p>
-                </div>
+          </button>
+
+          {/* Spacer to keep top bar balanced */}
+          <div className="hidden lg:block w-[360px] xl:w-[400px]" />
+        </div>
+
+        {/* ─── Main Content ──────────────────────────────────── */}
+        <div className="flex-1 flex flex-col lg:flex-row items-stretch px-5 md:px-10 lg:px-14 pb-8 md:pb-12 gap-8 lg:gap-14">
+          {/* ── Left Column: Title + Actions ──────────────────── */}
+          <div className="flex-1 flex flex-col justify-end min-w-0">
+            {/* Mobile Poster & Metadata */}
+            <div className="lg:hidden mb-5">
+              <div className="relative w-24 h-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 mb-4">
+                <Image
+                  src={posterSrc}
+                  alt={show.title}
+                  fill
+                  className="object-cover"
+                  sizes="96px"
+                />
               </div>
+              <div className="flex items-center gap-2.5 text-xs text-white/50 flex-wrap font-medium">
+                {show.rating && (
+                  <span className="flex items-center gap-1 text-violet-300">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    {show.rating.split("/")[0]}
+                  </span>
+                )}
+                {show.year && <span>• {show.year}</span>}
+                {show.runtime && <span>• {show.runtime}m/ep</span>}
+                {show.genres && (
+                  <span className="px-2 py-0.5 rounded bg-white/10 text-white/70 text-[10px] uppercase tracking-wider ml-1">
+                    {show.genres.split(",")[0].trim()}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Large Two-Tone Title */}
+            <h1 className="text-[12vw] sm:text-8xl lg:text-[6.5rem] font-black tracking-tighter leading-[0.85] uppercase mb-8 -ml-1">
+              <span className="text-white drop-shadow-2xl">{titleA}</span>
+              <span className="text-white/30">{titleB}</span>
+            </h1>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-4 flex-wrap">
+              {firstAvailable ? (
+                <Link
+                  href={`/player/${firstAvailable.id}`}
+                  className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-white text-black font-bold text-xs tracking-[0.15em] uppercase hover:bg-white/90 transition-all"
+                >
+                  <Play className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
+                  Watch Now
+                </Link>
+              ) : (
+                <div className="inline-flex items-center gap-3 px-8 py-4 bg-white/10 text-white/30 font-bold text-xs tracking-[0.15em] uppercase cursor-not-allowed border border-white/10">
+                  <HardDrive className="w-4 h-4" />
+                  Drive Offline
+                </div>
+              )}
+
+              <a
+                href={youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 border border-white/30 text-white font-bold text-xs tracking-[0.15em] uppercase hover:border-white/60 hover:bg-white/[0.04] transition-all"
+              >
+                <ExternalLink className="w-4 h-4 transition-transform group-hover:rotate-12" />
+                Watch the Trailer
+              </a>
             </div>
           </div>
 
-          {/* Right Section: Seasons & Episodes */}
-          <div className="lg:col-span-8">
-            <div className="sticky sm:top-15 top-0 z-30 bg-background/50 backdrop-blur-xl py-4 mb-10 border-b border-white/10 flex items-center gap-8 overflow-x-auto no-scrollbar shadow-sm">
-              {seasons.map((season) => (
-                <button
-                  key={season}
-                  onClick={() => setActiveSeason(season ?? 1)}
-                  className={`text-sm font-black tracking-widest uppercase transition-all pb-2 border-b-2 ${
-                    activeSeason === season 
-                    ? "text-primary border-primary" 
-                    : "text-muted-foreground border-transparent hover:text-foreground"
-                  }`}
-                >
-                  Season {season}
-                </button>
-              ))}
+          {/* ── Right Column: Poster Card + Episodes + Season Selector ───── */}
+          <div className="hidden lg:flex w-[360px] xl:w-[400px] flex-col gap-4 flex-shrink-0 justify-between">
+            {/* Poster + Details Card */}
+            <div className="flex items-center gap-5">
+              <div className="relative w-34 h-44 rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-black/50 flex-shrink-0">
+                <Image
+                  src={posterSrc}
+                  alt={show.title}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white font-bold text-3xl leading-tight truncate">
+                  {show.title}
+                </p>
+                <div className="flex items-center gap-2 mt-1.5 text-md text-white/40 flex-wrap">
+                  {show.rating && (
+                    <span className="flex items-center gap-1 text-violet-300">
+                      <Star className="w-3 h-3 fill-current" />
+                      {show.rating.split("/")[0]}
+                    </span>
+                  )}
+                  {show.year && <span>• {show.year}</span>}
+                  {show.runtime && <span>• {show.runtime}m/ep</span>}
+                </div>
+                <p className="text-[11px] text-white/25 mt-1.5 truncate">
+                  {show.genres
+                    ?.split(",")
+                    .slice(0, 2)
+                    .map((g) => g.trim())
+                    .join(" · ")}
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {seasonEpisodes.map((ep) => (
-                <div
-                  key={ep.id}
-                  className={`group flex flex-col md:flex-row gap-6 p-4 rounded-2xl transition-all border shadow-lg ${
-                    ep.available 
-                    ? "bg-white/5 backdrop-blur-md border-white/10 hover:bg-white/10 hover:border-white/20" 
-                    : "opacity-40 grayscale pointer-events-none border-transparent"
-                  }`}
-                >
-                  <div className="relative w-full md:w-64 aspect-video rounded-xl overflow-hidden shadow-lg flex-shrink-0">
-                    <Image src={ep.backdrop||ep.poster || "/placeholder.jpg"} alt="ep" fill className="object-cover" />
-                    
-                    {ep.available ? (
-                      <Link href={`/player/${ep.id}`} className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-2xl transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                            <Play className="w-5 h-5 fill-primary-foreground text-primary-foreground ml-1" />
-                         </div>
-                      </Link>
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <HardDrive className="w-6 h-6 text-destructive" />
-                      </div>
-                    )}
+            {/* Episodes header */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/25">
+                // {seasonEpisodes.length} Episode
+                {seasonEpisodes.length !== 1 ? "s" : ""}
+              </span>
+            </div>
 
-                    {ep.watch_progress && ep.runtime && ep.watch_progress > 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-                        <div 
-                          className="h-full bg-primary shadow-[0_0_10px_var(--primary)]" 
-                          style={{ width: `${Math.min(100, (ep.watch_progress / (ep.runtime * 60)) * 100)}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
+            {/* Episode Cards */}
+            <div className="space-y-3 max-h-[460px] overflow-y-auto no-scrollbar pr-1">
+              {seasonEpisodes.map((ep) => {
+                const epProgress =
+                  ep.watch_progress && ep.runtime
+                    ? Math.min(
+                        100,
+                        (ep.watch_progress / (ep.runtime * 60)) * 100,
+                      )
+                    : 0;
 
-                  <div className="flex-1 flex flex-col justify-center py-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-xl font-black italic tracking-tighter uppercase mb-1">
-                          E{ep.episode_start} <span className="text-muted-foreground mx-2">—</span> {ep.title}
-                        </h3>
-                        <p className="text-xs sm:hidden block font-mono text-muted-foreground truncate max-w-md">{ep.filename.slice(0, 40)}...</p>
-                        <p className="text-xs hidden sm:block font-mono text-muted-foreground truncate max-w-md">{ep.filename}</p>
-                      </div>
-                      {!ep.available && (
-                        <Badge className="bg-destructive/10 text-destructive border-none text-[10px] font-bold">OFFLINE</Badge>
-                      )}
-                    </div>
-                    
-                    <div className="mt-4 flex items-center gap-4 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {ep.runtime}m</span>
-                      <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> MKV</span>
-                      
+                return (
+                  <div
+                    key={ep.id}
+                    className={`group relative rounded-xl overflow-hidden transition-all duration-300 ${
+                      !ep.available
+                        ? "opacity-35 grayscale pointer-events-none"
+                        : "hover:ring-1 hover:ring-white/10"
+                    }`}
+                    onMouseEnter={() => setHoveredEp(ep.id)}
+                    onMouseLeave={() => setHoveredEp(null)}
+                  >
+                    <div className="relative aspect-video">
+                      <Image
+                        src={ep.backdrop || show.backdrop || "/placeholder.jpg"}
+                        alt={`Episode ${ep.episode_start}`}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        sizes="400px"
+                      />
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+                      {/* Center Play Button */}
                       {ep.available && (
-                        <button 
-                          onClick={() => { setSelectedEpisodeForParty(ep); setShowPartyModal(true); }}
-                          className="flex items-center gap-1.5 border-2 border-white/10 rounded-lg p-1.5 md:px-2 md:py-2 ml-auto text-[#E50914] hover:text-[#f6121d] transition-colors"
+                        <Link
+                          href={`/player/${ep.id}`}
+                          className="absolute inset-0 flex items-center justify-center"
                         >
-                          <Users className="w-3.5 h-3.5" /> <span className="hidden md:block">Watch Party</span>
+                          <div className="w-12 h-12 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm group-hover:border-white/60 group-hover:bg-black/40 transition-all duration-300 group-hover:scale-110">
+                            <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                          </div>
+                        </Link>
+                      )}
+
+                      {/* Offline indicator */}
+                      {!ep.available && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <HardDrive className="w-6 h-6 text-red-400/60" />
+                        </div>
+                      )}
+
+                      {/* Watch Party (appears on hover, top-right) */}
+                      {ep.available && hoveredEp === ep.id && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedEpisodeForParty(ep);
+                            setShowPartyModal(true);
+                          }}
+                          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-violet-500/60 hover:border-violet-400/30 transition-all duration-200 animate-in fade-in zoom-in-90 duration-150"
+                          title="Watch Party"
+                        >
+                          <Users className="w-3.5 h-3.5" />
                         </button>
                       )}
+
+                      {/* Episode label */}
+                      <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                        <span className="text-[11px] font-bold text-white/70 tracking-wider uppercase">
+                          Episode #{ep.episode_start}
+                          {ep.episode_end && ep.episode_end !== ep.episode_start
+                            ? `-${ep.episode_end}`
+                            : ""}
+                        </span>
+                        {ep.runtime && (
+                          <span className="text-[10px] text-white/30 font-medium">
+                            {ep.runtime}m
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Progress bar */}
+                      {epProgress > 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/[0.06]">
+                          <div
+                            className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]"
+                            style={{ width: `${epProgress}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {/* Season Selector (bottom right) */}
+            {seasons.length > 0 && (
+              <div
+                ref={seasonScrollRef}
+                className="flex items-center justify-end gap-1 mt-2 overflow-x-auto no-scrollbar"
+              >
+                {seasons.map((season) => (
+                  <button
+                    key={season}
+                    onClick={() => setActiveSeason(season ?? 1)}
+                    className={`px-4 py-2 text-[11px] font-bold tracking-[0.15em] uppercase whitespace-nowrap transition-all duration-200 ${
+                      activeSeason === season
+                        ? "text-white bg-white/10 border-b-2 border-white"
+                        : "text-white/25 hover:text-white/50"
+                    }`}
+                  >
+                    S{season}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <WatchPartyModal 
-        isOpen={showPartyModal} 
-        onClose={() => { setShowPartyModal(false); setTimeout(() => setSelectedEpisodeForParty(null), 300); }} 
-        initialMedia={selectedEpisodeForParty as any} 
+      {/* ─── Hamburger Side Panel ────────────────────────────── */}
+      {/* Backdrop overlay */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity duration-300 ${
+          menuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMenuOpen(false)}
+      />
+      {/* Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md z-[101] transition-transform duration-300 ease-out ${
+          menuOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="h-full bg-black/90 backdrop-blur-2xl border-l border-white/[0.06] flex flex-col">
+          {/* Panel Header */}
+          <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/[0.06]">
+            <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/25">
+              About This Show
+            </span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center hover:bg-white/[0.08] transition-all"
+            >
+              <X className="w-4 h-4 text-white/50" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 no-scrollbar">
+            {/* Poster + Title */}
+            <div className="flex gap-5">
+              <div className="relative w-24 h-36 rounded-xl overflow-hidden border border-white/[0.06] shadow-xl shadow-black/40 flex-shrink-0">
+                <Image
+                  src={posterSrc}
+                  alt={show.title}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-white leading-tight mb-2">
+                  {show.title}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-white/35 flex-wrap">
+                  {show.rating && (
+                    <span className="flex items-center gap-1 text-violet-300">
+                      <Star className="w-3 h-3 fill-current" />
+                      {show.rating.split("/")[0]}
+                    </span>
+                  )}
+                  {show.year && <span>• {show.year}</span>}
+                  {show.runtime && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {show.runtime}m/ep
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {show.genres?.split(",").map((g) => (
+                    <span
+                      key={g}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-white/35 bg-white/[0.04] border border-white/[0.06] rounded-full"
+                    >
+                      <Tag className="w-2.5 h-2.5" />
+                      {g.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Synopsis */}
+            {show.overview && (
+              <div>
+                <h4 className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20 mb-3">
+                  Synopsis
+                </h4>
+                <p className="text-sm text-white/45 leading-relaxed">
+                  {show.overview}
+                </p>
+              </div>
+            )}
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
+                <Tv className="w-4 h-4 text-white/20 mx-auto mb-1.5" />
+                <span className="text-lg font-bold text-white">
+                  {seasons.length}
+                </span>
+                <p className="text-[9px] text-white/25 mt-0.5 uppercase tracking-wider">
+                  Seasons
+                </p>
+              </div>
+              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
+                <Film className="w-4 h-4 text-white/20 mx-auto mb-1.5" />
+                <span className="text-lg font-bold text-white">
+                  {episodes.length}
+                </span>
+                <p className="text-[9px] text-white/25 mt-0.5 uppercase tracking-wider">
+                  Episodes
+                </p>
+              </div>
+              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
+                <Clock className="w-4 h-4 text-white/20 mx-auto mb-1.5" />
+                <span className="text-lg font-bold text-white">
+                  {show.runtime || "—"}
+                  <span className="text-xs text-white/30">m</span>
+                </span>
+                <p className="text-[9px] text-white/25 mt-0.5 uppercase tracking-wider">
+                  Per Ep
+                </p>
+              </div>
+            </div>
+
+            {/* Availability */}
+            <div>
+              <h4 className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20 mb-3">
+                Availability
+              </h4>
+              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                <div
+                  className={`w-2.5 h-2.5 rounded-full ${episodes.some((e) => e.available) ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]" : "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.3)]"}`}
+                />
+                <div>
+                  <p className="text-sm font-medium text-white/70">
+                    {episodes.filter((e) => e.available).length} of{" "}
+                    {episodes.length} episodes available
+                  </p>
+                  <p className="text-[11px] text-white/25 mt-0.5">
+                    Source:{" "}
+                    {show.source === "hdd" ? "External Drive" : "Local Storage"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div>
+              <h4 className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20 mb-3">
+                Quick Actions
+              </h4>
+              <div className="space-y-2">
+                <a
+                  href={youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white/50 hover:text-white/70 hover:bg-white/[0.06] transition-all text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Search Trailer on YouTube
+                </a>
+                {firstAvailable && (
+                  <button
+                    onClick={() => {
+                      setSelectedEpisodeForParty(firstAvailable);
+                      setShowPartyModal(true);
+                      setMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 w-full p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white/50 hover:text-white/70 hover:bg-white/[0.06] transition-all text-sm"
+                  >
+                    <Users className="w-4 h-4" />
+                    Start a Watch Party
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Panel Footer */}
+          <div className="p-6 md:p-8 border-t border-white/[0.06]">
+            <p className="text-[10px] font-mono text-white/15 truncate">
+              {show.filepath || show.filename}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Mobile Episode Section ──────────────────────────── */}
+      <div className="lg:hidden relative z-10 px-5 pb-28 mt-4">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/25">
+            // Episodes
+          </span>
+        </div>
+
+        {/* Mobile Season Selector */}
+        {seasons.length > 0 && (
+          <div className="flex items-center gap-2 mb-5 overflow-x-auto no-scrollbar pb-1">
+            {seasons.map((season) => (
+              <button
+                key={season}
+                onClick={() => setActiveSeason(season ?? 1)}
+                className={`px-5 py-2.5 text-[11px] font-bold tracking-[0.15em] uppercase whitespace-nowrap transition-all rounded-full ${
+                  activeSeason === season
+                    ? "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                Season {season}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {seasonEpisodes.map((ep) => {
+            const epProgress =
+              ep.watch_progress && ep.runtime
+                ? Math.min(100, (ep.watch_progress / (ep.runtime * 60)) * 100)
+                : 0;
+
+            return (
+              <div
+                key={`mobile-${ep.id}`}
+                className={`group relative rounded-xl overflow-hidden ${
+                  !ep.available
+                    ? "opacity-35 grayscale pointer-events-none"
+                    : ""
+                }`}
+              >
+                <div className="relative aspect-video">
+                  <Image
+                    src={ep.backdrop || show.backdrop || "/placeholder.jpg"}
+                    alt={`Episode ${ep.episode_start}`}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 640px) 50vw, 100vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+                  {ep.available && (
+                    <Link
+                      href={`/player/${ep.id}`}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <div className="w-11 h-11 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                        <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                      </div>
+                    </Link>
+                  )}
+
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between">
+                    <span className="text-[10px] font-bold text-white/70 tracking-wider uppercase">
+                      Ep #{ep.episode_start}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {ep.available && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSelectedEpisodeForParty(ep);
+                            setShowPartyModal(true);
+                          }}
+                          className="w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/40"
+                        >
+                          <Users className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                      {ep.runtime && (
+                        <span className="text-[9px] text-white/30 font-medium">
+                          {ep.runtime}m
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {epProgress > 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/[0.06]">
+                      <div
+                        className="h-full bg-gradient-to-r from-violet-500 to-cyan-400"
+                        style={{ width: `${epProgress}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Watch Party Modal */}
+      <WatchPartyModal
+        isOpen={showPartyModal}
+        onClose={() => {
+          setShowPartyModal(false);
+          setTimeout(() => setSelectedEpisodeForParty(null), 300);
+        }}
+        initialMedia={selectedEpisodeForParty as any}
       />
     </div>
   );
@@ -230,13 +700,12 @@ export default function ShowDetailPage() {
 
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-background p-20 space-y-12 animate-pulse">
-      <div className="h-64 w-full bg-muted rounded-3xl" />
-      <div className="grid grid-cols-12 gap-12">
-        <div className="col-span-4 h-96 bg-muted rounded-3xl" />
-        <div className="col-span-8 space-y-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-muted rounded-2xl" />)}
-        </div>
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-2 border-white/10 border-t-violet-400 rounded-full animate-spin" />
+        <span className="text-xs text-white/20 font-medium tracking-wider">
+          Loading show...
+        </span>
       </div>
     </div>
   );
@@ -244,12 +713,22 @@ function LoadingSkeleton() {
 
 function NotFound() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-20 text-center">
-      <h1 className="text-9xl font-black text-muted mb-4 italic uppercase">404</h1>
-      <p className="text-muted-foreground tracking-[0.5em] uppercase font-bold text-xs mb-8">Series Not Found</p>
-      <Link href="/shows" className="px-8 py-3 bg-foreground text-background font-black uppercase tracking-tighter hover:bg-primary hover:text-primary-foreground transition-colors">
-        Back to Library
-      </Link>
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-8 text-center">
+      <div className="max-w-sm">
+        <h1 className="text-8xl font-black text-white/[0.05] mb-4 leading-none">
+          404
+        </h1>
+        <p className="text-white/30 mb-8 text-sm">
+          This show couldn&apos;t be found in your library.
+        </p>
+        <Link
+          href="/shows"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-bold text-xs tracking-[0.15em] uppercase hover:bg-white/90 transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Shows
+        </Link>
+      </div>
     </div>
   );
 }

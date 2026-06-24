@@ -12,7 +12,9 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
 
   useEffect(() => {
     if (items && items.length > 0) {
-      setBgImage(items[currentIndex].backdrop || items[currentIndex].poster || null);
+      setBgImage(
+        items[currentIndex].backdrop || items[currentIndex].poster || null,
+      );
     }
   }, [currentIndex, items, setBgImage]);
 
@@ -37,12 +39,18 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
       <div className="relative w-full min-h-[60vh] flex items-center justify-center">
         <div className="text-center px-8 glass rounded-3xl p-12 max-w-lg">
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-            Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">VidLock</span>
+            Welcome to{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">
+              VidLock
+            </span>
           </h1>
           <p className="text-white/40 mb-6">
             Your personal offline media library. Scan your files to get started.
           </p>
-          <Link href="/settings" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 text-white font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/20">
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 text-white font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/20"
+          >
             <Play className="w-4 h-4 fill-current" />
             Get Started
           </Link>
@@ -100,14 +108,20 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
                 <span className="w-1 h-1 rounded-full bg-white/20" />
                 <span className="flex items-center gap-1 text-violet-300">
                   <Star className="w-3.5 h-3.5 fill-current" />
-                  {currentItem.rating.split('/')[0]}
+                  {currentItem.rating.split("/")[0]}
                 </span>
               </>
             )}
             {currentItem.genres && (
               <>
                 <span className="w-1 h-1 rounded-full bg-white/20" />
-                <span>{currentItem.genres.split(",").slice(0, 2).map(g => g.trim()).join(" / ")}</span>
+                <span>
+                  {currentItem.genres
+                    .split(",")
+                    .slice(0, 2)
+                    .map((g) => g.trim())
+                    .join(" / ")}
+                </span>
               </>
             )}
             {currentItem.runtime && (
@@ -115,7 +129,8 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
                 <span className="w-1 h-1 rounded-full bg-white/20" />
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {Math.floor(currentItem.runtime / 60)}h {currentItem.runtime % 60}m
+                  {Math.floor(currentItem.runtime / 60)}h{" "}
+                  {currentItem.runtime % 60}m
                 </span>
               </>
             )}
@@ -133,15 +148,16 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
             {currentItem.available === 1 && (
               <Link
                 href={`/player/${currentItem.id}`}
-                className="inline-flex items-center gap-2.5 px-7 py-3 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 text-white font-semibold text-sm hover:from-violet-400 hover:to-violet-500 transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center gap-2.5 sm:px-7 px-4 py-3 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 text-white font-semibold text-sm hover:from-violet-400 hover:to-violet-500 transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Play className="w-4 h-4 fill-current" />
-                Watch Now
+                <span className="block sm:hidden">Watch</span>
+                <span className="hidden sm:block">Watch Now</span>
               </Link>
             )}
             <Link
               href={`/${currentItem.type === "show" ? "shows" : "movies"}/${encodeURIComponent(currentItem.title.toLowerCase().replace(/\s+/g, "-"))}`}
-              className="hidden sm:inline-flex items-center gap-2 px-5 py-3 rounded-full glass text-white/70 text-sm font-medium hover:text-white hover:bg-white/[0.08] transition-all"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-full glass text-white/70 text-sm font-medium hover:text-white hover:bg-white/[0.08] transition-all"
             >
               Details
             </Link>

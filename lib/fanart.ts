@@ -14,7 +14,14 @@ async function fetchWithTimeout(url: string, timeoutMs: number = 4000) {
   const id = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Referer": new URL(url).origin + "/",
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      },
+    });
     clearTimeout(id);
     return response;
   } catch (err) {

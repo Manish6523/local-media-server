@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import CommandMenu from "./CommandMenu";
+import { useToast } from "@/components/Toast";
 
 const WatchPartyModal = dynamic(() => import("../WatchParty/WatchPartyModal"), { ssr: false });
 const QRModal = dynamic(() => import("../QRModal"), { ssr: false });
 
 export default function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -19,6 +22,9 @@ export default function NavBar() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [isLocalNetwork, setIsLocalNetwork] = useState(true);
+  const [showShuffleMenu, setShowShuffleMenu] = useState(false);
+  const [shuffleLoading, setShuffleLoading] = useState(false);
+  const shuffleRef = useRef<HTMLDivElement>(null);
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -79,6 +85,66 @@ export default function NavBar() {
     setIsLocalNetwork(local);
   }, []);
 
+  // ── Shuffle handler ──
+  const triggerShuffle = useCallback(async (type: "movie" | "show" | "both") => {
+    setShowShuffleMenu(false);
+    setShuffleLoading(true);
+    try {
+      const res = await fetch(`/api/shuffle?type=${type}`);
+      const data = await res.json();
+      if (data.found) {
+        // Brief spin delay for visual feedback
+        await new Promise(r => setTimeout(r, 300));
+        router.push(data.href);
+      } else {
+        if (type === "movie") {
+          toast("No unwatched movies found — try Shows or Both", "info");
+        } else if (type === "show") {
+          toast("No unwatched shows found — try Movies or Both", "info");
+        } else {
+          toast("You've watched everything! Mark some as unwatched to shuffle again 🎉", "success");
+        }
+      }
+    } catch {
+      toast("Shuffle failed — please try again", "error");
+    } finally {
+      setShuffleLoading(false);
+    }
+  }, [router, toast]);
+
+  // ── Keyboard shortcut: R key for instant shuffle ──
+  useEffect(() => {
+    const handleShuffleKey = (e: KeyboardEvent) => {
+      if (e.key === "r" || e.key === "R") {
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if ((document.activeElement as HTMLElement)?.isContentEditable) return;
+        triggerShuffle("both");
+      }
+    };
+    window.addEventListener("keydown", handleShuffleKey);
+    return () => window.removeEventListener("keydown", handleShuffleKey);
+  }, [triggerShuffle]);
+
+  // ── Close shuffle dropdown on outside click ──
+  useEffect(() => {
+    if (!showShuffleMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (shuffleRef.current && !shuffleRef.current.contains(e.target as Node)) {
+        setShowShuffleMenu(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowShuffleMenu(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [showShuffleMenu]);
+
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -87,16 +153,19 @@ export default function NavBar() {
     }
   }, []);
 
-  // Don't show nav on player/watch/join routes
+  // Don't show any nav on player/watch/join routes
   if (pathname.startsWith("/join") || pathname.startsWith("/watch") || pathname.startsWith("/player")) {
     return null;
   }
+
+  // On show/movie detail pages, hide desktop nav but keep mobile bottom nav
+  const isDetailPage = pathname.startsWith("/shows/") || pathname.startsWith("/movies/");
 
   return (
     <>
       {/* ═══ DESKTOP TOP NAV ═══ */}
       <header
-        className={`hidden md:flex fixed top-0 left-0 right-0 z-50 items-center justify-between px-6 lg:px-8 py-3 transition-all duration-500 ${
+        className={`${isDetailPage ? "hidden" : "hidden md:flex"} fixed top-0 left-0 right-0 z-50 items-center justify-between px-6 lg:px-8 py-3 transition-all duration-500 ${
           scrolled
             ? "bg-background/60 backdrop-blur-2xl border-b border-white/[0.04] shadow-lg shadow-black/10"
             : "bg-transparent"
@@ -149,6 +218,47 @@ export default function NavBar() {
             </kbd>
           </button>
 
+          {/* Shuffle Button */}
+          <div className="relative" ref={shuffleRef}>
+            <button
+              onClick={() => setShowShuffleMenu(v => !v)}
+              className={`p-2.5 rounded-full glass transition-all ${
+                shuffleLoading
+                  ? "text-violet-400 border-violet-500/20"
+                  : "text-white/50 hover:text-white hover:border-emerald-500/20"
+              }`}
+              title="Shuffle (R)"
+            >
+              <Shuffle className={`w-4 h-4 ${shuffleLoading ? "animate-spin" : ""}`} />
+            </button>
+
+            {/* Shuffle Dropdown */}
+            {showShuffleMenu && (
+              <div className="absolute right-0 top-full mt-2 w-[180px] rounded-xl bg-black/60 backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/40 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => triggerShuffle("movie")}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                  >
+                    <span className="text-base">🎬</span> Movies
+                  </button>
+                  <button
+                    onClick={() => triggerShuffle("show")}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                  >
+                    <span className="text-base">📺</span> Shows
+                  </button>
+                  <button
+                    onClick={() => triggerShuffle("both")}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                  >
+                    <span className="text-base">🎲</span> Both
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setShowPartyModal(true)}
             className="p-2.5 rounded-full glass text-white/50 hover:text-white hover:border-violet-500/20 transition-all"
@@ -181,113 +291,102 @@ export default function NavBar() {
       </header>
 
       {/* ═══ MOBILE BOTTOM NAV ═══ */}
-      {/* Backdrop overlay when expanded */}
+      {/* Expanded Menu Overlay */}
       {mobileExpanded && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => setMobileExpanded(false)}
-        />
-      )}
-
-      <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-sm">
-        {/* ── Secondary Tray (slides up) ── */}
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-out ${
-            mobileExpanded ? "max-h-20 opacity-100 mb-2" : "max-h-0 opacity-0 mb-0"
-          }`}
         >
-          <div className="glass-heavy rounded-2xl px-4 py-2.5 flex items-center justify-evenly shadow-2xl shadow-black/40">
-            {/* Favourites */}
-            <Link
-              href="/favorites"
-              onClick={() => setMobileExpanded(false)}
-              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${
-                pathname === "/favorites"
-                  ? "text-violet-400"
-                  : "text-white/40 hover:text-white/70 active:text-white"
-              }`}
-            >
-              <Heart className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wide">Watchlist</span>
-            </Link>
-
-            {/* Watch Party */}
-            <button
-              onClick={() => { setMobileExpanded(false); setShowPartyModal(true); }}
-              className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-white/40 hover:text-white/70 active:text-white transition-all"
-            >
-              <Users className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wide">Party</span>
-            </button>
-
-            {/* QR Code */}
-            {isLocalNetwork && (
-              <button
-                onClick={() => { setMobileExpanded(false); setShowQRModal(true); }}
-                className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-white/40 hover:text-white/70 active:text-white transition-all"
-              >
-                <QrCode className="w-5 h-5" />
-                <span className="text-[10px] font-medium tracking-wide">Scan</span>
+          <div
+            className="absolute bottom-28 left-4 right-4 bg-gradient-to-b from-[#1a1a1a]/95 to-[#0a0a0a]/95 backdrop-blur-3xl border border-white/[0.08] rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom-8 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-white/80 font-bold tracking-wide">More Options</span>
+              <button onClick={() => setMobileExpanded(false)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
+                <X className="w-4 h-4" />
               </button>
-            )}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <button onClick={() => { setMobileExpanded(false); router.push("/favorites"); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                <Heart className="w-6 h-6 text-rose-400" />
+                <span className="text-[11px] font-medium text-white/70">Watchlist</span>
+              </button>
+              
+              <button onClick={() => { setMobileExpanded(false); triggerShuffle("both"); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                <Shuffle className={`w-6 h-6 text-violet-400 ${shuffleLoading ? "animate-spin" : ""}`} />
+                <span className="text-[11px] font-medium text-white/70">Shuffle</span>
+              </button>
 
-            {/* Fullscreen */}
-            <button
-              onClick={() => { toggleFullscreen(); setMobileExpanded(false); }}
-              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${
-                isFullscreen
-                  ? "text-violet-400"
-                  : "text-white/40 hover:text-white/70 active:text-white"
-              }`}
-            >
-              <Maximize className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wide">Fullscreen</span>
-            </button>
+              <button onClick={() => { setMobileExpanded(false); setShowPartyModal(true); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                <Users className="w-6 h-6 text-blue-400" />
+                <span className="text-[11px] font-medium text-white/70">Party</span>
+              </button>
+
+              {isLocalNetwork && (
+                <button onClick={() => { setMobileExpanded(false); setShowQRModal(true); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                  <QrCode className="w-6 h-6 text-emerald-400" />
+                  <span className="text-[11px] font-medium text-white/70">Scan QR</span>
+                </button>
+              )}
+
+              <button onClick={() => { setMobileExpanded(false); toggleFullscreen(); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                <Maximize className="w-6 h-6 text-amber-400" />
+                <span className="text-[11px] font-medium text-white/70">Fullscreen</span>
+              </button>
+              
+              <button onClick={() => { setMobileExpanded(false); router.push("/settings"); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                <Settings className="w-6 h-6 text-gray-400" />
+                <span className="text-[11px] font-medium text-white/70">Settings</span>
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* ── Primary Row (always visible) ── */}
-        <div className="glass-heavy rounded-2xl px-3 py-2.5 flex items-center justify-between shadow-2xl shadow-black/40">
-          {/* Search */}
-          <button
-            onClick={() => setIsCommandOpen(true)}
-            className="p-2.5 rounded-xl text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
-          >
-            <Search className="w-5 h-5" />
-          </button>
+      {/* Floating Pill Nav */}
+      <div className="md:hidden fixed bottom-6 left-4 right-4 z-50">
+        <div className="bg-[#0a0a0a]/85 backdrop-blur-3xl border border-white/[0.08] rounded-full p-1.5 flex items-center justify-between shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+          <div className="flex items-center gap-1">
+            {primaryMobileLinks.map((link) => {
+              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`relative flex items-center justify-center gap-2 px-4 py-3 rounded-full transition-all duration-300 ${
+                    isActive
+                      ? "bg-white text-black shadow-md"
+                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  <link.icon className={`w-5 h-5 ${isActive ? "stroke-[2.5px]" : ""}`} />
+                  {isActive && (
+                    <span className="text-xs font-bold tracking-wide whitespace-nowrap">{link.label}</span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
 
-          {/* Primary nav links: Home, Movies, Shows */}
-          {primaryMobileLinks.map((link) => {
-            const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative p-2.5 rounded-xl transition-all ${
-                  isActive
-                    ? "text-violet-400 bg-violet-500/10"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
-                }`}
-              >
-                <link.icon className="w-5 h-5" />
-                {isActive && (
-                  <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400" />
-                )}
-              </Link>
-            );
-          })}
+          <div className="flex items-center gap-1 pr-1">
+            <div className="w-[1px] h-6 bg-white/[0.08] mx-1" />
 
-          {/* Expand / Collapse toggle */}
-          <button
-            onClick={() => setMobileExpanded((v) => !v)}
-            className={`p-2.5 rounded-xl transition-all duration-300 ${
-              mobileExpanded
-                ? "text-violet-400 bg-violet-500/10 rotate-180"
-                : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
-            }`}
-          >
-            <ChevronUp className="w-5 h-5" />
-          </button>
+            <button
+              onClick={() => setIsCommandOpen(true)}
+              className="p-3 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setMobileExpanded(true)}
+              className="p-3 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 

@@ -16,8 +16,15 @@ async function downloadCustomImage(url: string, type: "posters" | "backdrops", i
     const filepath = path.join(dir, filename);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, { signal: controller.signal });
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Referer": new URL(url).origin + "/",
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      },
+    });
     clearTimeout(timeoutId);
 
     if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);

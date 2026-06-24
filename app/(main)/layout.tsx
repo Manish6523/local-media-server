@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/layout/NavBar";
 import { BackgroundProvider } from "@/components/BackgroundContext";
+import { ToastProvider } from "@/components/Toast";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -23,12 +24,14 @@ export default function RootLayout({
         {/* Aurora gradient background */}
         <div className="aurora-bg" />
         
+        <ToastProvider>
         <BackgroundProvider>
           <NavBar />
           <main className="relative z-10 min-h-screen pb-28 md:pb-0">
             {children}
           </main>
         </BackgroundProvider>
+        </ToastProvider>
       </body>
     </html>
   );

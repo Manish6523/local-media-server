@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, MoreHorizontal, Shuffle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -15,6 +17,27 @@ interface HeroSectionProps {
 
 export default function HeroSection({ items, allMedia = [] }: HeroSectionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [shuffleLoading, setShuffleLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleShuffle = useCallback(async () => {
+    setShuffleLoading(true);
+    try {
+      const res = await fetch("/api/shuffle?type=both");
+      const data = await res.json();
+      if (data.found) {
+        await new Promise(r => setTimeout(r, 300));
+        router.push(data.href);
+      } else {
+        toast("You've watched everything! Mark some as unwatched to shuffle again \ud83c\udf89", "success");
+      }
+    } catch {
+      toast("Shuffle failed \u2014 please try again", "error");
+    } finally {
+      setShuffleLoading(false);
+    }
+  }, [router, toast]);
 
   // Build trending list from allMedia or items
   const trendingItems = (allMedia.length > 0 ? allMedia : items)
@@ -206,6 +229,14 @@ export default function HeroSection({ items, allMedia = [] }: HeroSectionProps) 
                   )}
                   <button className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all">
                     <MoreHorizontal className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleShuffle}
+                    disabled={shuffleLoading}
+                    className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 text-white/70 px-5 py-2.5 rounded-full font-semibold text-sm hover:bg-white/20 hover:text-white transition-all disabled:opacity-50"
+                  >
+                    <Shuffle className={`w-4 h-4 ${shuffleLoading ? "animate-spin" : ""}`} />
+                    Shuffle
                   </button>
                 </div>
               </motion.div>
