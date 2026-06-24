@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { getConfig, setConfig, getShowOfflineMedia, setShowOfflineMedia } from "@/lib/db";
+import { getConfig, setConfig, getShowOfflineMedia, setShowOfflineMedia, setPin, disablePin } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,14 @@ export async function POST(request: NextRequest) {
     if (showOfflineMedia !== undefined) {
       console.log('[Config] Saving showOfflineMedia:', showOfflineMedia);
       setShowOfflineMedia(showOfflineMedia);
+    }
+    
+    if (body.action === 'set-pin' && body.pin) {
+      setPin(body.pin);
+    }
+    
+    if (body.action === 'disable-pin') {
+      disablePin();
     }
 
     return NextResponse.json({ success: true });

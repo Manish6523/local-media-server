@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq, like, desc, asc, and } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import * as schema from "../db/schema";
 
 export interface MediaEntry {
@@ -354,4 +355,48 @@ export function getShowMetadataByTitle(title: string): any {
      LIMIT 1`
   ).get(title.toLowerCase());
   return row;
+}
+
+// ---- PIN Protection ----
+
+function hashPin(pin: string): string {
+  return crypto.createHash("sha256").update(pin).digest("hex");
+}
+
+export function getPinEnabled(): boolean {
+  const { sqliteDb } = getDb();
+  const row = sqliteDb.prepare(
+    `SELECT value FROM config WHERE key = 'admin_pin_enabled'`
+  ).get() as { value: string } | undefined;
+  return row?.value === "true";
+}
+
+export function setPin(pin: string) {
+  const { sqliteDb } = getDb();
+  const hash = hashPin(pin);
+  sqliteDb.prepare(
+    `INSERT INTO config (key, value) VALUES ('admin_pin_hash', ?)
+     ON CONFLICT(key) DO UPDATE SET value = ?`
+  ).run(hash, hash);
+  sqliteDb.prepare(
+    `INSERT INTO config (key, value) VALUES ('admin_pin_enabled', 'true')
+     ON CONFLICT(key) DO UPDATE SET value = 'true'`
+  ).run();
+}
+
+export function disablePin() {
+  const { sqliteDb } = getDb();
+  sqliteDb.prepare(
+    `INSERT INTO config (key, value) VALUES ('admin_pin_enabled', 'false')
+     ON CONFLICT(key) DO UPDATE SET value = 'false'`
+  ).run();
+}
+
+export function verifyPin(pin: string): boolean {
+  const { sqliteDb } = getDb();
+  const row = sqliteDb.prepare(
+    `SELECT value FROM config WHERE key = 'admin_pin_hash'`
+  ).get() as { value: string } | undefined;
+  if (!row) return false;
+  return row.value === hashPin(pin);
 }

@@ -3,13 +3,43 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Star, Pencil, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
+import AdminPinGate from "./AdminPinGate";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 const CreateRoomModal = dynamic(() => import("./WatchParty/CreateRoomModal"), { ssr: false });
+
+let adminStatusPromise: Promise<boolean> | null = null;
+
+function useAdminUnlocked() {
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (sessionStorage.getItem('admin_unlocked') === 'true') {
+        setIsUnlocked(true);
+        return;
+      }
+      
+      if (!adminStatusPromise) {
+        adminStatusPromise = fetch('/api/admin/pin-status')
+          .then(r => r.json())
+          .then(data => !data.enabled)
+          .catch(() => false);
+      }
+      
+      const unlocked = await adminStatusPromise;
+      setIsUnlocked(unlocked);
+    };
+    
+    checkStatus();
+  }, []);
+
+  return isUnlocked;
+}
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -23,6 +53,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
   const [isEditing, setIsEditing] = useState(false);
   const [showWatchParty, setShowWatchParty] = useState(false);
   const router = useRouter();
+  const isUnlocked = useAdminUnlocked();
 
   const posterSrc = media.poster || "/placeholder.jpg";
   const isUnavailable = !media.available;
@@ -90,7 +121,9 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         </Link>
 
         {isEditing && (
-          <EditTitleModal media={media} onClose={() => setIsEditing(false)} />
+          <AdminPinGate>
+            <EditTitleModal media={media} onClose={() => setIsEditing(false)} />
+          </AdminPinGate>
         )}
         {showWatchParty && (
           <CreateRoomModal
@@ -132,12 +165,14 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
                   <div className="h-9 w-9 rounded-full bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
                     <Play className="w-4 h-4 text-white fill-white ml-0.5" />
                   </div>
-                  <button 
-                    onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
-                    className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
-                  >
-                    <Pencil className="w-3.5 h-3.5 text-white" />
-                  </button>
+                  {isUnlocked && (
+                    <button 
+                      onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
+                      className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  )}
                   <button 
                     onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
                     className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
@@ -197,7 +232,9 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
       </div>
 
       {isEditing && (
-        <EditTitleModal media={media} onClose={() => setIsEditing(false)} />
+        <AdminPinGate>
+          <EditTitleModal media={media} onClose={() => setIsEditing(false)} />
+        </AdminPinGate>
       )}
 
       {showWatchParty && (

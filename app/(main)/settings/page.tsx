@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock } from "lucide-react";
+import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FolderPicker from "@/components/FolderPicker";
@@ -25,6 +26,8 @@ export default function SettingsPage() {
   const [hddExists, setHddExists] = useState<boolean | null>(null);
   const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
   const [showOfflineMedia, setShowOfflineMedia] = useState(true);
+  const [pinEnabled, setPinEnabled] = useState(false);
+  const [newPin, setNewPin] = useState("");
 
   useEffect(() => {
     fetch("/api/system-info")
@@ -50,6 +53,11 @@ export default function SettingsPage() {
       .then(data => {
         if (data.showOfflineMedia !== undefined) setShowOfflineMedia(data.showOfflineMedia);
       })
+      .catch(console.error);
+
+    fetch("/api/admin/pin-status")
+      .then(r => r.json())
+      .then(data => setPinEnabled(data.enabled))
       .catch(console.error);
   }, []);
 
@@ -125,8 +133,40 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSetPin = async () => {
+    if (newPin.length < 4) return alert("PIN must be at least 4 digits");
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set-pin", pin: newPin })
+      });
+      setPinEnabled(true);
+      setNewPin("");
+      alert("PIN saved successfully!");
+    } catch (err) {
+      alert("Failed to set PIN");
+    }
+  };
+
+  const handleDisablePin = async () => {
+    if (!confirm("Are you sure you want to disable PIN protection?")) return;
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disable-pin" })
+      });
+      setPinEnabled(false);
+      alert("PIN protection disabled.");
+    } catch (err) {
+      alert("Failed to disable PIN");
+    }
+  };
+
   return (
-    <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-16">
+    <AdminPinGate>
+      <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-16">
       <div className="max-w-4xl mx-auto space-y-12">
         
         {/* Header */}
@@ -330,6 +370,67 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Section 2.5 - Security */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
+            <Lock className="w-5 h-5 text-indigo-400" />
+            Security
+          </h2>
+          <div className="glass-card overflow-hidden">
+            <div className="p-6 md:p-8">
+              {!pinEnabled ? (
+                <div>
+                  <h3 className="text-white font-bold mb-2">Set an admin PIN</h3>
+                  <p className="text-sm text-white/60 mb-4">Protects Settings and Edit actions from other people on your network</p>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter 4-6 digits"
+                      className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 w-48"
+                    />
+                    <Button onClick={handleSetPin} disabled={newPin.length < 4} className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold">
+                      Save PIN
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+                    <span className="text-sm font-medium text-white/70">Admin PIN is enabled</span>
+                  </div>
+                  <div className="pt-4 border-t border-white/5">
+                    <h3 className="text-white font-bold mb-2">Change PIN</h3>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={newPin}
+                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter new 4-6 digits"
+                        className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 w-48"
+                      />
+                      <Button onClick={handleSetPin} disabled={newPin.length < 4} className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold">
+                        Change PIN
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-white/5">
+                    <Button onClick={handleDisablePin} variant="destructive" className="bg-red-500/20 text-red-500 hover:bg-red-500/40">
+                      Disable PIN protection
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Section 3 - Danger Zone */}
         <section className="space-y-6 pt-4">
           <h2 className="text-xl font-bold text-red-500 border-b border-red-500/20 pb-4 flex items-center gap-2 tracking-tight">
@@ -350,5 +451,6 @@ export default function SettingsPage() {
 
       </div>
     </div>
+    </AdminPinGate>
   );
 }
