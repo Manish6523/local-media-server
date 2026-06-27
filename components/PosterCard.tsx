@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Pencil, Users } from "lucide-react";
+import { Play, Star, Pencil, Users, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
@@ -47,9 +47,12 @@ interface PosterCardProps {
   media: MediaEntry;
   showEpisodeInfo?: boolean;
   variant?: "poster" | "landscape";
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: number) => void;
 }
 
-export default function PosterCard({ media, showEpisodeInfo = false, variant = "poster" }: PosterCardProps) {
+export default function PosterCard({ media, showEpisodeInfo = false, variant = "poster", selectionMode = false, isSelected = false, onToggleSelect }: PosterCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showWatchParty, setShowWatchParty] = useState(false);
   const router = useRouter();
@@ -142,81 +145,125 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
   }
 
   // ─── Default Poster Card ──────────────────────────────────────
+
+  const handleSelectionClick = (e: React.MouseEvent) => {
+    if (selectionMode && onToggleSelect) {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggleSelect(media.id);
+    }
+  };
+
+  const CardWrapper = selectionMode ? "div" : Link;
+  const cardWrapperProps = selectionMode
+    ? { onClick: handleSelectionClick, role: "button", tabIndex: 0 }
+    : { href: isUnavailable ? "#" : href };
+
   return (
-    <div className="group/card relative flex flex-col w-full transition-all duration-300 ease-out hover:-translate-y-2">
-      <Link href={isUnavailable ? "#" : href} className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-md hover:border-violet-500/20 transition-all duration-300 shadow-lg shadow-black/20">
+    <div className={`group/card relative flex flex-col w-full ${selectionMode ? "cursor-pointer" : ""}`}>
+      <CardWrapper
+        {...(cardWrapperProps as any)}
+        className={`relative aspect-[2/3] overflow-hidden rounded-[20px] bg-[#111] border shadow-xl transition-all duration-500 ${
+          selectionMode
+            ? isSelected
+              ? "border-violet-500 shadow-[0_0_25px_-5px_rgba(139,92,246,0.4)] ring-2 ring-violet-500/50"
+              : "border-white/[0.04] hover:border-white/[0.1]"
+            : "border-white/[0.04] group-hover/card:-translate-y-2 group-hover/card:shadow-[0_20px_40px_-15px_rgba(139,92,246,0.25)] group-hover/card:border-violet-500/30"
+        }`}
+      >
         
         {/* Poster Image */}
         <Image
           src={posterSrc}
           alt={media.title}
           fill
-          className={`object-cover transition-transform duration-500 group-hover/card:scale-105 ${
-            isUnavailable ? "grayscale opacity-40" : ""
+          className={`object-cover transition-transform duration-700 group-hover/card:scale-105 opacity-90 group-hover/card:opacity-100 ${
+            isUnavailable ? "grayscale opacity-40 group-hover/card:opacity-40" : ""
           }`}
           sizes="(max-width: 768px) 45vw, (max-width: 1024px) 30vw, 200px"
         />
 
-        {/* Hover Action Overlay */}
-        {!isUnavailable && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 z-20">
-            <div className="flex items-center justify-between translate-y-3 group-hover/card:translate-y-0 transition-transform duration-300">
-               <div className="flex gap-1.5">
-                  <div className="h-9 w-9 rounded-full bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                    <Play className="w-4 h-4 text-white fill-white ml-0.5" />
-                  </div>
-                  {isUnlocked && (
-                    <button 
-                      onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
-                      className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-white" />
-                    </button>
-                  )}
-                  <button 
-                    onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
-                    className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
-                    title="Watch Party"
-                  >
-                    <Users className="w-3.5 h-3.5 text-white" />
-                  </button>
-               </div>
-               <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
+        {/* Selection Mode Checkbox Overlay */}
+        {selectionMode && (
+          <div className="absolute top-3 left-3 z-40">
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+                isSelected
+                  ? "bg-violet-500 shadow-lg shadow-violet-500/40"
+                  : "bg-black/40 backdrop-blur-md border border-white/20"
+              }`}
+            >
+              {isSelected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
             </div>
           </div>
         )}
 
+        {/* Hover Action Overlay */}
+        {!isUnavailable && !selectionMode && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20">
+             
+             {/* Top Actions */}
+             <div className="absolute top-3 right-3 flex flex-col gap-2 translate-y-2 group-hover/card:translate-y-0 transition-transform duration-300">
+               <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
+               {isUnlocked && (
+                 <button 
+                   onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
+                   className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
+                 >
+                   <Pencil className="w-3.5 h-3.5 text-white" />
+                 </button>
+               )}
+               <button 
+                 onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
+                 className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
+                 title="Watch Party"
+               >
+                 <Users className="w-3.5 h-3.5 text-white" />
+               </button>
+             </div>
+
+             {/* Centered Play Button */}
+             <div className="absolute inset-0 flex items-center justify-center transform scale-75 group-hover/card:scale-100 transition-all duration-300 pointer-events-none">
+                <div className="w-14 h-14 rounded-full bg-violet-500/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.5)] pointer-events-auto">
+                  <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                </div>
+             </div>
+          </div>
+        )}
+
         {/* Status Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1 z-30">
-          <span className="inline-flex items-center bg-black/40 backdrop-blur-md text-[10px] border border-white/[0.06] text-white/60 px-2 py-0.5 rounded-md font-medium">
+        <div className={`absolute ${selectionMode ? "top-12" : "top-3"} left-3 flex flex-col gap-1.5 z-30`}>
+          <span className="inline-flex items-center bg-black/50 backdrop-blur-md text-[9px] uppercase tracking-wider border border-white/[0.08] text-white/80 px-2 py-0.5 rounded-md font-bold">
             {media.type === "show" ? "Series" : "Movie"}
           </span>
           {isUnavailable && (
-            <span className="inline-flex items-center bg-red-500/60 backdrop-blur-md text-[10px] text-white px-2 py-0.5 rounded-md font-medium">
-              OFFLINE
+            <span className="inline-flex items-center bg-red-500/80 backdrop-blur-md text-[9px] uppercase tracking-wider text-white px-2 py-0.5 rounded-md font-bold">
+              Offline
             </span>
           )}
         </div>
 
         {/* Progress Bar */}
         {progressPercent > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/[0.06] z-30">
-            <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" style={{ width: `${progressPercent}%` }} />
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/[0.08] z-30 backdrop-blur-sm">
+            <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 relative" style={{ width: `${progressPercent}%` }}>
+               <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/50 blur-[2px]" />
+            </div>
           </div>
         )}
-      </Link>
+      </CardWrapper>
 
-      {/* Info Section */}
-      <div className="mt-2.5 px-0.5">
-        <h3 className="text-[13px] font-medium text-white/70 line-clamp-1 group-hover/card:text-white transition-colors">
+      {/* Info Section Below Poster */}
+      <div className="mt-3 px-1">
+        <h3 className="text-sm font-bold text-white/90 line-clamp-1 group-hover/card:text-violet-300 transition-colors">
           {media.title}
         </h3>
-        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-white/30 font-medium">
+        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-white/40 font-medium">
           {media.year && <span>{media.year}</span>}
           {media.rating && (
             <>
               <span className="w-1 h-1 rounded-full bg-white/15" />
-              <span className="flex items-center gap-0.5 text-violet-300/70">
+              <span className="flex items-center gap-0.5 text-amber-400">
                 <Star className="w-3 h-3 fill-current" />
                 {media.rating?.split('/')[0]}
               </span>

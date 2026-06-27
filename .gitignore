@@ -19,6 +19,7 @@
 
 /public/backdrops
 /public/posters
+/public/episode-thumbs
 # production
 /build
 

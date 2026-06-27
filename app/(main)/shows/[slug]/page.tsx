@@ -22,6 +22,8 @@ import {
 import { useBackground } from "@/components/BackgroundContext";
 import dynamic from "next/dynamic";
 
+import EpisodeThumbnail from "@/components/EpisodeThumbnail";
+
 const WatchPartyModal = dynamic(
   () => import("@/components/WatchParty/WatchPartyModal"),
   { ssr: false },
@@ -300,12 +302,14 @@ export default function ShowDetailPage() {
                     onMouseLeave={() => setHoveredEp(null)}
                   >
                     <div className="relative aspect-video">
-                      <Image
-                        src={ep.backdrop || show.backdrop || "/placeholder.jpg"}
+                      <EpisodeThumbnail
+                        mediaAssetId={ep.id}
+                        fallbackSrc={ep.backdrop || show.backdrop || "/placeholder.jpg"}
                         alt={`Episode ${ep.episode_start}`}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
                         sizes="400px"
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        filepath={ep.filepath}
+                        isAvailable={!!ep.available}
                       />
                       {/* Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
@@ -625,12 +629,14 @@ export default function ShowDetailPage() {
                 }`}
               >
                 <div className="relative aspect-video">
-                  <Image
-                    src={ep.backdrop || show.backdrop || "/placeholder.jpg"}
+                  <EpisodeThumbnail
+                    mediaAssetId={ep.id}
+                    fallbackSrc={ep.backdrop || show.backdrop || "/placeholder.jpg"}
                     alt={`Episode ${ep.episode_start}`}
-                    fill
-                    className="object-cover"
                     sizes="(min-width: 640px) 50vw, 100vw"
+                    className="object-cover"
+                    filepath={ep.filepath}
+                    isAvailable={!!ep.available}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 

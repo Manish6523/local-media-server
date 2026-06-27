@@ -44,36 +44,40 @@ export default function FavoritesPage() {
   }, [favorites, sortParam]);
 
   return (
-    <div className="min-h-screen pt-14 px-4 md:px-8 lg:px-14 pb-20">
+    <div className="min-h-screen pt-24 px-5 md:px-10 lg:px-14 pb-32 bg-[#050505] relative">
+      {/* Ambient Top Gradient */}
+      <div className="absolute top-0 left-0 right-0 h-[50vh] bg-gradient-to-b from-pink-500/10 via-transparent to-transparent pointer-events-none" />
+
       {/* Clean Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+      <div className="flex items-end justify-between mb-10 relative z-10">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg">
             Watchlist
           </h1>
           {!loading && (
-            <span className="text-sm text-white/30 font-medium">{favorites.length} saved</span>
+            <span className="text-sm text-white/40 font-semibold">{favorites.length} saved</span>
           )}
         </div>
 
         {!loading && favorites.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 glass-card text-sm">
-            <Filter className="w-3.5 h-3.5 text-white/40" />
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/[0.03] border border-white/[0.05] shadow-lg text-sm backdrop-blur-md hover:bg-white/[0.06] transition-colors cursor-pointer">
+            <Filter className="w-4 h-4 text-white/60" />
+            <span className="text-white/60 font-medium hidden sm:inline">Filter</span>
             {/* <SortDropdown pageKey="favorites" onSortChange={setSortParam} /> */}
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 md:gap-6 relative z-10">
           {[...Array(14)].map((_, i) => (
-            <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
+            <div key={i} className="aspect-[2/3] bg-white/[0.03] rounded-[20px] animate-pulse border border-white/[0.02]" />
           ))}
         </div>
       ) : sortedFavorites.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 md:gap-6 relative z-10">
           {sortedFavorites.map((item) => (
             <PosterCard key={item.id} media={item} />
           ))}
@@ -85,19 +89,20 @@ export default function FavoritesPage() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-32 glass-card">
-      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-5">
-        <Heart className="w-7 h-7 text-white/20" />
+    <div className="flex flex-col items-center justify-center py-32 rounded-[24px] border border-white/[0.04] bg-[#111] shadow-2xl relative overflow-hidden z-10">
+      <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent pointer-events-none" />
+      <div className="w-20 h-20 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6 shadow-xl relative z-10">
+        <Heart className="w-8 h-8 text-white/30" />
       </div>
-      <h2 className="text-lg font-bold text-white mb-1">Your watchlist is empty</h2>
-      <p className="text-white/40 text-sm max-w-xs text-center mb-6">
+      <h2 className="text-xl font-black text-white mb-2 relative z-10">Your watchlist is empty</h2>
+      <p className="text-white/40 text-sm max-w-sm text-center mb-8 relative z-10">
         Start curating by hearting titles from the library.
       </p>
-      <div className="flex gap-3">
-        <Link href="/movies" className="px-5 py-2 bg-white text-black text-sm font-bold rounded-full hover:bg-white/90 transition-all">
+      <div className="flex gap-4 relative z-10">
+        <Link href="/movies" className="px-6 py-2.5 bg-white text-black text-sm font-bold rounded-full hover:bg-white/90 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
           Movies
         </Link>
-        <Link href="/shows" className="px-5 py-2 bg-white/10 border border-white/10 text-white text-sm font-bold rounded-full hover:bg-white/15 transition-all">
+        <Link href="/shows" className="px-6 py-2.5 bg-white/5 border border-white/10 text-white text-sm font-bold rounded-full hover:bg-white/10 transition-all backdrop-blur-sm">
           Shows
         </Link>
       </div>
