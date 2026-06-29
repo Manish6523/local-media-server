@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Camera, Loader2, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { X, Camera, Loader2, SkipBack, SkipForward, Play, Pause } from "lucide-react";
+import Hls from "hls.js";
 
 interface ThumbnailEditorProps {
   mediaId: number;
@@ -9,6 +10,17 @@ interface ThumbnailEditorProps {
   isOpen: boolean;
   onClose: () => void;
   onCapture: (thumbnailPath: string) => void;
+}
+
+const NATIVE_FORMATS = ["mp4", "m4v", "mov", "webm"];
+
+function getVideoSource(mediaId: number, filepath: string): { url: string; needsHls: boolean } {
+  const ext = filepath.split(".").pop()?.toLowerCase() || "";
+  if (NATIVE_FORMATS.includes(ext)) {
+    return { url: `/api/stream?id=${mediaId}`, needsHls: false };
+  }
+  // MKV, AVI, WMV etc → use HLS transcode
+  return { url: `/api/hls/${mediaId}/0/0/playlist.m3u8?clientId=thumb-editor`, needsHls: true };
 }
 
 function formatTime(seconds: number): string {
@@ -26,105 +38,154 @@ export default function ThumbnailEditor({
   onClose,
   onCapture,
 }: ThumbnailEditorProps) {
-  const [duration, setDuration] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [capturing, setCapturing] = useState(false);
-  const [loadingDuration, setLoadingDuration] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch duration on open
+  // Setup video source on open
   useEffect(() => {
     if (!isOpen) return;
-    setLoadingDuration(true);
-    setPreviewSrc(null);
-    setError(null);
+
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
     setCapturing(false);
+    setVideoReady(false);
+    setError(null);
 
-    fetch(`/api/episode-thumbnail?id=${mediaId}&info=true`)
-      .then((r) => r.json())
-      .then((data) => {
-        const dur = data.duration || 0;
-        setDuration(dur);
-        const initialTime = Math.floor(dur / 3);
-        setCurrentTime(initialTime);
-        setLoadingDuration(false);
-        // Auto-fetch preview at 1/3
-        fetchPreview(initialTime);
-      })
-      .catch(() => {
-        setLoadingDuration(false);
-        setError("Failed to load video info");
-      });
-  }, [isOpen, mediaId]);
+    const video = videoRef.current;
+    if (!video) return;
 
-  // Fetch a preview frame at a given timestamp
-  const fetchPreview = useCallback(
-    async (timestamp: number) => {
-      setLoadingPreview(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/episode-thumbnail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: mediaId, timestamp, preview: true }),
+    const { url, needsHls } = getVideoSource(mediaId, filepath);
+
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (needsHls) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          maxBufferLength: 60,
+          maxMaxBufferLength: 120,
         });
-        const data = await res.json();
-        if (data.thumbnail) {
-          setPreviewSrc(data.thumbnail + `?t=${Date.now()}`);
-        } else {
-          setError("Could not generate preview");
-        }
-      } catch {
-        setError("Network error");
-      } finally {
-        setLoadingPreview(false);
+        hlsRef.current = hls;
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setVideoReady(true);
+          // Seek to 1/3 once we know the duration
+          if (video.duration && isFinite(video.duration)) {
+            video.currentTime = video.duration / 3;
+          }
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls.startLoad();
+            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              hls.recoverMediaError();
+            } else {
+              setError("Failed to load video");
+            }
+          }
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = url;
+      } else {
+        setError("HLS not supported in this browser");
       }
-    },
-    [mediaId]
-  );
+    } else {
+      video.src = url;
+    }
 
-  // Debounced seek — generates preview 500ms after user stops dragging
-  const handleSeek = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const time = parseFloat(e.target.value);
-      setCurrentTime(time);
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [isOpen, mediaId, filepath]);
 
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        fetchPreview(time);
-      }, 500);
-    },
-    [fetchPreview]
-  );
+  // Video event handlers
+  const handleLoadedMetadata = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.duration && isFinite(video.duration)) {
+      setDuration(video.duration);
+      // Seek to 1/3 of duration
+      video.currentTime = video.duration / 3;
+    }
+    setVideoReady(true);
+  }, []);
 
-  // Skip buttons
+  const handleDurationChange = useCallback(() => {
+    const video = videoRef.current;
+    if (video && video.duration && isFinite(video.duration)) {
+      setDuration(video.duration);
+    }
+  }, []);
+
+  const handleTimeUpdate = useCallback(() => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  }, []);
+
+  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    setCurrentTime(time);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+    }
+  }, []);
+
   const skipSeconds = useCallback(
     (delta: number) => {
-      const newTime = Math.max(0, Math.min(duration, currentTime + delta));
+      if (!videoRef.current) return;
+      const newTime = Math.max(0, Math.min(duration, videoRef.current.currentTime + delta));
+      videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
-      fetchPreview(newTime);
     },
-    [duration, currentTime, fetchPreview]
+    [duration]
   );
 
-  // Confirm this frame as the final thumbnail
+  const togglePlay = useCallback(() => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isPlaying]);
+
   const handleCapture = useCallback(async () => {
+    if (!videoRef.current) return;
     setCapturing(true);
     setError(null);
+
+    // Pause at the current frame
+    videoRef.current.pause();
+    setIsPlaying(false);
+
+    const timestamp = videoRef.current.currentTime;
 
     try {
       const res = await fetch("/api/episode-thumbnail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: mediaId, timestamp: currentTime }),
+        body: JSON.stringify({ id: mediaId, timestamp }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.thumbnail) {
-        setError(data.error || "Failed to save thumbnail");
+        setError(data.error || "Failed to capture thumbnail");
         setCapturing(false);
         return;
       }
@@ -136,7 +197,7 @@ export default function ThumbnailEditor({
     } finally {
       setCapturing(false);
     }
-  }, [mediaId, currentTime, onCapture, onClose]);
+  }, [mediaId, onCapture, onClose]);
 
   // Escape to close
   useEffect(() => {
@@ -169,7 +230,7 @@ export default function ThumbnailEditor({
                 Choose Thumbnail
               </h3>
               <p className="text-xs text-white/30 mt-0.5">
-                Scrub to find the perfect frame
+                Scrub to the perfect frame and capture it
               </p>
             </div>
             <button
@@ -180,36 +241,35 @@ export default function ThumbnailEditor({
             </button>
           </div>
 
-          {/* Preview Area */}
-          <div className="relative bg-black aspect-video flex items-center justify-center">
-            {loadingDuration ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-                <span className="text-xs text-white/40">Loading video info...</span>
+          {/* Video Preview */}
+          <div className="relative bg-black aspect-video">
+            <video
+              ref={videoRef}
+              className="w-full h-full object-contain"
+              onLoadedMetadata={handleLoadedMetadata}
+              onDurationChange={handleDurationChange}
+              onTimeUpdate={handleTimeUpdate}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onCanPlay={() => setVideoReady(true)}
+              preload="auto"
+              playsInline
+              muted
+            />
+
+            {/* Loading overlay */}
+            {!videoReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+                  <span className="text-xs text-white/40">Loading video...</span>
+                </div>
               </div>
-            ) : previewSrc ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewSrc}
-                  alt="Preview frame"
-                  className="w-full h-full object-contain"
-                />
-                {loadingPreview && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
-                  </div>
-                )}
-              </>
-            ) : loadingPreview ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-                <span className="text-xs text-white/40">Generating preview...</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-white/20">
-                <ImageIcon className="w-10 h-10" />
-                <span className="text-xs">Move the slider to preview frames</span>
+            )}
+
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
           </div>
@@ -225,12 +285,13 @@ export default function ThumbnailEditor({
                 type="range"
                 min={0}
                 max={duration || 1}
-                step={1}
+                step={0.1}
                 value={currentTime}
                 onChange={handleSeek}
-                disabled={loadingDuration}
+                disabled={!videoReady}
                 className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer disabled:opacity-30
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(139,92,246,0.5)] [&::-webkit-slider-thumb]:cursor-pointer"
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(139,92,246,0.5)] [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-white/10"
                 style={{
                   background:
                     duration > 0
@@ -243,56 +304,43 @@ export default function ThumbnailEditor({
               </span>
             </div>
 
-            {/* Skip buttons + Capture */}
+            {/* Playback controls + Capture */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => skipSeconds(-30)}
-                  disabled={loadingDuration}
-                  className="h-9 px-3 rounded-lg bg-white/[0.04] flex items-center justify-center gap-1 hover:bg-white/[0.08] transition-colors text-white/50 hover:text-white text-xs font-medium disabled:opacity-30"
+                  onClick={() => skipSeconds(-10)}
+                  disabled={!videoReady}
+                  className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center hover:bg-white/[0.08] transition-colors text-white/50 hover:text-white disabled:opacity-30"
+                  title="Back 10s"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  30s
+                  <SkipBack className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => skipSeconds(-10)}
-                  disabled={loadingDuration}
-                  className="h-9 px-3 rounded-lg bg-white/[0.04] flex items-center justify-center gap-1 hover:bg-white/[0.08] transition-colors text-white/50 hover:text-white text-xs font-medium disabled:opacity-30"
+                  onClick={togglePlay}
+                  disabled={!videoReady}
+                  className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center hover:bg-white/[0.1] transition-colors text-white/70 hover:text-white disabled:opacity-30"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  10s
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
                 </button>
                 <button
                   onClick={() => skipSeconds(10)}
-                  disabled={loadingDuration}
-                  className="h-9 px-3 rounded-lg bg-white/[0.04] flex items-center justify-center gap-1 hover:bg-white/[0.08] transition-colors text-white/50 hover:text-white text-xs font-medium disabled:opacity-30"
+                  disabled={!videoReady}
+                  className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center hover:bg-white/[0.08] transition-colors text-white/50 hover:text-white disabled:opacity-30"
+                  title="Forward 10s"
                 >
-                  10s
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => skipSeconds(30)}
-                  disabled={loadingDuration}
-                  className="h-9 px-3 rounded-lg bg-white/[0.04] flex items-center justify-center gap-1 hover:bg-white/[0.08] transition-colors text-white/50 hover:text-white text-xs font-medium disabled:opacity-30"
-                >
-                  30s
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <SkipForward className="w-4 h-4" />
                 </button>
               </div>
 
-              {error && (
-                <p className="text-xs text-red-400 mx-4 truncate max-w-[180px]">{error}</p>
-              )}
-
               <button
                 onClick={handleCapture}
-                disabled={capturing || loadingDuration || !previewSrc}
+                disabled={capturing || !videoReady}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-500 text-white transition-all shadow-lg shadow-violet-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 {capturing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
+                    Capturing...
                   </>
                 ) : (
                   <>

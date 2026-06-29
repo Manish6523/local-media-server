@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
-      <body className="min-h-full relative" suppressHydrationWarning>
+      <body className="min-h-full relative" suppressHydrationWarning={false}>
         {/* Aurora gradient background */}
         <div className="aurora-bg" />
         

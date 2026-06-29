@@ -68,15 +68,29 @@ export async function GET(request: NextRequest) {
 
     if (range) {
       const parts = range.replace("bytes=", "").split("-");
-      const start = parseInt(parts[0], 10);
-      // Let the browser fetch the entire remaining file if end is not specified
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      let start = parseInt(parts[0], 10);
+      let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      // Clamp values to valid range
+      start = Math.max(0, Math.min(start, fileSize - 1));
+      end = Math.max(start, Math.min(end, fileSize - 1));
+
+      // Validate — return 416 if range is still nonsensical
+      if (start > end || start >= fileSize) {
+        return new NextResponse("Range Not Satisfiable", {
+          status: 416,
+          headers: {
+            "Content-Range": `bytes */${fileSize}`,
+          },
+        });
+      }
+
       const chunkSize = end - start + 1;
 
       const stream = fs.createReadStream(filepath, {
         start,
         end,
-        highWaterMark: 64 * 1024, // 64KB internal buffer
+        highWaterMark: 64 * 1024,
       });
 
       return new NextResponse(nodeStreamToWeb(stream), {
