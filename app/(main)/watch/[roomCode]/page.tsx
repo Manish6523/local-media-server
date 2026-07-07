@@ -6,6 +6,7 @@ import Link from "next/link";
 import NetflixPlayer from "@/components/Player/NetflixPlayer";
 import ChatPanel from "@/components/WatchParty/ChatPanel";
 import SyncOverlay from "@/components/WatchParty/SyncOverlay";
+import JoinRequestToast, { JoinRequest } from "@/components/WatchParty/JoinRequestToast";
 import { useWatchParty } from "@/hooks/useWatchParty";
 
 import type { MediaEntry } from "@/lib/db";
@@ -16,6 +17,7 @@ export default function WatchPartyPage() {
   const roomCode = (params.roomCode as string).toUpperCase();
 
   const {
+    socket,
     isConnected,
     members,
     messages,
@@ -43,6 +45,8 @@ export default function WatchPartyPage() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [videoMounted, setVideoMounted] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const joinAttempted = useRef(false);
@@ -56,6 +60,7 @@ export default function WatchPartyPage() {
 
   const registerVideoRef = useCallback((ref: HTMLVideoElement | null) => {
     videoRef.current = ref;
+    if (ref) setVideoMounted(true);
   }, []);
 
   // Resolve mediaId: from hook state OR sessionStorage fallback
@@ -193,6 +198,32 @@ export default function WatchPartyPage() {
     // readyState >= 2 (HAVE_CURRENT_DATA) means metadata + some data loaded
     return video.readyState >= 2 && isFinite(video.duration);
   }
+
+  // ── Knock-to-join Host Handlers ────────────────────────────────
+  useEffect(() => {
+    if (!effectiveIsHost || !socket) return;
+
+    const handleJoinRequested = (data: { requestId: string; guestName: string }) => {
+      console.log('[Host] Received join request from', data.guestName);
+      setJoinRequests(prev => [
+        ...prev,
+        { requestId: data.requestId, guestName: data.guestName, timestamp: Date.now() }
+      ]);
+    };
+
+    const handleJoinRequestCancelled = (data: { requestId: string }) => {
+      console.log('[Host] Join request cancelled for', data.requestId);
+      setJoinRequests(prev => prev.filter(req => req.requestId !== data.requestId));
+    };
+
+    socket?.on('join-requested', handleJoinRequested);
+    socket?.on('join-request-cancelled', handleJoinRequestCancelled);
+
+    return () => {
+      socket?.off('join-requested', handleJoinRequested);
+      socket?.off('join-request-cancelled', handleJoinRequestCancelled);
+    };
+  }, [effectiveIsHost, socket]);
 
   // ── Playback sync (play/pause/seek events) ──────────
   useEffect(() => {
@@ -475,7 +506,7 @@ export default function WatchPartyPage() {
     } else if (vid) {
       vid.addEventListener('loadedmetadata', doSeek, { once: true })
     }
-  }, [effectiveIsHost, playbackState, emitReady, isProcessingServerEvent]);
+  }, [effectiveIsHost, playbackState, emitReady, isProcessingServerEvent, videoMounted]);
 
   if (loading && !media) {
     return (
@@ -542,6 +573,18 @@ export default function WatchPartyPage() {
         <SyncOverlay 
           visible={syncing || waitingForReady} 
           waitingMembers={members.filter(m => !m.ready).map(m => m.name)}
+        />
+
+        <JoinRequestToast
+          requests={joinRequests}
+          onApprove={(requestId) => {
+            socket?.emit('approve-join', { roomCode, requestId });
+            setJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+          }}
+          onDecline={(requestId) => {
+            socket?.emit('decline-join', { roomCode, requestId });
+            setJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+          }}
         />
 
         {!effectiveIsHost && (

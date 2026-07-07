@@ -49,9 +49,9 @@ interface UseWatchPartyReturn {
   waitingForReady: boolean;
   connect: () => void;
   createRoom: (mediaId: number, hostName: string) => Promise<{ success: boolean; roomCode?: string }>;
-  joinRoom: (roomCode: string, guestName: string) => Promise<{ success: boolean; mediaId?: number; state?: PlaybackState; error?: string }>;
+  joinRoom: (roomCode: string, guestName: string) => Promise<{ success: boolean; mediaId?: number; state?: PlaybackState; status?: string; memberCount?: number; error?: string }>;
   rejoinRoom: (roomCode: string, name: string) => Promise<{ success: boolean; mediaId?: number; state?: PlaybackState; isHost?: boolean; error?: string }>;
-  getRoomInfo: (roomCode: string) => Promise<{ success: boolean; mediaId?: number; hostName?: string; members?: PublicMember[]; error?: string }>;
+  getRoomInfo: (roomCode: string) => Promise<{ success: boolean; mediaId?: number; hostName?: string; members?: PublicMember[]; status?: string; error?: string }>;
   listRooms: () => Promise<RoomListItem[]>;
   emitPlayback: (type: "play" | "pause" | "seek", currentTime: number) => void;
   emitReady: () => void;
@@ -67,6 +67,9 @@ interface UseWatchPartyReturn {
   emitPartyStart: (roomCode: string) => void;
   onPartyStarted: (handler: (data: { roomCode: string }) => void) => void;
   offPartyStarted: () => void;
+  approveJoin: (roomCode: string, requestId: string) => void;
+  declineJoin: (roomCode: string, requestId: string) => void;
+  cancelJoinRequest: (roomCode: string) => void;
   ntpOffset: number;
   getServerTime: () => number;
   isProcessingServerEvent: React.MutableRefObject<boolean>;
@@ -229,7 +232,7 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
   );
 
   const joinRoom = useCallback(
-    (roomCode: string, guestName: string): Promise<{ success: boolean; mediaId?: number; state?: PlaybackState; error?: string }> => {
+    (roomCode: string, guestName: string): Promise<{ success: boolean; mediaId?: number; state?: PlaybackState; status?: string; memberCount?: number; error?: string }> => {
       return new Promise((resolve) => {
         const socket = ensureSocket();
         whenConnected(socket, () => {
@@ -247,6 +250,10 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
               sessionStorage.setItem("wp_roomCode", roomCode);
               sessionStorage.setItem("wp_isHost", "false");
               resolve({ success: true, mediaId: response.mediaId, state: response.state });
+            } else if (response.status === 'pending') {
+              // Knock-to-join: request sent to host, waiting for approval
+              setRoomCode(roomCode);
+              resolve({ success: false, status: 'pending', memberCount: response.memberCount });
             } else {
               resolve({ success: false, error: response.error });
             }
@@ -284,7 +291,7 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
   );
 
   const getRoomInfo = useCallback(
-    (roomCode: string): Promise<{ success: boolean; mediaId?: number; hostName?: string; members?: PublicMember[]; error?: string }> => {
+    (roomCode: string): Promise<{ success: boolean; mediaId?: number; hostName?: string; members?: PublicMember[]; status?: string; error?: string }> => {
       return new Promise((resolve) => {
         const socket = ensureSocket();
         whenConnected(socket, () => {
@@ -349,6 +356,18 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     console.log(`[WatchParty] Socket connected: ${socketRef.current?.connected}`);
     if (!socketRef.current?.connected) return;
     socketRef.current.emit("party-started", { roomCode: code });
+  }, []);
+
+  const approveJoin = useCallback((roomCode: string, requestId: string) => {
+    socketRef.current?.emit("approve-join", { roomCode, requestId });
+  }, []);
+
+  const declineJoin = useCallback((roomCode: string, requestId: string) => {
+    socketRef.current?.emit("decline-join", { roomCode, requestId });
+  }, []);
+
+  const cancelJoinRequest = useCallback((roomCode: string) => {
+    socketRef.current?.emit("cancel-join-request", { roomCode });
   }, []);
 
   // ── Event Registration ──────────────────────────────────────────
@@ -467,6 +486,9 @@ export function useWatchParty(autoConnect: boolean = false): UseWatchPartyReturn
     emitPartyStart,
     onPartyStarted,
     offPartyStarted,
+    approveJoin,
+    declineJoin,
+    cancelJoinRequest,
     ntpOffset,
     getServerTime,
     isProcessingServerEvent,

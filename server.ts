@@ -36,6 +36,12 @@ interface PlaybackState {
   updatedAt: number; // Server timestamp when state was last updated
 }
 
+interface PendingRequest {
+  name: string;
+  socketId: string;
+  timeout: NodeJS.Timeout;
+}
+
 interface Room {
   mediaId: number;
   hostId: string;
@@ -46,6 +52,8 @@ interface Room {
   syncInterval: ReturnType<typeof setInterval> | null;
   waitingForReady: boolean; // True when waiting for all members to buffer after seek
   readyTimeout: ReturnType<typeof setTimeout> | null;
+  status: 'waiting' | 'started' | 'ended';
+  pendingRequests: Map<string, PendingRequest>;
 }
 
 // ─── Room Storage ────────────────────────────────────────────────
@@ -297,6 +305,8 @@ app.prepare().then(async () => {
         syncInterval: null,
         waitingForReady: false,
         readyTimeout: null,
+        status: 'waiting',
+        pendingRequests: new Map(),
       };
       rooms.set(roomCode, room);
       socket.join(roomCode);
@@ -317,6 +327,7 @@ app.prepare().then(async () => {
         hostName: room.hostName,
         memberCount: room.members.length,
         members: publicMembers(room.members),
+        status: room.status,
       });
     });
 
@@ -337,8 +348,49 @@ app.prepare().then(async () => {
     // ── GUEST joins a room ───────────────────────────────────────
     socket.on("join-room", ({ roomCode, guestName }, callback) => {
       const room = rooms.get(roomCode);
-      if (!room) return callback({ success: false, error: "Room not found or expired" });
+      if (!room || room.status === 'ended') return callback({ success: false, error: "Room not found or expired" });
 
+      if (room.status === 'started') {
+        // Knock-to-join flow
+        socket.data.isPending = true;
+        socket.data.roomCode = roomCode;
+        socket.data.name = guestName;
+
+        const timeout = setTimeout(() => {
+          if (room.pendingRequests.has(socket.id)) {
+            room.pendingRequests.delete(socket.id);
+            socket.data.isPending = false;
+            io.to(socket.id).emit('join-declined', { 
+              guestName: guestName,
+              reason: 'timeout'
+            });
+            // Also tell host to remove the toast
+            io.to(room.hostId).emit('join-request-cancelled', {
+              requestId: socket.id
+            });
+          }
+        }, 30000);
+
+        room.pendingRequests.set(socket.id, {
+          name: guestName,
+          socketId: socket.id,
+          timeout
+        });
+
+        io.to(room.hostId).emit('join-requested', {
+          requestId: socket.id,
+          guestName: guestName,
+        });
+
+        return callback({ 
+          success: false, 
+          status: 'pending', 
+          memberCount: room.members.length 
+        });
+      }
+
+      // Normal flow (waiting status)
+      socket.data.isPending = false;
       room.members.push({
         id: socket.id,
         name: guestName,
@@ -412,10 +464,17 @@ app.prepare().then(async () => {
           room.hostId = socket.id;
         }
 
+        const currentProjected = projectedTime(room.state);
+        socket.emit("playback-sync", {
+          type: room.state.isPlaying ? "play" : "pause",
+          currentTime: currentProjected,
+          serverTime: Date.now(),
+        });
+
         callback({
           success: true,
           mediaId: room.mediaId,
-          state: { ...room.state, currentTime: projectedTime(room.state) },
+          state: { ...room.state, currentTime: currentProjected },
           members: publicMembers(room.members),
           messages: room.messages.slice(-50),
           isHost: wasHost,
@@ -450,10 +509,17 @@ app.prepare().then(async () => {
           members: publicMembers(room.members),
         });
 
+        const currentProjected = projectedTime(room.state);
+        socket.emit("playback-sync", {
+          type: room.state.isPlaying ? "play" : "pause",
+          currentTime: currentProjected,
+          serverTime: Date.now(),
+        });
+
         callback({
           success: true,
           mediaId: room.mediaId,
-          state: { ...room.state, currentTime: projectedTime(room.state) },
+          state: { ...room.state, currentTime: currentProjected },
           members: publicMembers(room.members),
           messages: room.messages.slice(-50),
           isHost: false,
@@ -529,8 +595,110 @@ app.prepare().then(async () => {
       console.log(`[Server] Is host: ${room.hostId === socket.id} (hostId=${room.hostId}, socketId=${socket.id})`);
       if (room.hostId !== socket.id) return; // only host can start
 
+      room.status = 'started';
       console.log(`[Server] Broadcasting party-started to room ${roomCode} (${room.members.length} members)`);
       io.to(roomCode).emit("party-started", { roomCode });
+    });
+
+    // ── HOST approves join ───────────────────────────────────────
+    socket.on('approve-join', ({ roomCode, requestId }) => {
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      if (room.hostId !== socket.id) return; // only host
+
+      const request = room.pendingRequests.get(requestId);
+      if (!request) return;
+
+      clearTimeout(request.timeout);
+      room.pendingRequests.delete(requestId);
+
+      // Add guest to room
+      room.members.push({
+        id: requestId,
+        name: request.name,
+        isHost: false,
+        joinedAt: Date.now(),
+        ready: false
+      });
+      
+      // We must get the target socket and make it join the Socket.IO room
+      const guestSocket = io.sockets.sockets.get(requestId);
+      if (guestSocket) {
+        guestSocket.join(roomCode);
+        guestSocket.data.isPending = false;
+      }
+
+      const currentProjected = projectedTime(room.state);
+
+      // Tell guest they are approved + give them current state
+      io.to(requestId).emit('join-approved', {
+        mediaId: room.mediaId,
+        state: { ...room.state, currentTime: currentProjected },
+        members: publicMembers(room.members),
+        messages: room.messages.slice(-50)
+      });
+
+      // System message
+      const sysMsg: ChatMessage = {
+        id: Date.now(),
+        name: request.name,
+        text: `${request.name} joined the room`,
+        timestamp: Date.now(),
+        isSystem: true,
+      };
+      room.messages.push(sysMsg);
+
+      // Tell everyone in room
+      io.to(roomCode).emit('member-joined', {
+        name: request.name,
+        members: publicMembers(room.members)
+      });
+      io.to(roomCode).emit("new-message", sysMsg);
+
+      console.log(`[WatchParty] Host approved ${request.name} to join ${roomCode}`);
+    });
+
+    // ── HOST declines join ───────────────────────────────────────
+    socket.on('decline-join', ({ roomCode, requestId }) => {
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      if (room.hostId !== socket.id) return;
+
+      const request = room.pendingRequests.get(requestId);
+      if (!request) return;
+
+      clearTimeout(request.timeout);
+      room.pendingRequests.delete(requestId);
+
+      const guestSocket = io.sockets.sockets.get(requestId);
+      if (guestSocket) {
+        guestSocket.data.isPending = false;
+      }
+
+      io.to(requestId).emit('join-declined', {
+        guestName: request.name,
+        reason: 'declined'
+      });
+
+      console.log(`[WatchParty] Host declined ${request.name} from joining ${roomCode}`);
+    });
+
+    // ── GUEST cancels request ────────────────────────────────────
+    socket.on('cancel-join-request', ({ roomCode }) => {
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      
+      const request = room.pendingRequests.get(socket.id);
+      if (!request) return;
+
+      clearTimeout(request.timeout);
+      room.pendingRequests.delete(socket.id);
+      socket.data.isPending = false;
+
+      io.to(room.hostId).emit('join-request-cancelled', {
+        requestId: socket.id
+      });
+      console.log(`[WatchParty] ${socket.data.name} cancelled join request for ${roomCode}`);
     });
 
     // ── Disconnect ───────────────────────────────────────────────
@@ -540,11 +708,28 @@ app.prepare().then(async () => {
       const room = rooms.get(roomCode);
       if (!room) return;
 
+      // If this was just a pending knock, clean it up without broadcasting member-left
+      if (socket.data.isPending) {
+        const request = room.pendingRequests.get(socket.id);
+        if (request) {
+          clearTimeout(request.timeout);
+          room.pendingRequests.delete(socket.id);
+          io.to(room.hostId).emit('join-request-cancelled', { requestId: socket.id });
+        }
+        return;
+      }
+
       const leavingName = socket.data.name;
       room.members = room.members.filter((m) => m.id !== socket.id);
 
       if (room.members.length === 0) {
         stopSyncHeartbeat(room);
+        room.status = 'ended';
+        // Clear all pending knock timeouts for this room
+        for (const [id, req] of room.pendingRequests.entries()) {
+          clearTimeout(req.timeout);
+          io.to(id).emit('join-declined', { guestName: req.name, reason: 'timeout' });
+        }
         rooms.delete(roomCode);
         console.log(`[WatchParty] Room ${roomCode} deleted (empty)`);
         return;
