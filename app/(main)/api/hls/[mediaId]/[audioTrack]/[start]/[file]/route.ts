@@ -122,12 +122,15 @@ function buildHlsArgs(
   if (gpu.type === "nvenc") {
     args.push("-preset", "p4", "-rc", "vbr", "-cq", "26");
   } else if (gpu.type === "vaapi") {
-    args.push("-qp", "26");
+    args.push("-qp", "26", "-profile:v", "main", "-level:v", "4.1");
   } else if (gpu.type === "qsv") {
     args.push("-preset", "medium", "-global_quality", "26");
   } else {
     args.push("-preset", "ultrafast", "-crf", "26");
   }
+
+  // Ensure keyframes every 3 seconds for HLS seeking (required by Firefox)
+  args.push("-force_key_frames", "expr:gte(t,n_forced*3)");
 
   // ── Audio handling ──────────────────────────────────────────────
   // EAC3 (Dolby Digital Plus), AC3, DTS → need resampling + stereo downmix
