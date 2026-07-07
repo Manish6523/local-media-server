@@ -24,6 +24,8 @@ const activeTranscodes = new Map<string, ActiveTranscode>();
 
 // Cache ffprobe pixel format results per filepath to avoid re-probing
 const pixelFormatCache = new Map<string, boolean>();
+// Cache audio codec results per filepath+track to avoid re-probing
+const audioCodecCache = new Map<string, string>();
 
 function detect10bit(filepath: string): boolean {
   const cached = pixelFormatCache.get(filepath);
@@ -48,6 +50,28 @@ function detect10bit(filepath: string): boolean {
   }
 }
 
+function detectAudioCodec(filepath: string, trackNum: number): string {
+  const cacheKey = `${filepath}:${trackNum}`;
+  const cached = audioCodecCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  try {
+    const probeResult = execSync(
+      `ffprobe -v quiet -print_format json -show_streams -select_streams a "${filepath}"`,
+      { encoding: 'utf8', timeout: 10000 }
+    );
+    const audioStreams = JSON.parse(probeResult).streams;
+    const track = audioStreams?.[trackNum];
+    const codec = (track?.codec_name || 'unknown').toLowerCase();
+    audioCodecCache.set(cacheKey, codec);
+    return codec;
+  } catch (err) {
+    console.error('[HLS] ffprobe audio detection failed:', err);
+    audioCodecCache.set(cacheKey, 'unknown');
+    return 'unknown';
+  }
+}
+
 // ─── Dynamic HLS FFmpeg Arg Builder ──────────────────────────────
 
 function buildHlsArgs(
@@ -56,6 +80,7 @@ function buildHlsArgs(
   startSec: number,
   trackNum: number,
   is10bit: boolean,
+  audioCodec: string,
   outDir: string,
   playlistPath: string,
 ): string[] {
@@ -82,8 +107,8 @@ function buildHlsArgs(
     if (is10bit) {
       // 10-bit→8-bit conversion entirely on GPU: scale_vaapi converts
       // P010/P010LE (10-bit) to NV12 (8-bit) in VAAPI surface memory.
-      // No CPU-side format conversion or hwupload needed.
-      args.push("-vf", "scale_vaapi=format=nv12");
+      // w=-2:h=-2 preserves original resolution with even-number alignment.
+      args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
     } else {
       args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
     }
@@ -104,9 +129,22 @@ function buildHlsArgs(
     args.push("-preset", "ultrafast", "-crf", "26");
   }
 
-  // ── Audio + HLS output ──────────────────────────────────────────
+  // ── Audio handling ──────────────────────────────────────────────
+  // EAC3 (Dolby Digital Plus), AC3, DTS → need resampling + stereo downmix
+  // to avoid AAC encoder failures with these surround formats.
+  const needsAudioFix = ['eac3', 'ac3', 'dts', 'dts-hd', 'truehd'].includes(audioCodec);
+  if (needsAudioFix) {
+    args.push("-af", "aresample=48000", "-ar", "48000", "-ac", "2");
+  }
+
+  // ── Audio codec + HLS output ────────────────────────────────────
   args.push(
     "-c:a", "aac", "-b:a", "128k",
+  );
+  if (needsAudioFix) {
+    args.push("-strict", "experimental");
+  }
+  args.push(
     "-sn",
     "-f", "hls",
     "-hls_time", "3",
@@ -187,11 +225,12 @@ export async function GET(
 
       if (!active && !fs.existsSync(requestedFilePath)) {
         const is10bit = detect10bit(media.filepath);
+        const audioCodec = detectAudioCodec(media.filepath, trackNum);
         const gpu = getDetectedGPU();
-        console.log(`[HLS] Spawning ${gpu.label}${is10bit ? ' (10-bit)' : ''} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
+        console.log(`[HLS] Spawning ${gpu.label}${is10bit ? ' (10-bit)' : ''}${audioCodec !== 'aac' ? ` (audio: ${audioCodec})` : ''} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
         
         // Build FFmpeg args dynamically based on detected GPU
-        const ffmpegArgs = buildHlsArgs(gpu, media.filepath, startSec, trackNum, is10bit, outDir, requestedFilePath);
+        const ffmpegArgs = buildHlsArgs(gpu, media.filepath, startSec, trackNum, is10bit, audioCodec, outDir, requestedFilePath);
         console.log(`[HLS] Full command: ffmpeg ${ffmpegArgs.join(" ")}`);
 
         const ffmpeg = spawn("ffmpeg", ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] });
