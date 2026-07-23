@@ -55,15 +55,77 @@ export function getDb() {
   const dbPath = path.join(dbDir, "media.db");
   sqliteDb = new Database(dbPath);
   sqliteDb.pragma("journal_mode = WAL");
-  
+
+  // Ensure all tables exist
+  sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS media_assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      filepath TEXT NOT NULL UNIQUE,
+      filename TEXT NOT NULL,
+      source TEXT NOT NULL,
+      type TEXT NOT NULL,
+      available INTEGER NOT NULL DEFAULT 1,
+      fetched_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      omdb_confirmed INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE TABLE IF NOT EXISTS movies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_asset_id INTEGER NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      year INTEGER,
+      runtime INTEGER,
+      poster TEXT,
+      backdrop TEXT,
+      backdrop_url TEXT,
+      overview TEXT,
+      rating TEXT,
+      genres TEXT,
+      omdb_id TEXT
+    );
+    CREATE TABLE IF NOT EXISTS tv_shows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      overview TEXT,
+      poster TEXT,
+      backdrop TEXT,
+      backdrop_url TEXT,
+      omdb_id TEXT,
+      rating TEXT,
+      genres TEXT
+    );
+    CREATE TABLE IF NOT EXISTS episodes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_asset_id INTEGER NOT NULL UNIQUE,
+      show_id INTEGER NOT NULL,
+      season_number INTEGER,
+      episode_start INTEGER,
+      episode_end INTEGER,
+      runtime INTEGER,
+      episode_thumbnail TEXT
+    );
+    CREATE TABLE IF NOT EXISTS playback_progress (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_asset_id INTEGER NOT NULL UNIQUE,
+      watch_progress INTEGER NOT NULL DEFAULT 0,
+      is_watched INTEGER NOT NULL DEFAULT 0,
+      is_favorite INTEGER NOT NULL DEFAULT 0,
+      last_watched_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS config (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+  `);
+
   db = drizzle(sqliteDb, { schema });
 
   // Seed default config if empty
   const configCount = db.select().from(schema.config).all().length;
   if (configCount === 0) {
     db.insert(schema.config).values([
-      { key: "local_path", value: process.env.LOCAL_MEDIA_PATH || "/home/manish-arch/EveryThing/series/media/" },
-      { key: "hdd_path", value: process.env.HDD_PATH || "/run/media/manish-arch/HDD/" },
+      { key: "local_path", value: process.env.LOCAL_MEDIA_PATH || "" },
+      { key: "hdd_path", value: process.env.HDD_PATH || "" },
       { key: "last_scan", value: null },
     ]).onConflictDoNothing().run();
   }
@@ -271,7 +333,7 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_
   return assetId;
 }
 
-export function updateAvailability(source: string, available: number): void {
+export function updateAvailability(source: "local" | "hdd", available: number): void {
   const { db } = getDb();
   db.update(schema.mediaAssets).set({ available }).where(eq(schema.mediaAssets.source, source)).run();
 }

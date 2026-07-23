@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const localPath = getConfig("local_path") || process.env.LOCAL_MEDIA_PATH || "/home/manish-arch/EveryThing/series/media/";
-    const hddPath = getConfig("hdd_path") || process.env.HDD_PATH || "/run/media/manish-arch/HDD/";
+    const localPath = getConfig("local_path") || process.env.LOCAL_MEDIA_PATH || "";
+    const hddPath = getConfig("hdd_path") || process.env.HDD_PATH || "";
 
     console.log("[Scan] Starting scan...");
     console.log(`[Scan] Local path: ${localPath}`);

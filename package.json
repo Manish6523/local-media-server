@@ -48,5 +48,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.10.0": true
   }
 }
