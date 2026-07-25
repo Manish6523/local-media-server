@@ -119,6 +119,8 @@ export function usePlayer(
     ? `/api/hls/${mediaId}/${state.activeAudioTrack}/${transcodeStartTime}/playlist.m3u8?clientId=${clientIdRef.current}`
     : `/api/stream?id=${mediaId}`;
 
+  console.log('[Player] Video src:', videoSrc);
+
   // hls.js integration
   useEffect(() => {
     const video = videoRef.current;

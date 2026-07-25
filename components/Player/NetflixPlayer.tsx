@@ -58,8 +58,13 @@ export default function NetflixPlayer({
 }: NetflixPlayerProps) {
   const router = useRouter();
 
-  const ext = filename.split(".").pop()?.toLowerCase();
-  const baseNeedsTranscode = ext === "mkv" || ext === "avi" || ext === "wmv";
+  const NATIVE_FORMATS = ["mp4", "m4v", "mov", "webm"];
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const baseNeedsTranscode = !NATIVE_FORMATS.includes(ext);
+
+  console.log('[Player] File:', filename);
+  console.log('[Player] Extension:', ext);
+  console.log('[Player] Needs transcode:', baseNeedsTranscode);
 
   const {
     videoRef,

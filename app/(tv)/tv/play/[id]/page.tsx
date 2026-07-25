@@ -51,7 +51,11 @@ export default async function PlayPage(props: PlayPageProps) {
 
   var title = media.title || "Untitled";
   var episodeLabel = formatEpisodeLabel(media);
-  var streamUrl = "/api/stream?id=" + media.id;
+  var nativeFormats = ["mp4", "m4v", "mov", "webm"];
+  var fileExt = (media.filename.split(".").pop() || "").toLowerCase();
+  var streamUrl = nativeFormats.includes(fileExt)
+    ? "/api/stream?id=" + media.id
+    : "/api/hls/" + media.id + "/0/0/playlist.m3u8?clientId=tv";
 
   var metaParts = [];
   if (media.year) {

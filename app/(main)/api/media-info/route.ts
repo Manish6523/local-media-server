@@ -100,7 +100,7 @@ async function probeFile(filepath: string): Promise<MediaInfo> {
           container: ext,
           streamingTier,
           needsRemux: streamingTier === "remux",
-          needsTranscode: streamingTier === "transcode",
+          needsTranscode: streamingTier !== "direct",
         });
       } catch (err) {
         reject(err);
