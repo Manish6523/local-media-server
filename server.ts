@@ -701,6 +701,63 @@ app.prepare().then(async () => {
       console.log(`[WatchParty] ${socket.data.name} cancelled join request for ${roomCode}`);
     });
 
+    // ── Voice Chat — WebRTC Signaling ────────────────────────────
+    // Pure relay: server forwards messages between the right sockets.
+    // No server-side voice state tracking.
+
+    socket.on("webrtc-offer", ({ targetSocketId, offer }: { roomCode: string; targetSocketId: string; offer: any }) => {
+      io.to(targetSocketId).emit("webrtc-offer", {
+        fromSocketId: socket.id,
+        fromName: socket.data.name,
+        offer,
+      });
+    });
+
+    socket.on("webrtc-answer", ({ targetSocketId, answer }: { roomCode: string; targetSocketId: string; answer: any }) => {
+      io.to(targetSocketId).emit("webrtc-answer", {
+        fromSocketId: socket.id,
+        answer,
+      });
+    });
+
+    socket.on("webrtc-ice-candidate", ({ targetSocketId, candidate }: { roomCode: string; targetSocketId: string; candidate: any }) => {
+      io.to(targetSocketId).emit("webrtc-ice-candidate", {
+        fromSocketId: socket.id,
+        candidate,
+      });
+    });
+
+    socket.on("voice-joined", ({ roomCode }: { roomCode: string }) => {
+      socket.to(roomCode).emit("voice-peer-joined", {
+        socketId: socket.id,
+        name: socket.data.name,
+      });
+      console.log(`[Voice] ${socket.data.name} joined voice in ${roomCode}`);
+    });
+
+    socket.on("voice-left", ({ roomCode }: { roomCode: string }) => {
+      socket.to(roomCode).emit("voice-peer-left", {
+        socketId: socket.id,
+        name: socket.data.name,
+      });
+      console.log(`[Voice] ${socket.data.name} left voice in ${roomCode}`);
+    });
+
+    socket.on("voice-mute-changed", ({ roomCode, isMuted }: { roomCode: string; isMuted: boolean }) => {
+      socket.to(roomCode).emit("voice-mute-changed", {
+        socketId: socket.id,
+        name: socket.data.name,
+        isMuted,
+      });
+    });
+
+    socket.on("voice-speaking", ({ roomCode, isSpeaking }: { roomCode: string; isSpeaking: boolean }) => {
+      socket.to(roomCode).emit("voice-speaking", {
+        socketId: socket.id,
+        isSpeaking,
+      });
+    });
+
     // ── Disconnect ───────────────────────────────────────────────
     socket.on("disconnect", () => {
       const roomCode = socket.data.roomCode;

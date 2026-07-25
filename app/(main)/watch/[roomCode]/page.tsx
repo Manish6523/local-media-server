@@ -8,6 +8,7 @@ import ChatPanel from "@/components/WatchParty/ChatPanel";
 import SyncOverlay from "@/components/WatchParty/SyncOverlay";
 import JoinRequestToast, { JoinRequest } from "@/components/WatchParty/JoinRequestToast";
 import { useWatchParty } from "@/hooks/useWatchParty";
+import { useVoiceChat } from "@/hooks/useVoiceChat";
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -47,6 +48,34 @@ export default function WatchPartyPage() {
   const [joined, setJoined] = useState(false);
   const [videoMounted, setVideoMounted] = useState(false);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+
+  const {
+    isVoiceEnabled,
+    isMuted: voiceMuted,
+    isSpeaking,
+    micPermission,
+    voicePeers,
+    joinVoice,
+    leaveVoice,
+    toggleMute: toggleVoiceMute,
+  } = useVoiceChat(socket, roomCode, joined);
+
+  // V key to toggle voice mute (M is used for video mute)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === "INPUT" || (e.target as HTMLElement)?.tagName === "TEXTAREA") return;
+      if (e.key === "v" || e.key === "V") {
+        if (isVoiceEnabled) {
+          e.preventDefault();
+          toggleVoiceMute();
+        }
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isVoiceEnabled, toggleVoiceMute]);
+
+  const myName = typeof window !== "undefined" ? sessionStorage.getItem("wp_name") || "You" : "You";
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const joinAttempted = useRef(false);
@@ -599,6 +628,15 @@ export default function WatchPartyPage() {
           messages={messages}
           onSendMessage={sendMessage}
           isConnected={isConnected}
+          isVoiceEnabled={isVoiceEnabled}
+          isMuted={voiceMuted}
+          isSpeaking={isSpeaking}
+          micPermission={micPermission}
+          voicePeers={voicePeers}
+          onJoinVoice={joinVoice}
+          onLeaveVoice={leaveVoice}
+          onToggleMute={toggleVoiceMute}
+          myName={myName}
         />
       </div>
     </div>
