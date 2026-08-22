@@ -165,7 +165,7 @@ export default function NavBar() {
     <>
       {/* ═══ DESKTOP TOP NAV ═══ */}
       <header
-        className={`${isDetailPage ? "hidden" : "hidden md:flex"} fixed top-0 left-0 right-0 z-50 items-center justify-between px-6 lg:px-8 py-3 transition-all duration-500 ${
+        className={`${isDetailPage ? "hidden" : "flex"} fixed top-0 left-0 right-0 z-50 items-center justify-between px-4 md:px-6 lg:px-8 py-3 transition-all duration-500 ${
           scrolled
             ? "bg-background/60 backdrop-blur-2xl border-b border-white/[0.04] shadow-lg shadow-black/10"
             : "bg-transparent"
@@ -184,7 +184,7 @@ export default function NavBar() {
         </Link>
 
         {/* Center Nav */}
-        <nav className="flex items-center gap-1 glass-md px-1.5 py-1 rounded-full">
+        <nav className={`${isDetailPage ? "hidden" : "hidden md:flex"} items-center gap-1 glass-md px-1.5 py-1 rounded-full`}>
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
@@ -208,7 +208,7 @@ export default function NavBar() {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className={`${isDetailPage ? "hidden" : "hidden md:flex"} items-center gap-2 shrink-0`}>
           <button
             onClick={() => setIsCommandOpen(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-white/40 hover:text-white/70 hover:border-white/10 transition-all group"
