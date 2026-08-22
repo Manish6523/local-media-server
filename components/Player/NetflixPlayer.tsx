@@ -365,7 +365,10 @@ export default function NetflixPlayer({
         lastClickSide.current = clickSide;
         setTimeout(() => {
           if (Date.now() - lastClickTime.current >= 280) {
-            wpTogglePlay();
+            const isTouch = window.matchMedia("(pointer: coarse)").matches;
+            if (!isTouch) {
+              wpTogglePlay();
+            }
           }
         }, 300);
       }
