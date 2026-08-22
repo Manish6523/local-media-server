@@ -1,7 +1,5 @@
 <p align="center">
-  <picture>
-    <img src="assets/logo.pdf" width="220" alt="VidLock">
-  </picture>
+  <img src="assets/logo.pdf" width="220" alt="VidLock" />
 </p>
 
 <h1 align="center">VidLock</h1>
@@ -33,13 +31,11 @@
 </p>
 
 <p align="center">
-  <!-- Place your hero dashboard screenshot in the assets folder as hero.png -->
-  <img src="./assets/hero.png" alt="VidLock Dashboard" width="100%" style="border-radius: 10px; margin-top: 20px;" />
+  <img src="assets/hero.png" alt="VidLock Dashboard" width="100%" />
 </p>
 
 <p align="center">
-  <!-- Place your full app demo video in the assets folder as demo.mp4 -->
-  <video src="./assets/demo.mp4" width="100%" autoplay loop muted playsinline style="border-radius: 10px; margin-top: 20px;"></video>
+  <video src="assets/demo.mp4" width="100%" autoplay loop muted playsinline></video>
 </p>
 
 ---
