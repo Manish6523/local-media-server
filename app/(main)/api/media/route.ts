@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import fs from "fs";
 import { getAllMedia, getMediaById, getMediaByType, searchMedia, getMediaStats, getConfig, getShowOfflineMedia } from "@/lib/db";
+import { FFPROBE } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       if (fs.existsSync(media.filepath)) {
         try {
           const output = execSync(
-            `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${media.filepath}"`,
+            `"${FFPROBE}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${media.filepath}"`,
             { encoding: "utf-8", timeout: 5000 }
           );
           const parsed = parseFloat(output.trim());

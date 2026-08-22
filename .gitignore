@@ -44,5 +44,8 @@ yarn-error.log*
 next-env.d.ts
 
 # vidlock data
-/db/
+/db/*.db
+/db/*.db-journal
+/db/*.db-wal
+/db/*.db-shm
 /public/posters/*.jpg

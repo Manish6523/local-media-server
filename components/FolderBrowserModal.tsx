@@ -89,11 +89,12 @@ export default function FolderBrowserModal({ isOpen, onClose, onSelect, initialP
           </div>
           
           {/* Quick jump buttons */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
             {platform === "win32" ? (
               <>
                 <button onClick={() => fetchDirectory("C:\\")} className="text-xs bg-white/5 hover:bg-white/10 text-white/70 px-2.5 py-1 rounded border border-white/10 transition-colors">C:\</button>
                 <button onClick={() => fetchDirectory("D:\\")} className="text-xs bg-white/5 hover:bg-white/10 text-white/70 px-2.5 py-1 rounded border border-white/10 transition-colors">D:\</button>
+                <button onClick={() => fetchDirectory("")} className="text-xs flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white/70 px-2.5 py-1 rounded border border-white/10 transition-colors"><Home className="w-3 h-3" /> Home</button>
               </>
             ) : (
               <>

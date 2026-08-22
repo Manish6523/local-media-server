@@ -3,6 +3,7 @@ import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getMediaById } from "@/lib/db";
+import { FFPROBE } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     if (fs.existsSync(media.filepath)) {
       try {
         const output = execSync(
-          `ffprobe -v quiet -print_format json -show_streams -select_streams s "${media.filepath}"`,
+          `"${FFPROBE}" -v quiet -print_format json -show_streams -select_streams s "${media.filepath}"`,
           { encoding: "utf-8", timeout: 15000 }
         );
         const result = JSON.parse(output);

@@ -3,6 +3,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getMediaById } from "@/lib/db";
+import { FFPROBE } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ async function probeFile(filepath: string): Promise<MediaInfo> {
       filepath,
     ];
 
-    const ffprobe = spawn("ffprobe", args);
+    const ffprobe = spawn(FFPROBE, args);
     let stdout = "";
     let stderr = "";
 

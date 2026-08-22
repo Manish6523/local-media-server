@@ -1,10 +1,11 @@
 import { spawn } from "child_process";
 import fs from "fs";
+import { FFMPEG } from "./ffmpeg";
 
 // ─── GPU Capability Types ────────────────────────────────────────
 
 export interface GPUCapability {
-  type: "nvenc" | "vaapi" | "qsv" | "cpu";
+  type: "nvenc" | "vaapi" | "qsv" | "amf" | "cpu";
   encoder: string;        // ffmpeg encoder name
   hwaccel: string | null;  // ffmpeg -hwaccel flag, null for CPU
   device: string | null;   // device path if applicable
@@ -48,7 +49,7 @@ function testEncoder(label: string, ffmpegArgs: string[]): Promise<boolean> {
 
     console.log(`[GPU] ${label} test command: ffmpeg ${ffmpegArgs.join(" ")}`);
 
-    const proc = spawn("ffmpeg", ffmpegArgs, {
+    const proc = spawn(FFMPEG, ffmpegArgs, {
       stdio: ["pipe", "pipe", "pipe"],
     });
 
@@ -112,7 +113,6 @@ export async function detectBestEncoder(): Promise<GPUCapability> {
   console.log("[GPU] Testing NVENC (Nvidia)...");
   const nvencWorks = await testEncoder("NVENC", [
     "-v", "error",
-    "-hwaccel", "cuda",
     "-f", "lavfi", "-i", "color=black:s=256x256:d=1",
     "-c:v", "h264_nvenc",
     "-f", "null", "-",
@@ -131,7 +131,29 @@ export async function detectBestEncoder(): Promise<GPUCapability> {
   }
   console.log("[GPU] NVENC: ✗ not available");
 
-  // ── Test 2: VAAPI (AMD / Intel on Linux) ────────────────────────
+  // ── Test 2: AMF (AMD Radeon on Windows) ─────────────────────────
+  console.log("[GPU] Testing AMF (AMD Radeon)...");
+  const amfWorks = await testEncoder("AMF", [
+    "-v", "error",
+    "-f", "lavfi", "-i", "color=black:s=256x256:d=1",
+    "-c:v", "h264_amf",
+    "-f", "null", "-",
+  ]);
+  if (amfWorks) {
+    const gpu: GPUCapability = {
+      type: "amf",
+      encoder: "h264_amf",
+      hwaccel: null,
+      device: null,
+      label: "AMD Radeon AMF",
+    };
+    globalThis.__gpuCapability = gpu;
+    console.log(`[GPU] ${gpu.label}: ✓ ready`);
+    return gpu;
+  }
+  console.log("[GPU] AMF: ✗ not available");
+
+  // ── Test 3: VAAPI (AMD / Intel on Linux) ────────────────────────
   const renderDevices = ["/dev/dri/renderD128", "/dev/dri/renderD129"];
   let vaapiDevice: string | null = null;
   for (const dev of renderDevices) {
@@ -161,11 +183,10 @@ export async function detectBestEncoder(): Promise<GPUCapability> {
     console.log("[GPU] VAAPI: ✗ no render device found");
   }
 
-  // ── Test 3: QSV (Intel Quick Sync) ──────────────────────────────
+  // ── Test 4: QSV (Intel Quick Sync) ──────────────────────────────
   console.log("[GPU] Testing QSV (Intel Quick Sync)...");
   const qsvWorks = await testEncoder("QSV", [
     "-v", "error",
-    "-hwaccel", "qsv",
     "-f", "lavfi", "-i", "color=black:s=256x256:d=1",
     "-c:v", "h264_qsv",
     "-f", "null", "-",

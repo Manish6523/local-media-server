@@ -123,9 +123,15 @@ export function getDb() {
   // Seed default config if empty
   const configCount = db.select().from(schema.config).all().length;
   if (configCount === 0) {
+    // Generate OS-aware default path suggestions
+    const isWindows = process.platform === "win32";
+    const defaultLocalPath = process.env.LOCAL_MEDIA_PATH ||
+      (isWindows ? `C:\\Users\\${require("os").userInfo().username}\\Videos\\` : "");
+    const defaultHddPath = process.env.HDD_PATH || "";
+
     db.insert(schema.config).values([
-      { key: "local_path", value: process.env.LOCAL_MEDIA_PATH || "" },
-      { key: "hdd_path", value: process.env.HDD_PATH || "" },
+      { key: "local_path", value: defaultLocalPath },
+      { key: "hdd_path", value: defaultHddPath },
       { key: "last_scan", value: null },
     ]).onConflictDoNothing().run();
   }

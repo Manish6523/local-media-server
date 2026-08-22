@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "clear; tsx server.ts",
+    "dev": "tsx server.ts",
     "build": "next build",
     "start": "NODE_ENV=production tsx server.ts",
     "lint": "eslint"
@@ -21,6 +21,8 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "embla-carousel-react": "^8.6.0",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "framer-motion": "^12.40.0",
     "hls.js": "^1.6.16",
     "lucide-react": "^1.17.0",
@@ -50,6 +52,8 @@
     "typescript": "^5"
   },
   "allowScripts": {
-    "better-sqlite3@12.10.0": true
+    "better-sqlite3@12.10.0": true,
+    "ffmpeg-static@5.3.0": true,
+    "ffprobe-static@3.1.0": true
   }
 }

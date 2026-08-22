@@ -3,6 +3,7 @@ import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import fs from "fs";
 import { getMediaById } from "@/lib/db";
 import { getDetectedGPU, type GPUCapability } from "@/lib/gpu-detect";
+import { FFMPEG } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,8 @@ function buildGpuArgs(filepath: string, start: number, audioTrack: number, gpu: 
     args.push("-qp", "28");
   } else if (gpu.type === "qsv") {
     args.push("-preset", "medium", "-global_quality", "28");
+  } else if (gpu.type === "amf") {
+    args.push("-rc", "cqp", "-qp_i", "28", "-qp_p", "28");
   } else {
     args.push("-preset", "ultrafast", "-crf", "28");
   }
@@ -200,7 +203,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Transcode] Using ${gpu.label} for media ${id} @ ${start}s [${processKey}] | Active: ${activeProcesses.size + 1}`);
 
-    const ffmpeg = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
+    const ffmpeg = spawn(FFMPEG, args, { stdio: ["pipe", "pipe", "pipe"] });
 
     // Register in active processes
     activeProcesses.set(processKey, {

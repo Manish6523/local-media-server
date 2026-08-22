@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import fs from "fs";
 import { getMediaById } from "@/lib/db";
+import { FFMPEG } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       "pipe:1"
     ];
 
-    const ffmpeg = spawn("ffmpeg", ffmpegArgs, {
+    const ffmpeg = spawn(FFMPEG, ffmpegArgs, {
       stdio: ["ignore", "pipe", "pipe"],
     });
 

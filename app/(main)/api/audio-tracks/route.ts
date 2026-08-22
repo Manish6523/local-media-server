@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import fs from "fs";
 import { getMediaById } from "@/lib/db";
+import { FFPROBE } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     try {
       // Run ffprobe to get audio streams
       const output = execSync(
-        `ffprobe -v quiet -print_format json -show_streams -select_streams a "${media.filepath}"`,
+        `"${FFPROBE}" -v quiet -print_format json -show_streams -select_streams a "${media.filepath}"`,
         { encoding: "utf-8", timeout: 15000 }
       );
 

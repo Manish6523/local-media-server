@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn, execSync, ChildProcess } from "child_process";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { getMediaById } from "@/lib/db";
 import { getDetectedGPU, type GPUCapability } from "@/lib/gpu-detect";
+import { FFMPEG, FFPROBE } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
-const CACHE_BASE = "/tmp/filmaro-cache";
+const CACHE_BASE = path.join(os.tmpdir(), "vidlock-cache");
 
 // Ensure base cache dir exists
 if (!fs.existsSync(CACHE_BASE)) {
@@ -33,7 +35,7 @@ function detect10bit(filepath: string): boolean {
 
   try {
     const probeResult = execSync(
-      `ffprobe -v quiet -print_format json -show_streams "${filepath}"`,
+      `"${FFPROBE}" -v quiet -print_format json -show_streams "${filepath}"`,
       { encoding: 'utf8', timeout: 10000 }
     );
     const streams = JSON.parse(probeResult).streams;
@@ -57,7 +59,7 @@ function detectAudioCodec(filepath: string, trackNum: number): string {
 
   try {
     const probeResult = execSync(
-      `ffprobe -v quiet -print_format json -show_streams -select_streams a "${filepath}"`,
+      `"${FFPROBE}" -v quiet -print_format json -show_streams -select_streams a "${filepath}"`,
       { encoding: 'utf8', timeout: 10000 }
     );
     const audioStreams = JSON.parse(probeResult).streams;
@@ -112,8 +114,8 @@ function buildHlsArgs(
     } else {
       args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
     }
-  } else if (is10bit && gpu.type === "cpu") {
-    // CPU fallback: software scale for 10-bit
+  } else if (is10bit && (gpu.type === "cpu" || gpu.type === "amf")) {
+    // CPU fallback or AMF: software scale for 10-bit
     args.push("-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2");
   }
 
@@ -125,6 +127,8 @@ function buildHlsArgs(
     args.push("-qp", "26", "-profile:v", "main", "-level:v", "4.1");
   } else if (gpu.type === "qsv") {
     args.push("-preset", "medium", "-global_quality", "26");
+  } else if (gpu.type === "amf") {
+    args.push("-rc", "cqp", "-qp_i", "26", "-qp_p", "26");
   } else {
     args.push("-preset", "ultrafast", "-crf", "26");
   }
@@ -236,7 +240,7 @@ export async function GET(
         const ffmpegArgs = buildHlsArgs(gpu, media.filepath, startSec, trackNum, is10bit, audioCodec, outDir, requestedFilePath);
         console.log(`[HLS] Full command: ffmpeg ${ffmpegArgs.join(" ")}`);
 
-        const ffmpeg = spawn("ffmpeg", ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] });
+        const ffmpeg = spawn(FFMPEG, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] });
         
         ffmpeg.stderr.on("data", (data: Buffer) => {
           const line = data.toString().trim();
