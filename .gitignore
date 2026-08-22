@@ -48,7 +48,6 @@ next-env.d.ts
 /db/*.db-journal
 /db/*.db-wal
 /db/*.db-shm
-
 /public/posters/*.jpg
 
 _plans/
