@@ -46,9 +46,19 @@ export default function RootLayout({
                   );
                 });
               }
+
+              window.__onGCastApiAvailable = function(isAvailable) {
+                if (isAvailable) {
+                  cast.framework.CastContext.getInstance().setOptions({
+                    receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+                  });
+                }
+              };
             `,
           }}
         />
+        <script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
         {/* Aurora gradient background */}
         <div className="aurora-bg" />
         

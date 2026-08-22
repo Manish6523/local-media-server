@@ -19,6 +19,7 @@ import VolumeControl from "./VolumeControl";
 import SubtitleMenu from "./SubtitleMenu";
 import AudioMenu from "./AudioMenu";
 import SkipOverlay from "./SkipOverlay";
+import CastButton from "./CastButton";
 
 interface WatchPartyMode {
   roomCode?: string | null;
@@ -423,6 +424,7 @@ export default function NetflixPlayer({
     >
       {/* Video */}
       <video
+        x-webkit-airplay="allow"
         ref={(el) => {
           // @ts-ignore
           videoRef.current = el;
@@ -648,10 +650,12 @@ export default function NetflixPlayer({
               </div>
             )}
 
+            <CastButton videoRef={videoRef} videoSrc={videoSrc} title={title} />
+            
             {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 text-white/50 active:text-white transition-all"
+              className="p-1.5 text-white/50 active:text-white transition-all ml-1"
             >
               {state.isFullscreen ? (
                 <Minimize className="w-4 h-4" />
@@ -773,10 +777,12 @@ export default function NetflixPlayer({
               )}
             </div>
 
+            <CastButton videoRef={videoRef} videoSrc={videoSrc} title={title} />
+
             {/* Right: fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="p-2 text-white/60 active:text-white transition-all"
+              className="p-2 text-white/60 active:text-white transition-all ml-1"
             >
               {state.isFullscreen ? (
                 <Minimize className="w-5 h-5" />
@@ -918,6 +924,8 @@ export default function NetflixPlayer({
                 )}
               </div>
             )}
+
+            <CastButton videoRef={videoRef} videoSrc={videoSrc} title={title} />
 
             {/* Fullscreen */}
             <button
