@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "next build",
-    "start": "tsx server.ts",
+    "start": "set NODE_ENV=production&& tsx server.ts",
+    "serve": "npm run build && npm run start",
     "lint": "eslint"
   },
   "dependencies": {

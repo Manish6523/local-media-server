@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/layout/NavBar";
@@ -31,7 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
       <body className="min-h-full relative" suppressHydrationWarning={false}>
-        <script
+        <Script
+          id="pwa-and-cast-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
@@ -58,7 +61,10 @@ export default function RootLayout({
             `,
           }}
         />
-        <script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+        <Script 
+          src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"
+          strategy="beforeInteractive"
+        />
         {/* Aurora gradient background */}
         <div className="aurora-bg" />
         

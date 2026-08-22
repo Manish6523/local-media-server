@@ -3,19 +3,27 @@
 import { useEffect, useState, RefObject } from "react";
 import { Cast } from "lucide-react";
 
+declare const chrome: any;
+
 interface CastButtonProps {
   videoRef: RefObject<HTMLVideoElement | null>;
   videoSrc: string | undefined;
   title: string;
+  className?: string;
+  iconClassName?: string;
 }
 
-export default function CastButton({ videoRef, videoSrc, title }: CastButtonProps) {
+export default function CastButton({ videoRef, videoSrc, title, className, iconClassName }: CastButtonProps) {
   const [canAirPlay, setCanAirPlay] = useState(false);
   const [showChromecast, setShowChromecast] = useState(false);
 
+  const defaultBtnClass = "p-1.5 md:p-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all flex items-center justify-center";
+  const btnClass = className || defaultBtnClass;
+  const iconClass = iconClassName || "w-4 h-4 md:w-5 md:h-5";
+
   useEffect(() => {
     // AirPlay Support
-    if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    if ((window as any).WebKitPlaybackTargetAvailabilityEvent) {
       const listener = (e: any) => {
         if (e.availability === "available") {
           setCanAirPlay(true);
@@ -51,10 +59,9 @@ export default function CastButton({ videoRef, videoSrc, title }: CastButtonProp
           }
         };
 
-        context.addEventListener(
-          cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-          sessionListener
-        );
+        // We don't hide the button anymore so the user can always click it
+        // to force the browser to scan for connectable devices.
+        setShowChromecast(true);
 
         return () => {
           context.removeEventListener(
@@ -87,22 +94,36 @@ export default function CastButton({ videoRef, videoSrc, title }: CastButtonProp
     }
   };
 
+  const handleChromecast = async () => {
+    const cast = (window as any).cast;
+    if (cast && cast.framework) {
+      try {
+        await cast.framework.CastContext.getInstance().requestSession();
+      } catch (err) {
+        console.error("Cast session request failed:", err);
+      }
+    }
+  };
+
   return (
     <div className="flex items-center gap-1">
       {canAirPlay && (
         <button
           onClick={handleAirPlay}
-          className="p-1.5 md:p-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all flex items-center justify-center"
+          className={btnClass}
           title="AirPlay"
         >
-          <Cast className="w-4 h-4 md:w-5 md:h-5" />
+          <Cast className={iconClass} />
         </button>
       )}
       {showChromecast && (
-        <div className="flex items-center justify-center p-1.5 md:p-2 hover:bg-white/10 rounded-full transition-all">
-          {/* @ts-expect-error custom element */}
-          <google-cast-launcher style={{ width: "20px", height: "20px", cursor: "pointer", "--connected-color": "#fff", "--disconnected-color": "rgba(255,255,255,0.7)" } as any} />
-        </div>
+        <button
+          onClick={handleChromecast}
+          className={btnClass}
+          title="Cast to Screen"
+        >
+          <Cast className={iconClass} />
+        </button>
       )}
     </div>
   );
