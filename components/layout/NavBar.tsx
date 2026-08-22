@@ -173,10 +173,12 @@ export default function NavBar() {
       >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-          <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-shadow">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-lg font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">
+          <img 
+            src="/logo.png" 
+            alt="VidLock Logo" 
+            className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(139,92,246,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-all duration-300"
+          />
+          <span className="text-xl font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">
             VidLock
           </span>
         </Link>
