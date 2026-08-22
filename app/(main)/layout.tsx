@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/layout/NavBar";
@@ -8,9 +8,19 @@ import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
+};
+
 export const metadata: Metadata = {
   title: "VidLock — Your Personal Media Library",
   description: "A fully local, offline Netflix-style media browser and player. No cloud, no accounts, no internet required.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VidLock",
+  },
 };
 
 export default function RootLayout({
@@ -21,6 +31,24 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
       <body className="min-h-full relative" suppressHydrationWarning={false}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) {
+                      console.log('ServiceWorker registration successful');
+                    },
+                    function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
         {/* Aurora gradient background */}
         <div className="aurora-bg" />
         
