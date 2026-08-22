@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="220" alt="VidLock" />
+  <img src="assets/withoutbg.png" width="220" alt="VidLock" />
 </p>
 
 <h1 align="center">VidLock</h1>
