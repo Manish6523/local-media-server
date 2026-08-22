@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   experimental: {
     scrollRestoration: true
   },
-  allowedDevOrigins: ["*",'10.251.238.203','172.22.147.203',"http://localhost:3000"],
+  allowedDevOrigins: ["*", "10.191.99.203", "10.251.238.203", "172.22.147.203", "localhost"],
   serverExternalPackages: ["better-sqlite3"],
   images: {
     remotePatterns: [
