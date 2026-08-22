@@ -34,9 +34,9 @@
   <img src="assets/hero.png" alt="VidLock Dashboard" width="100%" />
 </p>
 
-<p align="center">
-  <video src="assets/demo.mp4" width="100%" autoplay loop muted playsinline></video>
-</p>
+https://github.com/user-attachments/assets/c1466194-9340-40f9-a5b9-6f6949c12d7d
+
+
 
 ---
 
