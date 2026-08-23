@@ -90,6 +90,7 @@ export default function NetflixPlayer({
     setSubtitleColor,
     showResumeToast,
     forceHideControls,
+    fetchSubtitles,
   } = usePlayer(
     mediaId,
     baseNeedsTranscode,
@@ -621,6 +622,8 @@ export default function NetflixPlayer({
                     tracks={state.subtitleTracks}
                     activeIndex={state.activeSubtitle}
                     state={state}
+                    mediaId={mediaId}
+                    onSubtitleDownloaded={fetchSubtitles}
                     onSelect={setActiveSubtitle}
                     onSizeSelect={setSubtitleSize}
                     onColorSelect={setSubtitleColor}
@@ -722,6 +725,8 @@ export default function NetflixPlayer({
                       tracks={state.subtitleTracks}
                       activeIndex={state.activeSubtitle}
                       state={state}
+                      mediaId={mediaId}
+                      onSubtitleDownloaded={fetchSubtitles}
                       onSelect={setActiveSubtitle}
                       onSizeSelect={setSubtitleSize}
                       onColorSelect={setSubtitleColor}
@@ -889,6 +894,8 @@ export default function NetflixPlayer({
                     tracks={state.subtitleTracks}
                     activeIndex={state.activeSubtitle}
                     state={state}
+                    mediaId={mediaId}
+                    onSubtitleDownloaded={fetchSubtitles}
                     onSelect={setActiveSubtitle}
                     onSizeSelect={setSubtitleSize}
                     onColorSelect={setSubtitleColor}

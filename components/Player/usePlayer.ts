@@ -185,14 +185,18 @@ export function usePlayer(
     };
   }, [videoSrc, needsTranscode]);
 
-  // Fetch subtitle and audio tracks
-  useEffect(() => {
+  const fetchSubtitles = useCallback(() => {
     fetch(`/api/subtitles?id=${mediaId}`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) setState((s) => ({ ...s, subtitleTracks: data }));
       })
       .catch(console.error);
+  }, [mediaId]);
+
+  // Fetch subtitle and audio tracks
+  useEffect(() => {
+    fetchSubtitles();
 
     fetch(`/api/audio-tracks?id=${mediaId}`)
       .then((r) => r.json())
@@ -500,5 +504,6 @@ export function usePlayer(
     showResumeToast,
     updateTranscodeStart: setTranscodeStartTime,
     forceHideControls,
+    fetchSubtitles,
   };
 }
