@@ -10,7 +10,15 @@ export async function GET() {
     const hddPath = getConfig("hdd_path");
     const lastScan = getConfig("last_scan");
     const showOfflineMedia = getShowOfflineMedia();
-    return NextResponse.json({ localPath, hddPath, lastScan, showOfflineMedia });
+    const customVideoPlayers = getConfig("custom_video_players");
+    console.log('[Config] GET customVideoPlayers:', customVideoPlayers);
+    return NextResponse.json({ 
+      localPath, 
+      hddPath, 
+      lastScan, 
+      showOfflineMedia, 
+      customVideoPlayers: customVideoPlayers ? JSON.parse(customVideoPlayers) : []
+    });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
@@ -19,13 +27,17 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { localPath, hddPath, showOfflineMedia } = body;
+    console.log('[Config] Received POST body:', body);
+    const { localPath, hddPath, showOfflineMedia, customVideoPlayers } = body;
 
     if (localPath) setConfig("local_path", path.normalize(localPath));
     if (hddPath) setConfig("hdd_path", path.normalize(hddPath));
     if (showOfflineMedia !== undefined) {
       console.log('[Config] Saving showOfflineMedia:', showOfflineMedia);
       setShowOfflineMedia(showOfflineMedia);
+    }
+    if (customVideoPlayers !== undefined) {
+      setConfig("custom_video_players", JSON.stringify(customVideoPlayers));
     }
     
     if (body.action === 'set-pin' && body.pin) {

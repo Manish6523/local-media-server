@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Pencil, Users, Check } from "lucide-react";
+import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor } from "lucide-react";
 import { useState, useEffect } from "react";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
@@ -41,6 +41,29 @@ function useAdminUnlocked() {
   return isUnlocked;
 }
 
+let customPlayersPromise: Promise<any[]> | null = null;
+
+function useCustomPlayers() {
+  const [players, setPlayers] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      if (!customPlayersPromise) {
+        customPlayersPromise = fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
+          .then(r => r.json())
+          .then(data => data.customVideoPlayers || [])
+          .catch(() => []);
+      }
+      const loaded = await customPlayersPromise;
+      setPlayers(loaded);
+    };
+    
+    fetchPlayers();
+  }, []);
+
+  return players;
+}
+
 import type { MediaEntry } from "@/lib/db";
 
 interface PosterCardProps {
@@ -57,6 +80,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
   const [showWatchParty, setShowWatchParty] = useState(false);
   const router = useRouter();
   const isUnlocked = useAdminUnlocked();
+  const customVideoPlayers = useCustomPlayers();
 
   const posterSrc = media.poster || "/placeholder.jpg";
   const isUnavailable = !media.available;
@@ -202,25 +226,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         {!isUnavailable && !selectionMode && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20">
              
-             {/* Top Actions */}
-             <div className="absolute top-3 right-3 flex flex-col gap-2 translate-y-2 group-hover/card:translate-y-0 transition-transform duration-300">
-               <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
-               {isUnlocked && (
-                 <button 
-                   onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
-                   className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
-                 >
-                   <Pencil className="w-3.5 h-3.5 text-white" />
-                 </button>
-               )}
-               <button 
-                 onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
-                 className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
-                 title="Watch Party"
-               >
-                 <Users className="w-3.5 h-3.5 text-white" />
-               </button>
-             </div>
+             {/* Top Actions moved outside to prevent clipping */}
 
              {/* Centered Play Button */}
              <div className="absolute inset-0 flex items-center justify-center transform scale-75 group-hover/card:scale-100 transition-all duration-300 pointer-events-none">
@@ -252,6 +258,77 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           </div>
         )}
       </CardWrapper>
+
+      {/* Top Actions (Moved outside CardWrapper to avoid overflow clipping) */}
+      {!isUnavailable && !selectionMode && (
+        <div className="absolute top-3 right-3 flex flex-col gap-2 translate-y-2 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-50">
+          <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
+          {/* Play on PC Dropdown */}
+          <div className="relative group/play">
+            <button 
+              onClick={(e) => e.preventDefault()}
+              className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
+              title="Play on PC"
+            >
+              <MonitorPlay className="w-3.5 h-3.5 text-white" />
+            </button>
+            
+            {/* Sub-menu appearing to the right */}
+            <div className="absolute left-full top-0 ml-2 flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 origin-left scale-95 group-hover/play:scale-100 shadow-xl whitespace-nowrap">
+              <button
+                onClick={async (e) => { 
+                  e.preventDefault(); 
+                  await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "default" }) }); 
+                }}
+                className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <MonitorPlay className="w-3.5 h-3.5 text-blue-400" />
+                Default Player
+              </button>
+              <button
+                onClick={async (e) => { 
+                  e.preventDefault(); 
+                  await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); 
+                }}
+                className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <Monitor className="w-3.5 h-3.5 text-orange-400" />
+                VLC Media Player
+              </button>
+              
+              {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
+              {customVideoPlayers.map((cp) => (
+                <button
+                  key={cp.id}
+                  onClick={async (e) => { 
+                    e.preventDefault(); 
+                    await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: cp.id }) }); 
+                  }}
+                  className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" />
+                  {cp.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          {isUnlocked && (
+            <button 
+              onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
+              className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg"
+            >
+              <Pencil className="w-3.5 h-3.5 text-white" />
+            </button>
+          )}
+          <button 
+            onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
+            className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg"
+            title="Watch Party"
+          >
+            <Users className="w-3.5 h-3.5 text-white" />
+          </button>
+        </div>
+      )}
 
       {/* Info Section Below Poster */}
       <div className="mt-3 px-1">

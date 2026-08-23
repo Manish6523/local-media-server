@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay } from "lucide-react";
 import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,12 @@ interface ScanResult {
   success: boolean;
   summary?: { totalFiles: number; new: number; updated: number; skipped: number; errors: number; deleted: number; hddConnected: boolean };
   error?: string;
+}
+
+export interface CustomVideoPlayer {
+  id: string;
+  name: string;
+  path: string;
 }
 
 export default function SettingsPage() {
@@ -28,6 +34,7 @@ export default function SettingsPage() {
   const [showOfflineMedia, setShowOfflineMedia] = useState(true);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [newPin, setNewPin] = useState("");
+  const [customVideoPlayers, setCustomVideoPlayers] = useState<CustomVideoPlayer[]>([]);
 
   useEffect(() => {
     fetch("/api/system-info")
@@ -48,10 +55,11 @@ export default function SettingsPage() {
       })
       .catch(console.error);
 
-    fetch("/api/config")
+    fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => {
         if (data.showOfflineMedia !== undefined) setShowOfflineMedia(data.showOfflineMedia);
+        if (data.customVideoPlayers) setCustomVideoPlayers(data.customVideoPlayers);
       })
       .catch(console.error);
 
@@ -96,7 +104,7 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath }) });
+      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath, customVideoPlayers }) });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -296,6 +304,100 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 1.5 - Custom Video Players */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
+            <MonitorPlay className="w-5 h-5 text-blue-400" />
+            Custom Video Players
+          </h2>
+          
+          <div className="glass-card overflow-hidden">
+            <div className="p-6 md:p-8 space-y-6">
+              
+              <div>
+                <h3 className="text-white font-bold mb-2">Added Players</h3>
+                {customVideoPlayers.length === 0 ? (
+                  <p className="text-sm text-white/50 italic">No custom players added yet. VLC and the default system player are always available.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {customVideoPlayers.map(player => (
+                      <li key={player.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 gap-3">
+                        <div>
+                          <p className="text-white font-medium text-sm">{player.name}</p>
+                          <p className="text-white/50 text-xs font-mono truncate max-w-sm">{player.path}</p>
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => {
+                            setCustomVideoPlayers(prev => prev.filter(p => p.id !== player.id));
+                            setSaved(false);
+                          }}
+                          className="bg-red-500/20 text-red-500 hover:bg-red-500/40 w-fit shrink-0"
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-white/5">
+                <h3 className="text-white font-bold mb-2">Add New Player</h3>
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const fd = new FormData(e.currentTarget);
+                    const name = fd.get("playerName") as string;
+                    const execPath = fd.get("playerPath") as string;
+                    if (name && execPath) {
+                      setCustomVideoPlayers(prev => [...prev, { id: Date.now().toString(), name, path: execPath }]);
+                      setSaved(false);
+                      e.currentTarget.reset();
+                    }
+                  }}
+                  className="flex flex-col gap-3"
+                >
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input 
+                      type="text" 
+                      name="playerName" 
+                      placeholder="Player Name (e.g., Haruna)" 
+                      required
+                      className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 flex-1"
+                    />
+                    <input 
+                      type="text" 
+                      name="playerPath" 
+                      placeholder="Executable Path" 
+                      required
+                      className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 flex-[2]"
+                    />
+                    <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white font-bold">
+                      Add Player
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              {/* OS Guide */}
+              <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-blue-400" />
+                  <h4 className="text-sm font-bold text-blue-400">Path Guide</h4>
+                </div>
+                <ul className="text-xs text-white/70 space-y-2 list-disc list-inside">
+                  <li><strong>Windows:</strong> Usually located in <code className="text-white/90 bg-black/30 px-1 py-0.5 rounded">C:\Program Files\</code> (e.g. <code className="text-white/90 bg-black/30 px-1 py-0.5 rounded">C:\Program Files\MPC-HC\mpc-hc64.exe</code>)</li>
+                  <li><strong>Mac:</strong> Point to the executable inside the .app package (e.g. <code className="text-white/90 bg-black/30 px-1 py-0.5 rounded">/Applications/IINA.app/Contents/MacOS/iina-cli</code>)</li>
+                  <li><strong>Linux:</strong> The command name if in PATH (e.g. <code className="text-white/90 bg-black/30 px-1 py-0.5 rounded">haruna</code> or <code className="text-white/90 bg-black/30 px-1 py-0.5 rounded">mpv</code>)</li>
+                </ul>
+              </div>
+
             </div>
           </div>
         </section>
