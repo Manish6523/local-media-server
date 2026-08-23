@@ -249,10 +249,10 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
              
              {/* Top Actions moved outside to prevent clipping */}
 
-             {/* Centered Play Button */}
-             <div className="absolute inset-0 flex items-center justify-center transform scale-75 group-hover/card:scale-100 transition-all duration-300 pointer-events-none">
-                <div className="w-14 h-14 rounded-full bg-violet-500/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.5)] pointer-events-auto">
-                  <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+             {/* Bottom Left Play Button */}
+             <div className="absolute bottom-4 left-3 transform translate-y-4 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-40">
+                <div className="w-10 h-10 rounded-full bg-violet-500/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)] pointer-events-auto border border-white/20 hover:scale-110 hover:bg-violet-400 transition-transform cursor-pointer">
+                  <Play className="w-4 h-4 text-white fill-white ml-0.5" />
                 </div>
              </div>
           </div>
