@@ -341,14 +341,14 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           {isUnlocked && (
             <button 
               onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
-              className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg"
+              className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5 text-white" />
             </button>
           )}
           <button 
             onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
-            className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg"
+            className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
             title="Watch Party"
           >
             <Users className="w-3.5 h-3.5 text-white" />
