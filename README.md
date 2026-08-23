@@ -86,6 +86,8 @@ Everything runs from a single Node.js process. **No external databases to instal
 </table>
 
 ### 💎 More Highlights
+- **Cinematic Auto-Trailers:** Netflix-style immersive, silent background video previews that automatically play when you view a movie or series.
+- **Hover Previews:** Hover over any poster card or episode thumbnail to instantly watch a small, seamlessly looping preview clip (complete with timeline progress and instant-resume memory cache).
 - **Hardware Acceleration:** Auto-detects and utilizes NVENC (Nvidia), AMF (AMD), VAAPI (Linux), or QSV (Intel) for silky-smooth transcoding.
 - **TV Mode:** Auto-redirects LG webOS and smart TV browsers to a lightweight `/tv` UI designed specifically for remote controls.
 - **Offline Resilience:** If you unplug an external HDD, its movies are gracefully marked "offline" instead of being deleted from your library.
