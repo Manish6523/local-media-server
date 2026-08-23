@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const q = searchParams.get("q");
 
     if (!id) {
       return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Media not found" }, { status: 404 });
     }
 
-    const filename = path.basename(media.filepath);
+    const filename = q ? q : path.basename(media.filepath);
     const results = await searchSubtitles(filename);
 
     return NextResponse.json({ results });

@@ -117,3 +117,32 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const filePath = searchParams.get("path");
+
+    if (!filePath) {
+      return NextResponse.json({ error: "Missing path parameter" }, { status: 400 });
+    }
+
+    const resolved = path.resolve(filePath);
+    if (!fs.existsSync(resolved)) {
+      return NextResponse.json({ error: "Subtitle file not found" }, { status: 404 });
+    }
+
+    // Only allow deleting subtitle extensions
+    const ext = path.extname(resolved).toLowerCase();
+    if (![".srt", ".vtt", ".ass", ".ssa", ".sub"].includes(ext)) {
+      return NextResponse.json({ error: "Invalid file type" }, { status: 403 });
+    }
+
+    fs.unlinkSync(resolved);
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("[SubtitleFile] Error deleting:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

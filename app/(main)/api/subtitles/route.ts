@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
           const { language, label } = detectLanguage(file);
           const fullPath = path.join(videoDir, file);
           subtitles.push({
-            label,
+            label: `${label} (${file})`,
             language,
             url: `/api/subtitle-file?path=${encodeURIComponent(fullPath)}`,
           });

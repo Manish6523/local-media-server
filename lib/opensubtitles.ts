@@ -18,13 +18,22 @@ export async function searchSubtitles(filename: string): Promise<OSSubtitle[]> {
   }
 
   // Strip extension and try to clean up filename slightly for better search results
-  const query = path.basename(filename, path.extname(filename));
+  let query = path.basename(filename, path.extname(filename));
+  // Clean up common release tags from query to improve matches
+  query = query.replace(/(1080p|720p|2160p|4k|x264|x265|hevc|bluray|webrip|hdrip|ddp|10bit|hindi|english|dual|audio)/gi, '').trim();
 
-  const res = await fetch(`${BASE_URL}/subtitles?query=${encodeURIComponent(query)}&languages=en,hi,es,fr,de,ja,ko`, {
+  // OpenSubtitles Best Practices:
+  // 1. Sort parameters alphabetically (languages before query)
+  // 2. Use + instead of %20
+  // 3. Lowercase parameters
+  const encodedQuery = encodeURIComponent(query.toLowerCase()).replace(/%20/g, "+");
+
+  const res = await fetch(`${BASE_URL}/subtitles?languages=en,hi,es,fr,de,ja,ko&query=${encodedQuery}`, {
     headers: {
       "Api-Key": API_KEY,
       "Content-Type": "application/json",
       "User-Agent": "VidLock v1.0",
+      "X-User-Agent": "VidLock v1.0",
     },
   });
 
