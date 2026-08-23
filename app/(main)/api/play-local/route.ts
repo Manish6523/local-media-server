@@ -6,7 +6,7 @@ import os from "os";
 
 export async function POST(request: NextRequest) {
   try {
-    const { mediaId, player } = await request.json();
+    const { mediaId, player, startTime = 0 } = await request.json();
 
     if (!mediaId) {
       return NextResponse.json({ error: "Missing mediaId" }, { status: 400 });
@@ -24,6 +24,16 @@ export async function POST(request: NextRequest) {
 
     const platform = os.platform();
     let command = "";
+    
+    // Helper to append start time arguments based on player type
+    const getStartTimeArg = (execPath: string, time: number) => {
+      if (time <= 0) return "";
+      const lower = execPath.toLowerCase();
+      if (lower.includes("vlc")) return ` --start-time=${time}`;
+      if (lower.includes("mpv")) return ` --start=${time}`;
+      if (lower.includes("mpc-hc")) return ` /start ${time * 1000}`;
+      return ""; // Unknown custom player, don't break it
+    };
 
     if (player === "vlc") {
       let vlcPath = "vlc"; // Fallback to PATH (works on Linux and sometimes Mac/Win)
@@ -46,9 +56,9 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      command = `${vlcPath} "${filepath}"`;
+      command = `${vlcPath} "${filepath}"${getStartTimeArg("vlc", startTime)}`;
     } else if (player === "default") {
-      // Default player depending on OS
+      // Default player depending on OS (most OS default open commands don't support start times)
       if (platform === "win32") {
         command = `start "" "${filepath}"`;
       } else if (platform === "darwin") {
@@ -64,7 +74,7 @@ export async function POST(request: NextRequest) {
           const players = JSON.parse(customVideoPlayersStr);
           const customPlayer = players.find((p: any) => p.id === player);
           if (customPlayer && customPlayer.path) {
-            command = `"${customPlayer.path}" "${filepath}"`;
+            command = `"${customPlayer.path}" "${filepath}"${getStartTimeArg(customPlayer.path, startTime)}`;
           }
         } catch (e) {
           console.error("[PlayLocal] Failed to parse custom players:", e);

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor } from "lucide-react";
+import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
@@ -273,43 +273,46 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
               <MonitorPlay className="w-3.5 h-3.5 text-white" />
             </button>
             
-            {/* Sub-menu appearing to the right */}
-            <div className="absolute left-full top-0 ml-2 flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 origin-left scale-95 group-hover/play:scale-100 shadow-xl whitespace-nowrap">
-              <button
-                onClick={async (e) => { 
-                  e.preventDefault(); 
-                  await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "default" }) }); 
-                }}
-                className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <MonitorPlay className="w-3.5 h-3.5 text-blue-400" />
-                Default Player
-              </button>
-              <button
-                onClick={async (e) => { 
-                  e.preventDefault(); 
-                  await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); 
-                }}
-                className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <Monitor className="w-3.5 h-3.5 text-orange-400" />
-                VLC Media Player
-              </button>
-              
-              {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
-              {customVideoPlayers.map((cp) => (
-                <button
-                  key={cp.id}
-                  onClick={async (e) => { 
-                    e.preventDefault(); 
-                    await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: cp.id }) }); 
-                  }}
-                  className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer"
-                >
-                  <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" />
-                  {cp.name}
+            {/* Sub-menu appearing to the right (with invisible bridge padding) */}
+            <div className="absolute left-full top-0 pl-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50">
+              <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/play:scale-100 transition-all duration-200">
+                <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "default" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                  <MonitorPlay className="w-3.5 h-3.5 text-blue-400" /> Default Player
                 </button>
-              ))}
+                
+                {media.watch_progress > 0 ? (
+                  <div className="relative group/vlc">
+                    <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-default">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-white/40" />
+                    </button>
+                    {/* Nested Sub-menu for VLC (with invisible bridge padding to prevent closing on gap) */}
+                    <div className="absolute left-full top-0 -mt-1 pl-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
+                      <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/vlc:scale-100 transition-all duration-200">
+                        <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc", startTime: media.watch_progress }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                          Resume ({Math.floor(media.watch_progress / 60)}m)
+                        </button>
+                        <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                          Start Over
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                    <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
+                  </button>
+                )}
+                
+                {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
+                {customVideoPlayers.map((cp) => (
+                  <button key={`custom-${cp.id}`} onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: cp.id }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                    <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" /> {cp.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           {isUnlocked && (
