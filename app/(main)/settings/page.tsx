@@ -32,6 +32,8 @@ export default function SettingsPage() {
   const [hddExists, setHddExists] = useState<boolean | null>(null);
   const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
   const [showOfflineMedia, setShowOfflineMedia] = useState(true);
+  const [showPlayOnPc, setShowPlayOnPc] = useState(true);
+  const [enableAutoTrailerBg, setEnableAutoTrailerBg] = useState(true);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [customVideoPlayers, setCustomVideoPlayers] = useState<CustomVideoPlayer[]>([]);
@@ -59,6 +61,8 @@ export default function SettingsPage() {
       .then(r => r.json())
       .then(data => {
         if (data.showOfflineMedia !== undefined) setShowOfflineMedia(data.showOfflineMedia);
+        if (data.showPlayOnPc !== undefined) setShowPlayOnPc(data.showPlayOnPc);
+        if (data.enableAutoTrailerBg !== undefined) setEnableAutoTrailerBg(data.enableAutoTrailerBg);
         if (data.customVideoPlayers) setCustomVideoPlayers(data.customVideoPlayers);
       })
       .catch(console.error);
@@ -104,7 +108,7 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath, customVideoPlayers }) });
+      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg }) });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -138,6 +142,34 @@ export default function SettingsPage() {
     } catch (err) {
       console.error(err);
       setShowOfflineMedia(!newValue); // revert on failure
+    }
+  };
+
+  const handlePlayOnPcToggle = async (newValue: boolean) => {
+    setShowPlayOnPc(newValue);
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showPlayOnPc: newValue }),
+      });
+    } catch (err) {
+      console.error(err);
+      setShowPlayOnPc(!newValue); // revert on failure
+    }
+  };
+
+  const handleAutoTrailerToggle = async (newValue: boolean) => {
+    setEnableAutoTrailerBg(newValue);
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enableAutoTrailerBg: newValue }),
+      });
+    } catch (err) {
+      console.error(err);
+      setEnableAutoTrailerBg(!newValue); // revert on failure
     }
   };
 
@@ -318,6 +350,59 @@ export default function SettingsPage() {
           <div className="glass-card overflow-hidden">
             <div className="p-6 md:p-8 space-y-6">
               
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <MonitorPlay className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Show "Play on PC" buttons</p>
+                    <p className="text-xs text-white/40 mt-0.5">Display local playback options on movie posters and details pages</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handlePlayOnPcToggle(!showPlayOnPc)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none shrink-0 ${
+                    showPlayOnPc ? "bg-emerald-500" : "bg-zinc-700"
+                  }`}
+                  role="switch"
+                  aria-checked={showPlayOnPc}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
+                      showPlayOnPc ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle Auto Trailer Button */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
+                    <Film className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Enable Auto-Trailer Backgrounds</p>
+                    <p className="text-xs text-white/40 mt-0.5">Automatically play silent background trailers on movie details pages</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleAutoTrailerToggle(!enableAutoTrailerBg)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none shrink-0 ${
+                    enableAutoTrailerBg ? "bg-emerald-500" : "bg-zinc-700"
+                  }`}
+                  role="switch"
+                  aria-checked={enableAutoTrailerBg}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
+                      enableAutoTrailerBg ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div>
                 <h3 className="text-white font-bold mb-2">Added Players</h3>
                 {customVideoPlayers.length === 0 ? (

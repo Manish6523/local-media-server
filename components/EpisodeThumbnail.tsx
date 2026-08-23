@@ -79,7 +79,7 @@ export default function EpisodeThumbnail({
             e.stopPropagation();
             setShowEditor(true);
           }}
-          className="absolute top-2 left-2 z-[50] w-7 h-7 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/50 hover:text-white hover:bg-violet-500/70 hover:border-violet-400/40 transition-all duration-200 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+          className="absolute top-2 left-2 z-[50] w-7 h-7 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/50 hover:text-white hover:bg-violet-500/70 hover:border-violet-400/40 transition-all duration-200 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto cursor-pointer"
           title="Change thumbnail"
         >
           <Pencil className="w-3 h-3" />

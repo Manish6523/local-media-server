@@ -11,13 +11,19 @@ export async function GET() {
     const lastScan = getConfig("last_scan");
     const showOfflineMedia = getShowOfflineMedia();
     const customVideoPlayers = getConfig("custom_video_players");
+    const showPlayOnPcRaw = getConfig("show_play_on_pc");
+    const showPlayOnPc = showPlayOnPcRaw === null ? true : showPlayOnPcRaw === "true";
+    const enableAutoTrailerBgRaw = getConfig("enable_auto_trailer_bg");
+    const enableAutoTrailerBg = enableAutoTrailerBgRaw === null ? true : enableAutoTrailerBgRaw === "true";
     console.log('[Config] GET customVideoPlayers:', customVideoPlayers);
     return NextResponse.json({ 
       localPath, 
       hddPath, 
       lastScan, 
       showOfflineMedia, 
-      customVideoPlayers: customVideoPlayers ? JSON.parse(customVideoPlayers) : []
+      customVideoPlayers: customVideoPlayers ? JSON.parse(customVideoPlayers) : [],
+      showPlayOnPc,
+      enableAutoTrailerBg
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -28,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('[Config] Received POST body:', body);
-    const { localPath, hddPath, showOfflineMedia, customVideoPlayers } = body;
+    const { localPath, hddPath, showOfflineMedia, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg } = body;
 
     if (localPath) setConfig("local_path", path.normalize(localPath));
     if (hddPath) setConfig("hdd_path", path.normalize(hddPath));
@@ -38,6 +44,12 @@ export async function POST(request: NextRequest) {
     }
     if (customVideoPlayers !== undefined) {
       setConfig("custom_video_players", JSON.stringify(customVideoPlayers));
+    }
+    if (showPlayOnPc !== undefined) {
+      setConfig("show_play_on_pc", showPlayOnPc ? "true" : "false");
+    }
+    if (enableAutoTrailerBg !== undefined) {
+      setConfig("enable_auto_trailer_bg", enableAutoTrailerBg ? "true" : "false");
     }
     
     if (body.action === 'set-pin' && body.pin) {

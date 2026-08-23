@@ -41,27 +41,30 @@ function useAdminUnlocked() {
   return isUnlocked;
 }
 
-let customPlayersPromise: Promise<any[]> | null = null;
+let configPromise: Promise<{customVideoPlayers: any[], showPlayOnPc: boolean}> | null = null;
 
-function useCustomPlayers() {
-  const [players, setPlayers] = useState<any[]>([]);
+function useConfig() {
+  const [config, setConfig] = useState<{customVideoPlayers: any[], showPlayOnPc: boolean}>({ customVideoPlayers: [], showPlayOnPc: true });
   
   useEffect(() => {
-    const fetchPlayers = async () => {
-      if (!customPlayersPromise) {
-        customPlayersPromise = fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
+    const fetchConfig = async () => {
+      if (!configPromise) {
+        configPromise = fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
           .then(r => r.json())
-          .then(data => data.customVideoPlayers || [])
-          .catch(() => []);
+          .then(data => ({
+            customVideoPlayers: data.customVideoPlayers || [],
+            showPlayOnPc: data.showPlayOnPc !== false
+          }))
+          .catch(() => ({ customVideoPlayers: [], showPlayOnPc: true }));
       }
-      const loaded = await customPlayersPromise;
-      setPlayers(loaded);
+      const loaded = await configPromise;
+      setConfig(loaded);
     };
     
-    fetchPlayers();
+    fetchConfig();
   }, []);
-
-  return players;
+  
+  return config;
 }
 
 import type { MediaEntry } from "@/lib/db";
@@ -80,7 +83,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
   const [showWatchParty, setShowWatchParty] = useState(false);
   const router = useRouter();
   const isUnlocked = useAdminUnlocked();
-  const customVideoPlayers = useCustomPlayers();
+  const { customVideoPlayers, showPlayOnPc } = useConfig();
 
   const posterSrc = media.poster || "/placeholder.jpg";
   const isUnavailable = !media.available;
@@ -264,8 +267,9 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         <div className="absolute top-3 right-3 flex flex-col gap-2 translate-y-2 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-50">
           <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
           {/* Play on PC Dropdown */}
-          <div className="relative group/play">
-            <button 
+          {showPlayOnPc && media.type === "movie" && (
+            <div className="relative group/play">
+              <button 
               onClick={(e) => e.preventDefault()}
               className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
               title="Play on PC"
@@ -282,7 +286,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
                 
                 {media.watch_progress > 0 ? (
                   <div className="relative group/vlc">
-                    <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-default">
+                    <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-pointer">
                       <div className="flex items-center gap-2">
                         <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
                       </div>
@@ -307,7 +311,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
                 )}
                 
                 {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
-                {customVideoPlayers.map((cp) => (
+                {customVideoPlayers.map((cp:any) => (
                   <button key={`custom-${cp.id}`} onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: cp.id }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
                     <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" /> {cp.name}
                   </button>
@@ -315,6 +319,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
               </div>
             </div>
           </div>
+          )}
           {isUnlocked && (
             <button 
               onClick={(e) => { e.preventDefault(); setIsEditing(true); }}

@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Tag, Users, ExternalLink } from "lucide-react";
+import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Tag, Users, ExternalLink, MonitorPlay, Monitor, ChevronRight } from "lucide-react";
 import { useBackground } from "@/components/BackgroundContext";
 import dynamic from "next/dynamic";
 
 const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
+import AutoTrailerInline from "@/components/AutoTrailerInline";
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -29,6 +30,21 @@ export default function MovieDetailPage() {
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { setBgImage } = useBackground();
+
+  // Custom Video Players logic
+  const [customVideoPlayers, setCustomVideoPlayers] = useState<any[]>([]);
+  const [showPlayOnPc, setShowPlayOnPc] = useState(true);
+  const [enableAutoTrailerBg, setEnableAutoTrailerBg] = useState(true);
+  useEffect(() => {
+    fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => {
+        if (data.customVideoPlayers) setCustomVideoPlayers(data.customVideoPlayers);
+        if (data.showPlayOnPc !== undefined) setShowPlayOnPc(data.showPlayOnPc);
+        if (data.enableAutoTrailerBg !== undefined) setEnableAutoTrailerBg(data.enableAutoTrailerBg);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/media?type=movie")
@@ -86,15 +102,24 @@ export default function MovieDetailPage() {
           sizes="100vw"
           priority
         />
+        
+        {/* Inline Auto-Trailer */}
+        {enableAutoTrailerBg && (
+          <AutoTrailerInline 
+            mediaId={movie.id} 
+            exactDuration={movie.exactDuration || (movie.runtime ? movie.runtime * 60 : 0)} 
+          />
+        )}
+
         {/* Cinematic gradients matching shows page */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/10 to-black/40 z-[1]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/20 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/10 to-black/40 z-[1] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-black/20 z-[1] pointer-events-none" />
       </div>
 
       {/* ─── Content Layer ───────────────────────────────────── */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 min-h-screen flex flex-col pointer-events-none">
         {/* ─── Top Bar ───────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10">
+        <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10 pointer-events-auto">
           {/* Left: Back + Movie Title */}
           <Link href="/movies" className="group flex items-center gap-3">
             <ArrowLeft className="w-4 h-4 text-white/30 group-hover:-translate-x-1 transition-transform" />
@@ -121,7 +146,7 @@ export default function MovieDetailPage() {
         {/* ─── Main Content ──────────────────────────────────── */}
         <div className="flex-1 flex flex-col lg:flex-row items-stretch px-5 md:px-10 lg:px-14 pb-8 md:pb-12 gap-8 lg:gap-14">
           {/* ── Left Column: Title + Actions ──────────────────── */}
-          <div className="flex-1 flex flex-col justify-end min-w-0">
+          <div className="flex-1 flex flex-col justify-end min-w-0 pointer-events-auto">
             {/* Mobile Poster & Metadata */}
             <div className="lg:hidden mb-5">
               <div className="relative w-24 h-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 mb-4">
@@ -150,14 +175,34 @@ export default function MovieDetailPage() {
               </div>
             </div>
 
-            {/* Title */}
+            {/* Title & Mini Trailer / Backdrop Image */}
+            <div className="mb-4 w-64 md:w-80 xl:w-96 pointer-events-auto">
+              {!enableAutoTrailerBg ? (
+                <AutoTrailerInline 
+                  mediaId={movie.id} 
+                  exactDuration={movie.exactDuration || (movie.runtime ? movie.runtime * 60 : 0)} 
+                  isMini={true} 
+                />
+              ) : (
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-black/50">
+                  <Image
+                    src={bgImage}
+                    alt={movie.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 256px, (max-width: 1280px) 320px, 384px"
+                  />
+                </div>
+              )}
+            </div>
+            
             <h1 className="text-[12vw] sm:text-8xl lg:text-[6.5rem] font-black tracking-tighter leading-[0.85] uppercase mb-8 -ml-1 text-white">
               <span className="text-white drop-shadow-2xl">{titleA}</span>
               <span className="text-white/30">{titleB}</span>
             </h1>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative z-20">
               {movie.available ? (
                 <Link
                   href={`/player/${movie.id}`}
@@ -173,7 +218,62 @@ export default function MovieDetailPage() {
                 </div>
               )}
 
-              <a
+              {/* Play on PC Dropdown */}
+              {showPlayOnPc && (
+                <div className="relative group/play">
+                  <button
+                  onClick={(e) => e.preventDefault()}
+                  className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-[#1a1a1a]/80 backdrop-blur-md border border-white/20 text-white font-bold text-xs tracking-[0.15em] uppercase hover:bg-white/10 transition-all cursor-pointer"
+                >
+                  <MonitorPlay className="w-4 h-4 transition-transform group-hover/play:scale-110" />
+                  Play on PC
+                </button>
+                
+                {/* Sub-menu appearing below */}
+                <div className="absolute top-full left-0 pt-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50 min-w-full">
+                  <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-top scale-95 group-hover/play:scale-100 transition-all duration-200">
+                    <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: movie.id, player: "default" }) }); }} className="px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-3 cursor-pointer">
+                      <MonitorPlay className="w-4 h-4 text-blue-400" /> Default Player
+                    </button>
+                    
+                    {(movie.watch_progress || 0) > 0 ? (
+                      <div className="relative group/vlc">
+                        <button className="w-full px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <Monitor className="w-4 h-4 text-orange-400" /> VLC Media Player
+                          </div>
+                          <ChevronRight className="w-3 h-3 text-white/40" />
+                        </button>
+                        {/* Nested Sub-menu for VLC */}
+                        <div className="absolute left-full top-0 -mt-1 pl-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
+                          <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/vlc:scale-100 transition-all duration-200">
+                            <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: movie.id, player: "vlc", startTime: movie.watch_progress }) }); }} className="px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                              Resume ({Math.floor((movie.watch_progress || 0) / 60)}m)
+                            </button>
+                            <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: movie.id, player: "vlc" }) }); }} className="px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                              Start Over
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: movie.id, player: "vlc" }) }); }} className="px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-3 cursor-pointer">
+                        <Monitor className="w-4 h-4 text-orange-400" /> VLC Media Player
+                      </button>
+                    )}
+                    
+                    {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
+                    {customVideoPlayers.map((cp) => (
+                      <button key={`custom-${cp.id}`} onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: movie.id, player: cp.id }) }); }} className="px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-3 cursor-pointer">
+                        <MonitorPlay className="w-4 h-4 text-emerald-400" /> {cp.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <a
                 href={youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -186,8 +286,7 @@ export default function MovieDetailPage() {
           </div>
 
           {/* ── Right Column: Poster Card ───── */}
-          <div className="hidden lg:flex w-[360px] xl:w-[400px] flex-col gap-4 flex-shrink-0 justify-end">
-            {/* Poster + Details Card */}
+          <div className="hidden lg:flex w-[360px] xl:w-[400px] flex-col gap-4 flex-shrink-0 justify-end pointer-events-auto">
             <div className="flex items-center gap-5">
               <div className="relative w-34 h-44 rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-black/50 flex-shrink-0">
                 <Image
