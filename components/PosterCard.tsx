@@ -101,7 +101,15 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
   // ─── Landscape Card Variant ──────────────────────────────────
   if (variant === "landscape") {
     return (
-      <div className="group/card relative landscape-hover">
+      <div 
+        className="group/card relative landscape-hover"
+        onContextMenu={(e) => {
+          if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
+            e.preventDefault();
+          }
+        }}
+        style={{ WebkitTouchCallout: 'none' }}
+      >
         <Link
           href={isUnavailable ? "#" : href}
           className="relative block aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02] backdrop-blur-md hover:border-violet-500/20 transition-all duration-300 shadow-lg shadow-black/20"
@@ -193,6 +201,12 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
       className={`group/card relative flex flex-col w-full ${selectionMode ? "cursor-pointer" : ""}`}
       onMouseEnter={() => !selectionMode && setIsHovered(true)}
       onMouseLeave={() => !selectionMode && setIsHovered(false)}
+      onContextMenu={(e) => {
+        if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
+          e.preventDefault();
+        }
+      }}
+      style={{ WebkitTouchCallout: 'none' }}
     >
       <CardWrapper
         {...(cardWrapperProps as any)}

@@ -127,7 +127,7 @@ export default function ShowDetailPage() {
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(show.title + " trailer")}`;
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative flex flex-col overflow-x-hidden lg:h-screen lg:overflow-hidden bg-black">
       {/* ─── Immersive Background ────────────────────────────── */}
       <div className="fixed inset-0 z-0">
         {/* Desktop Backdrop */}
@@ -158,9 +158,11 @@ export default function ShowDetailPage() {
       </div>
 
       {/* ─── Content Layer ───────────────────────────────────── */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* ─── Top Bar ───────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10">
+      <div className="relative z-10 flex flex-col lg:h-screen">
+        {/* ─── Hero Section (Snaps to 100dvh on mobile) ──────── */}
+        <div className="h-[100dvh] -mb-24 lg:mb-0 lg:flex-1 flex flex-col pointer-events-none min-h-0">
+          {/* ─── Top Bar ───────────────────────────────────────── */}
+          <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10 pointer-events-auto">
           {/* Left: Back + Show Title */}
           <Link href="/shows" className="group flex items-center gap-3">
             <ArrowLeft className="w-4 h-4 text-white/30 group-hover:-translate-x-1 transition-transform" />
@@ -185,9 +187,9 @@ export default function ShowDetailPage() {
         </div>
 
         {/* ─── Main Content ──────────────────────────────────── */}
-        <div className="flex-1 flex flex-col lg:flex-row items-stretch px-5 md:px-10 lg:px-14 pb-8 md:pb-12 gap-8 lg:gap-14">
+        <div className="flex-1 flex flex-col lg:flex-row items-stretch px-5 md:px-10 lg:px-14 pb-0 lg:pb-12 gap-8 lg:gap-14 min-h-0">
           {/* ── Left Column: Title + Actions ──────────────────── */}
-          <div className="flex-1 flex flex-col justify-end min-w-0">
+          <div className="flex-1 flex flex-col justify-end min-w-0 pb-24 lg:pb-0 pointer-events-auto">
             {/* Mobile Poster & Metadata */}
             <div className="lg:hidden mb-5">
               <div className="relative w-24 h-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 mb-4">
@@ -252,7 +254,7 @@ export default function ShowDetailPage() {
           </div>
 
           {/* ── Right Column: Poster Card + Episodes + Season Selector ───── */}
-          <div className="hidden lg:flex w-[360px] xl:w-[400px] flex-col gap-4 flex-shrink-0 justify-between">
+          <div className="hidden lg:flex w-[360px] xl:w-[400px] flex-col gap-4 flex-shrink-0 pointer-events-auto min-h-0">
             {/* Poster + Details Card */}
             <div className="flex items-center gap-5">
               <div className="relative w-34 h-44 rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-black/50 flex-shrink-0">
@@ -297,7 +299,7 @@ export default function ShowDetailPage() {
             </div>
 
             {/* Episode Cards */}
-            <div className="space-y-3 max-h-[460px] overflow-y-auto no-scrollbar pr-1">
+            <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-0 pb-4">
               {seasonEpisodes.map((ep) => {
                 const epProgress =
                   ep.watch_progress && ep.runtime
@@ -659,12 +661,13 @@ export default function ShowDetailPage() {
           </div>
 
           {/* Panel Footer */}
-          <div className="p-6 md:p-8 border-t border-white/[0.06]">
+          <div className="p-6 md:p-8 border-t border-white/[0.06] pointer-events-auto">
             <p className="text-[10px] font-mono text-white/15 truncate">
               {show.filepath || show.filename}
             </p>
           </div>
         </div>
+        </div> {/* <-- Closes Hero Section Wrapper */}
       </div>
 
       {/* ─── Mobile Episode Section ──────────────────────────── */}
@@ -714,6 +717,12 @@ export default function ShowDetailPage() {
                   className="relative aspect-video"
                   onMouseEnter={() => setHoveredEp(ep.id)}
                   onMouseLeave={() => setHoveredEp(null)}
+                  onContextMenu={(e) => {
+                    if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
+                      e.preventDefault();
+                    }
+                  }}
+                  style={{ WebkitTouchCallout: 'none' }}
                 >
                   <EpisodeThumbnail
                     mediaAssetId={ep.id}

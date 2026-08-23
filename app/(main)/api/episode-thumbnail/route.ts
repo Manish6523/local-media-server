@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       episodeThumbnail: schema.episodes.episodeThumbnail,
       filepath: schema.mediaAssets.filepath,
       available: schema.mediaAssets.available,
+      runtime: schema.episodes.runtime,
     })
     .from(schema.episodes)
     .leftJoin(schema.mediaAssets, eq(schema.episodes.mediaAssetId, schema.mediaAssets.id))
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 4. Generate thumbnail with FFmpeg
-  const generatePromise = generateThumbnail(episode.filepath, thumbPath, mediaAssetId, db);
+  const generatePromise = generateThumbnail(episode.filepath, thumbPath, mediaAssetId, episode.runtime, db);
   inFlight.set(mediaAssetId, generatePromise);
 
   try {
@@ -227,6 +228,7 @@ async function generateThumbnail(
   filepath: string,
   outputPath: string,
   mediaAssetId: number,
+  runtime: number | null | undefined,
   db: any
 ): Promise<string | null> {
   // Ensure output directory exists
@@ -238,13 +240,15 @@ async function generateThumbnail(
   const publicPath = `/episode-thumbs/${mediaAssetId}.jpg`;
 
   try {
-    // First, get the video duration to seek to ~10% in
-    const duration = await getVideoDuration(filepath);
-    // Seek to 1/3 of the video + a slight random offset (±5% of duration)
-    // e.g. 40 min episode → ~13m20s ± ~2 min
-    const third = duration / 3;
-    const jitter = (Math.random() - 0.5) * 0.1 * duration; // ±5%
-    const seekTime = Math.max(5, third + jitter);
+    // Determine duration to use for the 1/3 mark.
+    // If the DB has `runtime`, we MUST use it (runtime * 60) so our calculation 
+    // exactly matches the client's HoverPreview which only has access to the DB runtime.
+    // If we use ffprobe here, the exact file duration might differ slightly from the DB runtime,
+    // causing a mismatch of a few seconds (a different scene).
+    const duration = (runtime && runtime > 0) ? (runtime * 60) : await getVideoDuration(filepath);
+    
+    // Seek to exactly 1/3 of the video so HoverPreview can calculate the exact same timestamp
+    const seekTime = Math.max(5, duration / 3);
 
     await new Promise<void>((resolve, reject) => {
       const args = [

@@ -51,11 +51,13 @@ export default function RootLayout({
               }
 
               window.__onGCastApiAvailable = function(isAvailable) {
-                if (isAvailable) {
-                  cast.framework.CastContext.getInstance().setOptions({
-                    receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-                  });
+                if (isAvailable && window.chrome && window.chrome.cast && window.chrome.cast.media) {
+                  try {
+                    cast.framework.CastContext.getInstance().setOptions({
+                      receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                      autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+                    });
+                  } catch (e) { console.error("Cast SDK Init Error:", e); }
                 }
               };
             `,
@@ -71,7 +73,7 @@ export default function RootLayout({
         <ToastProvider>
         <BackgroundProvider>
           <NavBar />
-          <main className="relative z-10 min-h-screen pb-28 md:pb-0">
+          <main className="relative z-10 min-h-[100dvh] pb-24 lg:pb-0 flex flex-col">
             {children}
           </main>
         </BackgroundProvider>

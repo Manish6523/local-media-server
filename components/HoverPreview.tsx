@@ -18,6 +18,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [computedStartTime, setComputedStartTime] = useState(600);
+
   
   // Fixed starting point fallback
   const fallbackStartTime = 600;
@@ -28,15 +29,19 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
     if (isHovered) {
       // 500ms delay to prevent accidental loading on fast mouse swipes
       timeoutId = setTimeout(() => {
+        const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
         if (randomStart) {
-          const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
           if (totalSeconds > clipDuration) {
              setComputedStartTime(Math.random() * (totalSeconds - clipDuration));
           } else {
              setComputedStartTime(0);
           }
         } else {
-          setComputedStartTime(fallbackStartTime);
+          if (totalSeconds > 0) {
+            setComputedStartTime(Math.max(0, (totalSeconds / 3) - 1));
+          } else {
+            setComputedStartTime(fallbackStartTime);
+          }
         }
         setShouldLoad(true);
       }, 500);
@@ -87,7 +92,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     return () => video.removeEventListener("timeupdate", handleTimeUpdate);
-  }, [shouldLoad]);
+  }, [shouldLoad, computedStartTime, clipDuration]);
 
   // If it's never been hovered, don't render anything to save DOM nodes
   if (!shouldLoad && (!videoRef.current || !videoRef.current.src)) return null;
@@ -109,6 +114,15 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
         playsInline
         loop
         onPlay={() => setIsPlaying(true)}
+        onLoadedMetadata={(e) => {
+          const video = e.currentTarget;
+          const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
+          if (totalSeconds === 0 && !randomStart && isFinite(video.duration) && video.duration > 0) {
+            const exactStart = Math.max(0, (video.duration / 3) - 1);
+            setComputedStartTime(exactStart);
+            video.currentTime = exactStart;
+          }
+        }}
       />
 
       {/* 15s Timeline */}

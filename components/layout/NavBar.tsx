@@ -348,16 +348,16 @@ export default function NavBar() {
       )}
 
       {/* Floating Pill Nav */}
-      <div className="md:hidden fixed bottom-6 left-4 right-4 z-50">
-        <div className="bg-[#0a0a0a]/85 backdrop-blur-3xl border border-white/[0.08] rounded-full p-1.5 flex items-center justify-between shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
-          <div className="flex items-center gap-1">
+      <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-3">
+        <div className="bg-[#0a0a0a]/85 backdrop-blur-3xl border border-white/[0.08] rounded-full p-1.5 flex items-center shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             {primaryMobileLinks.map((link) => {
               const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative flex items-center justify-center gap-2 px-4 py-3 rounded-full transition-all duration-300 ${
+                  className={`relative flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-all duration-300 ${
                     isActive
                       ? "bg-white text-black shadow-md"
                       : "text-white/40 hover:text-white/70 hover:bg-white/5"
@@ -372,7 +372,7 @@ export default function NavBar() {
             })}
           </div>
 
-          <div className="flex items-center gap-1 pr-1">
+          <div className="flex items-center gap-1 pl-1 shrink-0">
             <div className="w-[1px] h-6 bg-white/[0.08] mx-1" />
 
             <button
@@ -383,10 +383,10 @@ export default function NavBar() {
             </button>
 
             <button
-              onClick={() => setMobileExpanded(true)}
+              onClick={() => setMobileExpanded(!mobileExpanded)}
               className="p-3 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
             >
-              <Menu className="w-5 h-5" />
+              {mobileExpanded ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>

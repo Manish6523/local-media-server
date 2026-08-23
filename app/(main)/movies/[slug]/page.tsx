@@ -91,9 +91,9 @@ export default function MovieDetailPage() {
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " trailer")}`;
 
   return (
-    <div className="relative min-h-screen bg-black text-white selection:bg-white/20 overflow-x-hidden">
+    <div className="relative h-[calc(100dvh+2rem)] lg:h-[100dvh] flex flex-col overflow-hidden">
       {/* ─── Immersive Background ────────────────────────────── */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <Image
           src={bgImage}
           alt={movie.title}
@@ -117,13 +117,13 @@ export default function MovieDetailPage() {
       </div>
 
       {/* ─── Content Layer ───────────────────────────────────── */}
-      <div className="relative z-10 min-h-screen flex flex-col pointer-events-none">
+      <div className="relative z-10 flex-1 flex flex-col pointer-events-none">
         {/* ─── Top Bar ───────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10 pointer-events-auto">
           {/* Left: Back + Movie Title */}
           <Link href="/movies" className="group flex items-center gap-3">
-            <ArrowLeft className="w-4 h-4 text-white/30 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-white/40 text-[11px] font-semibold tracking-[0.25em] uppercase">
+            <ArrowLeft className="w-4 h-4 text-white/30 group-hover:-translate-x-1 transition-transform shrink-0" />
+            <span className="text-white/40 text-[11px] font-semibold tracking-[0.25em] uppercase truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs">
               {movie.title}
             </span>
           </Link>
@@ -144,7 +144,7 @@ export default function MovieDetailPage() {
         </div>
 
         {/* ─── Main Content ──────────────────────────────────── */}
-        <div className="flex-1 flex flex-col lg:flex-row items-stretch px-5 md:px-10 lg:px-14 pb-8 md:pb-12 gap-8 lg:gap-14">
+        <div className="flex-1 flex flex-col lg:flex-row items-stretch px-5 md:px-10 lg:px-14 pb-0 lg:pb-12 gap-8 lg:gap-14">
           {/* ── Left Column: Title + Actions ──────────────────── */}
           <div className="flex-1 flex flex-col justify-end min-w-0 pointer-events-auto">
             {/* Mobile Poster & Metadata */}
@@ -176,7 +176,7 @@ export default function MovieDetailPage() {
             </div>
 
             {/* Title & Mini Trailer / Backdrop Image */}
-            <div className="mb-4 w-64 md:w-80 xl:w-96 pointer-events-auto">
+            <div className="hidden lg:block mb-4 w-64 md:w-80 xl:w-96 pointer-events-auto">
               {!enableAutoTrailerBg ? (
                 <AutoTrailerInline 
                   mediaId={movie.id} 
