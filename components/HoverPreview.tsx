@@ -1,0 +1,125 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+
+interface HoverPreviewProps {
+  mediaId: number;
+  runtime: number | null; // in minutes
+  exactDuration?: number; // in seconds
+  isHovered: boolean;
+  clipDuration?: number; // in seconds, default 15
+  randomStart?: boolean; // default false (uses 10m in)
+}
+
+export default function HoverPreview({ mediaId, runtime, exactDuration, isHovered, clipDuration = 15, randomStart = false }: HoverPreviewProps) {
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [computedStartTime, setComputedStartTime] = useState(600);
+  
+  // Fixed starting point fallback
+  const fallbackStartTime = 600;
+  
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isHovered) {
+      // 500ms delay to prevent accidental loading on fast mouse swipes
+      timeoutId = setTimeout(() => {
+        if (randomStart) {
+          const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
+          if (totalSeconds > clipDuration) {
+             setComputedStartTime(Math.random() * (totalSeconds - clipDuration));
+          } else {
+             setComputedStartTime(0);
+          }
+        } else {
+          setComputedStartTime(fallbackStartTime);
+        }
+        setShouldLoad(true);
+      }, 500);
+    } else {
+      setShouldLoad(false);
+      // We don't reset isPlaying here so that if they hover back, it resumes smoothly
+    }
+    
+    return () => clearTimeout(timeoutId);
+  }, [isHovered]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (shouldLoad) {
+      // If the video hasn't been loaded yet (first hover), set the source
+      if (!video.src || video.src === "") {
+        video.src = `/api/stream?id=${mediaId}`;
+        video.currentTime = computedStartTime;
+      }
+      
+      // Play and resume from wherever it was paused
+      video.play().catch(() => {
+        // Ignore auto-play errors
+      });
+    } else {
+      // Just pause the video. Do NOT clear the src!
+      // This "stores" the downloaded buffer locally in the browser.
+      // Next time they hover, it resumes instantly from this exact spot.
+      video.pause();
+    }
+  }, [shouldLoad, mediaId]);
+
+  // 15-second loop logic
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      // If we've passed the clip duration, loop back to the start!
+      if (video.currentTime >= computedStartTime + clipDuration) {
+        video.currentTime = computedStartTime;
+      }
+      const pct = Math.max(0, Math.min(100, ((video.currentTime - computedStartTime) / clipDuration) * 100));
+      setProgress(pct);
+    };
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    return () => video.removeEventListener("timeupdate", handleTimeUpdate);
+  }, [shouldLoad]);
+
+  // If it's never been hovered, don't render anything to save DOM nodes
+  if (!shouldLoad && (!videoRef.current || !videoRef.current.src)) return null;
+
+  return (
+    <div className={`absolute inset-0 z-10 overflow-hidden pointer-events-none rounded-[20px] transition-opacity duration-300 ${shouldLoad ? 'opacity-100 bg-[#111]' : 'opacity-0'}`}>
+      {/* Loading Spinner */}
+      {!isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+          <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
+        </div>
+      )}
+      
+      <video
+        ref={videoRef}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
+        autoPlay
+        muted
+        playsInline
+        loop
+        onPlay={() => setIsPlaying(true)}
+      />
+
+      {/* 15s Timeline */}
+      {isPlaying && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-30">
+          <div 
+            className="h-full bg-violet-500 transition-all duration-100" 
+            style={{ width: `${progress}%` }} 
+          />
+        </div>
+      )}
+    </div>
+  );
+}

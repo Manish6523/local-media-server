@@ -9,6 +9,7 @@ import EditTitleModal from "./EditTitleModal";
 import AdminPinGate from "./AdminPinGate";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import HoverPreview from "./HoverPreview";
 
 const CreateRoomModal = dynamic(() => import("./WatchParty/CreateRoomModal"), { ssr: false });
 
@@ -81,6 +82,7 @@ interface PosterCardProps {
 export default function PosterCard({ media, showEpisodeInfo = false, variant = "poster", selectionMode = false, isSelected = false, onToggleSelect }: PosterCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showWatchParty, setShowWatchParty] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const router = useRouter();
   const isUnlocked = useAdminUnlocked();
   const { customVideoPlayers, showPlayOnPc } = useConfig();
@@ -187,7 +189,11 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
     : { href: isUnavailable ? "#" : href };
 
   return (
-    <div className={`group/card relative flex flex-col w-full ${selectionMode ? "cursor-pointer" : ""}`}>
+    <div 
+      className={`group/card relative flex flex-col w-full ${selectionMode ? "cursor-pointer" : ""}`}
+      onMouseEnter={() => !selectionMode && setIsHovered(true)}
+      onMouseLeave={() => !selectionMode && setIsHovered(false)}
+    >
       <CardWrapper
         {...(cardWrapperProps as any)}
         className={`relative aspect-[2/3] overflow-hidden rounded-[20px] bg-[#111] border shadow-xl transition-all duration-500 ${
@@ -209,6 +215,18 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           }`}
           sizes="(max-width: 768px) 45vw, (max-width: 1024px) 30vw, 200px"
         />
+
+        {/* Hover Preview Video (Only for non-selection mode) */}
+        {!selectionMode && !isUnavailable && (
+          <HoverPreview 
+            mediaId={media.id} 
+            runtime={media.runtime} 
+            exactDuration={media.exactDuration} 
+            isHovered={isHovered} 
+            clipDuration={10}
+            randomStart={true}
+          />
+        )}
 
         {/* Selection Mode Checkbox Overlay */}
         {selectionMode && (

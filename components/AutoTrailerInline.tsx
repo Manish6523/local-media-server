@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Volume2, VolumeX, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Film, Loader2 } from "lucide-react";
 
 interface AutoTrailerInlineProps {
   mediaId: number;
@@ -20,7 +20,7 @@ export default function AutoTrailerInline({
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isVideoHidden, setIsVideoHidden] = useState(false);
   const [trailerFinished, setTrailerFinished] = useState(false);
 
   // Constants
@@ -131,10 +131,10 @@ export default function AutoTrailerInline({
       {/* Video Element */}
       <video
         ref={videoRef}
-        className={`w-full h-full object-cover transition-opacity duration-1000 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-1000 ${isPlaying && !isVideoHidden ? 'opacity-100' : 'opacity-0'}`}
         playsInline
         autoPlay
-        muted={isMuted}
+        muted={true}
         controls={false}
       />
       
@@ -155,20 +155,26 @@ export default function AutoTrailerInline({
         </div>
       )}
 
-      {/* Mute Toggle */}
+      {/* Visibility Toggle */}
       <div className={isMini ? "absolute bottom-3 right-3 z-[60] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto" : "absolute bottom-10 right-10 z-[60] pointer-events-auto"}>
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setIsMuted(!isMuted);
+            const newHiddenState = !isVideoHidden;
+            setIsVideoHidden(newHiddenState);
             if (videoRef.current) {
-              videoRef.current.muted = !isMuted;
+              if (newHiddenState) {
+                videoRef.current.pause();
+              } else {
+                videoRef.current.play().catch(console.error);
+              }
             }
           }}
           className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all cursor-pointer shadow-lg pointer-events-auto"
+          title={isVideoHidden ? "Show Trailer" : "Show Static Image"}
         >
-          {isMuted ? <VolumeX className="w-4 h-4 md:w-5 md:h-5" /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" />}
+          {isVideoHidden ? <Film className="w-4 h-4 md:w-5 md:h-5" /> : <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />}
         </button>
       </div>
     </div>

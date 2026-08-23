@@ -26,6 +26,7 @@ import { useBackground } from "@/components/BackgroundContext";
 import dynamic from "next/dynamic";
 
 import EpisodeThumbnail from "@/components/EpisodeThumbnail";
+import HoverPreview from "@/components/HoverPreview";
 
 const WatchPartyModal = dynamic(
   () => import("@/components/WatchParty/WatchPartyModal"),
@@ -327,6 +328,15 @@ export default function ShowDetailPage() {
                         filepath={ep.filepath}
                         isAvailable={!!ep.available}
                       />
+                      {/* Hover Preview Video */}
+                      {ep.available && (
+                        <HoverPreview 
+                          mediaId={ep.id} 
+                          runtime={ep.runtime} 
+                          exactDuration={ep.exactDuration} 
+                          isHovered={hoveredEp === ep.id} 
+                        />
+                      )}
                       {/* Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
@@ -700,7 +710,11 @@ export default function ShowDetailPage() {
                     : ""
                 }`}
               >
-                <div className="relative aspect-video">
+                <div 
+                  className="relative aspect-video"
+                  onMouseEnter={() => setHoveredEp(ep.id)}
+                  onMouseLeave={() => setHoveredEp(null)}
+                >
                   <EpisodeThumbnail
                     mediaAssetId={ep.id}
                     fallbackSrc={ep.backdrop || show.backdrop || "/placeholder.jpg"}
@@ -710,12 +724,21 @@ export default function ShowDetailPage() {
                     filepath={ep.filepath}
                     isAvailable={!!ep.available}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  {/* Hover Preview Video */}
+                  {ep.available && (
+                    <HoverPreview 
+                      mediaId={ep.id} 
+                      runtime={ep.runtime} 
+                      exactDuration={ep.exactDuration} 
+                      isHovered={hoveredEp === ep.id} 
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-20 pointer-events-none" />
 
                   {ep.available && (
                     <Link
                       href={`/player/${ep.id}`}
-                      className="absolute inset-0 flex items-center justify-center"
+                      className="absolute inset-0 flex items-center justify-center z-30"
                     >
                       <div className="w-11 h-11 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm">
                         <Play className="w-4 h-4 text-white fill-white ml-0.5" />
@@ -723,7 +746,7 @@ export default function ShowDetailPage() {
                     </Link>
                   )}
 
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between">
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between z-30 pointer-events-none">
                     <span className="text-[10px] font-bold text-white/70 tracking-wider uppercase">
                       Ep #{ep.episode_start}
                     </span>
