@@ -17,36 +17,36 @@ let adminStatusPromise: Promise<boolean> | null = null;
 
 function useAdminUnlocked() {
   const [isUnlocked, setIsUnlocked] = useState(false);
-  
+
   useEffect(() => {
     const checkStatus = async () => {
       if (sessionStorage.getItem('admin_unlocked') === 'true') {
         setIsUnlocked(true);
         return;
       }
-      
+
       if (!adminStatusPromise) {
         adminStatusPromise = fetch('/api/admin/pin-status')
           .then(r => r.json())
           .then(data => !data.enabled)
           .catch(() => false);
       }
-      
+
       const unlocked = await adminStatusPromise;
       setIsUnlocked(unlocked);
     };
-    
+
     checkStatus();
   }, []);
 
   return isUnlocked;
 }
 
-let configPromise: Promise<{customVideoPlayers: any[], showPlayOnPc: boolean}> | null = null;
+let configPromise: Promise<{ customVideoPlayers: any[], showPlayOnPc: boolean }> | null = null;
 
 function useConfig() {
-  const [config, setConfig] = useState<{customVideoPlayers: any[], showPlayOnPc: boolean}>({ customVideoPlayers: [], showPlayOnPc: true });
-  
+  const [config, setConfig] = useState<{ customVideoPlayers: any[], showPlayOnPc: boolean }>({ customVideoPlayers: [], showPlayOnPc: true });
+
   useEffect(() => {
     const fetchConfig = async () => {
       if (!configPromise) {
@@ -61,10 +61,10 @@ function useConfig() {
       const loaded = await configPromise;
       setConfig(loaded);
     };
-    
+
     fetchConfig();
   }, []);
-  
+
   return config;
 }
 
@@ -95,14 +95,13 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
     : 0;
 
   const slug = encodeURIComponent(media.title.toLowerCase().replace(/\s+/g, "-"));
-  const href = `/${media.type === "movie" ? "movies" : "shows"}/${slug}${
-    media.source === "online" ? `?imdb=${media.omdb_id}` : ""
-  }`;
+  const href = `/${media.type === "movie" ? "movies" : "shows"}/${slug}${media.source === "online" ? `?imdb=${media.omdb_id}` : ""
+    }`;
 
   // ─── Landscape Card Variant ──────────────────────────────────
   if (variant === "landscape") {
     return (
-      <div 
+      <div
         className="group/card relative landscape-hover"
         onContextMenu={(e) => {
           if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
@@ -119,9 +118,8 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
             src={media.backdrop || media.poster || "/placeholder.jpg"}
             alt={media.title}
             fill
-            className={`object-cover transition-transform duration-500 group-hover/card:scale-105 ${
-              isUnavailable ? "grayscale opacity-40" : ""
-            }`}
+            className={`object-cover transition-transform duration-500 group-hover/card:scale-105 ${isUnavailable ? "grayscale opacity-40" : ""
+              }`}
             sizes="(max-width: 768px) 50vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -198,7 +196,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
     : { href: isUnavailable ? "#" : href };
 
   return (
-    <div 
+    <div
       className={`group/card relative flex flex-col w-full ${selectionMode ? "cursor-pointer" : ""}`}
       onMouseEnter={() => !selectionMode && setIsHovered(true)}
       onMouseLeave={() => !selectionMode && setIsHovered(false)}
@@ -211,23 +209,21 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
     >
       <CardWrapper
         {...(cardWrapperProps as any)}
-        className={`relative aspect-[2/3] overflow-hidden rounded-[20px] bg-[#111] border shadow-xl transition-all duration-500 ${
-          selectionMode
+        className={`relative aspect-[2/3] overflow-hidden rounded-[20px] bg-[#111] border shadow-xl transition-all duration-500 ${selectionMode
             ? isSelected
               ? "border-violet-500 shadow-[0_0_25px_-5px_rgba(139,92,246,0.4)] ring-2 ring-violet-500/50"
               : "border-white/[0.04] hover:border-white/[0.1]"
             : "border-white/[0.04] group-hover/card:-translate-y-2 group-hover/card:shadow-[0_20px_40px_-15px_rgba(139,92,246,0.25)] group-hover/card:border-violet-500/30"
-        }`}
+          }`}
       >
-        
+
         {/* Poster Image */}
         <Image
           src={posterSrc}
           alt={media.title}
           fill
-          className={`object-cover transition-transform duration-700 group-hover/card:scale-105 opacity-90 group-hover/card:opacity-100 ${
-            isUnavailable ? "grayscale opacity-40 group-hover/card:opacity-40" : ""
-          }`}
+          className={`object-cover transition-transform duration-700 group-hover/card:scale-105 opacity-90 group-hover/card:opacity-100 ${isUnavailable ? "grayscale opacity-40 group-hover/card:opacity-40" : ""
+            }`}
           sizes="(max-width: 768px) 45vw, (max-width: 1024px) 30vw, 200px"
         />
 
@@ -239,12 +235,12 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         )}
 
         {/* Hover Preview Video (Only for non-selection mode) */}
-        {!selectionMode && !isUnavailable && (
-          <HoverPreview 
-            mediaId={media.id} 
-            runtime={media.runtime} 
-            exactDuration={media.exactDuration} 
-            isHovered={isHovered} 
+        {!selectionMode && !isUnavailable && media.source !== "online" && (
+          <HoverPreview
+            mediaId={media.id}
+            runtime={media.runtime}
+            exactDuration={media.exactDuration}
+            isHovered={isHovered}
             clipDuration={10}
             randomStart={true}
           />
@@ -254,11 +250,10 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         {selectionMode && (
           <div className="absolute top-3 left-3 z-40">
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
-                isSelected
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${isSelected
                   ? "bg-violet-500 shadow-lg shadow-violet-500/40"
                   : "bg-black/40 backdrop-blur-md border border-white/20"
-              }`}
+                }`}
             >
               {isSelected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
             </div>
@@ -268,15 +263,15 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         {/* Hover Action Overlay */}
         {!isUnavailable && !selectionMode && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 z-20">
-             
-             {/* Top Actions moved outside to prevent clipping */}
 
-             {/* Bottom Left Play Button */}
-             <div className="absolute bottom-4 left-3 transform translate-y-4 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-40">
-                <div className="w-10 h-10 rounded-full bg-violet-500/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)] pointer-events-auto border border-white/20 hover:scale-110 hover:bg-violet-400 transition-transform cursor-pointer">
-                  <Play className="w-4 h-4 text-white fill-white ml-0.5" />
-                </div>
-             </div>
+            {/* Top Actions moved outside to prevent clipping */}
+
+            {/* Bottom Left Play Button */}
+            <div className="absolute bottom-4 left-3 transform translate-y-4 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-40">
+              <div className="w-10 h-10 rounded-full bg-violet-500/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)] pointer-events-auto border border-white/20 hover:scale-110 hover:bg-violet-400 transition-transform cursor-pointer">
+                <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+              </div>
+            </div>
           </div>
         )}
 
@@ -296,7 +291,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
         {progressPercent > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/[0.08] z-30 backdrop-blur-sm">
             <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 relative" style={{ width: `${progressPercent}%` }}>
-               <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/50 blur-[2px]" />
+              <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/50 blur-[2px]" />
             </div>
           </div>
         )}
@@ -309,66 +304,66 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           {/* Play on PC Dropdown */}
           {showPlayOnPc && media.type === "movie" && (
             <div className="relative group/play">
-              <button 
-              onClick={(e) => e.preventDefault()}
-              className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
-              title="Play on PC"
-            >
-              <MonitorPlay className="w-3.5 h-3.5 text-white" />
-            </button>
-            
-            {/* Sub-menu appearing to the right (with invisible bridge padding) */}
-            <div className="absolute left-full top-0 pl-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50">
-              <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/play:scale-100 transition-all duration-200">
-                <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "default" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                  <MonitorPlay className="w-3.5 h-3.5 text-blue-400" /> Default Player
-                </button>
-                
-                {media.watch_progress > 0 ? (
-                  <div className="relative group/vlc">
-                    <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
-                      </div>
-                      <ChevronRight className="w-3 h-3 text-white/40" />
-                    </button>
-                    {/* Nested Sub-menu for VLC (with invisible bridge padding to prevent closing on gap) */}
-                    <div className="absolute left-full top-0 -mt-1 pl-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
-                      <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/vlc:scale-100 transition-all duration-200">
-                        <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc", startTime: media.watch_progress }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                          Resume ({Math.floor(media.watch_progress / 60)}m)
-                        </button>
-                        <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                          Start Over
-                        </button>
+              <button
+                onClick={(e) => e.preventDefault()}
+                className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
+                title="Play on PC"
+              >
+                <MonitorPlay className="w-3.5 h-3.5 text-white" />
+              </button>
+
+              {/* Sub-menu appearing to the right (with invisible bridge padding) */}
+              <div className="absolute left-full top-0 pl-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50">
+                <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/play:scale-100 transition-all duration-200">
+                  <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "default" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                    <MonitorPlay className="w-3.5 h-3.5 text-blue-400" /> Default Player
+                  </button>
+
+                  {media.watch_progress > 0 ? (
+                    <div className="relative group/vlc">
+                      <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-white/40" />
+                      </button>
+                      {/* Nested Sub-menu for VLC (with invisible bridge padding to prevent closing on gap) */}
+                      <div className="absolute left-full top-0 -mt-1 pl-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
+                        <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/vlc:scale-100 transition-all duration-200">
+                          <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc", startTime: media.watch_progress }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                            Resume ({Math.floor(media.watch_progress / 60)}m)
+                          </button>
+                          <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                            Start Over
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                    <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
-                  </button>
-                )}
-                
-                {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
-                {customVideoPlayers.map((cp:any) => (
-                  <button key={`custom-${cp.id}`} onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: cp.id }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                    <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" /> {cp.name}
-                  </button>
-                ))}
+                  ) : (
+                    <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                      <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
+                    </button>
+                  )}
+
+                  {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
+                  {customVideoPlayers.map((cp: any) => (
+                    <button key={`custom-${cp.id}`} onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: cp.id }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                      <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" /> {cp.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
           )}
           {isUnlocked && (
-            <button 
+            <button
               onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
               className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5 text-white" />
             </button>
           )}
-          <button 
+          <button
             onClick={(e) => { e.preventDefault(); setShowWatchParty(true); }}
             className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
             title="Watch Party"

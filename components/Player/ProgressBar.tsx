@@ -5,14 +5,17 @@ interface ProgressBarProps {
   duration: number;
   bufferedEnd: number;
   onSeek: (time: number) => void;
+  videoSrc?: string | null;
+  mediaId?: string;
 }
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
-export default function ProgressBar({ currentTime, duration, bufferedEnd, onSeek }: ProgressBarProps) {
+export default function ProgressBar({ currentTime, duration, bufferedEnd, onSeek, videoSrc, mediaId }: ProgressBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
   const [hoverX, setHoverX] = useState(0);
+  const [debouncedHoverTime, setDebouncedHoverTime] = useState(0);
   const [dragging, setDragging] = useState(false);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -20,6 +23,13 @@ export default function ProgressBar({ currentTime, duration, bufferedEnd, onSeek
   const hoverTime = duration > 0 && barRef.current
     ? (hoverX / barRef.current.clientWidth) * duration
     : 0;
+
+  useEffect(() => {
+    if (hovering) {
+      const timer = setTimeout(() => setDebouncedHoverTime(hoverTime), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [hoverTime, hovering]);
 
   const formatTime = (s: number) => {
     if (!isFinite(s) || s < 0) return "0:00";
@@ -64,7 +74,7 @@ export default function ProgressBar({ currentTime, duration, bufferedEnd, onSeek
     const rect = barRef.current.getBoundingClientRect();
     setHoverX(Math.max(0, Math.min(e.clientX - rect.left, rect.width)));
   }, []);
-
+  
   return (
     <div className="w-full mb-2 group/progress">
       <div
@@ -101,10 +111,21 @@ export default function ProgressBar({ currentTime, duration, bufferedEnd, onSeek
         {/* Hover timestamp tooltip */}
         {hovering && barRef.current && (
           <div
-            className="absolute -top-9 -translate-x-1/2 bg-[#1a1a1a] text-white text-xs px-2 py-1 rounded pointer-events-none"
+            className="absolute bottom-6 -translate-x-1/2 flex flex-col items-center gap-1.5 pointer-events-none z-50"
             style={{ left: `${hoverX}px` }}
           >
-            {formatTime(hoverTime)}
+            {mediaId && (
+              <div className="w-32 md:w-40 aspect-video bg-black rounded overflow-hidden border border-white/20 shadow-xl shadow-black/50">
+                <img
+                  src={`/api/thumbnail?id=${mediaId}&time=${debouncedHoverTime}`}
+                  className="w-full h-full object-cover"
+                  alt="preview"
+                />
+              </div>
+            )}
+            <div className="bg-[#1a1a1a] text-white text-[11px] font-bold px-2 py-1 rounded shadow-md border border-white/10">
+              {formatTime(hoverTime)}
+            </div>
           </div>
         )}
       </div>

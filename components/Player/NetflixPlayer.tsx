@@ -556,6 +556,8 @@ export default function NetflixPlayer({
             duration={state.duration}
             bufferedEnd={state.bufferedEnd}
             onSeek={wpSeek}
+            videoSrc={videoSrc}
+            mediaId={mediaId}
           />
 
           {/* Single row: all controls */}
@@ -680,6 +682,8 @@ export default function NetflixPlayer({
             duration={state.duration}
             bufferedEnd={state.bufferedEnd}
             onSeek={wpSeek}
+            videoSrc={videoSrc}
+            mediaId={mediaId}
           />
 
           {/* Time */}
@@ -818,6 +822,8 @@ export default function NetflixPlayer({
           duration={state.duration}
           bufferedEnd={state.bufferedEnd}
           onSeek={wpSeek}
+          videoSrc={videoSrc}
+          mediaId={mediaId}
         />
 
         {/* Controls row */}

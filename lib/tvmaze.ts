@@ -1,5 +1,5 @@
 import { MediaEntry } from "./db";
-import { normalize, downloadPoster } from "./omdb"; // We can reuse the normalize utility from omdb
+import { downloadPoster } from "./omdb"; // We can reuse the normalize utility from omdb
 
 const BASE_URL = "https://api.tvmaze.com";
 

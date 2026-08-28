@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X, Compass } from "lucide-react";
 import dynamic from "next/dynamic";
-import CommandMenu from "./CommandMenu";
 import { useToast } from "@/components/Toast";
 
 const WatchPartyModal = dynamic(() => import("../WatchParty/WatchPartyModal"), { ssr: false });
@@ -15,7 +14,6 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
@@ -46,7 +44,7 @@ export default function NavBar() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setIsCommandOpen((open) => !open);
+        router.push("/search");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -211,8 +209,8 @@ export default function NavBar() {
 
         {/* Right Actions */}
         <div className={`${isDetailPage ? "hidden" : "hidden md:flex"} items-center gap-2 shrink-0`}>
-          <button
-            onClick={() => setIsCommandOpen(true)}
+          <Link
+            href="/search"
             className="flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-white/40 hover:text-white/70 hover:border-white/10 transition-all group"
           >
             <Search className="w-4 h-4" />
@@ -220,7 +218,7 @@ export default function NavBar() {
             <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white/[0.06] text-[10px] font-mono text-white/30 ml-2">
               ⌘K
             </kbd>
-          </button>
+          </Link>
 
           {/* Shuffle Button */}
           <div className="relative" ref={shuffleRef}>
@@ -377,12 +375,12 @@ export default function NavBar() {
           <div className="flex items-center gap-1 pl-1 shrink-0">
             <div className="w-[1px] h-6 bg-white/[0.08] mx-1" />
 
-            <button
-              onClick={() => setIsCommandOpen(true)}
+            <Link
+              href="/search"
               className="p-3 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
             >
               <Search className="w-5 h-5" />
-            </button>
+            </Link>
 
             <button
               onClick={() => setMobileExpanded(!mobileExpanded)}
@@ -394,7 +392,6 @@ export default function NavBar() {
         </div>
       </div>
 
-      <CommandMenu open={isCommandOpen} setOpen={setIsCommandOpen} />
       <WatchPartyModal isOpen={showPartyModal} onClose={() => setShowPartyModal(false)} />
       <QRModal isOpen={showQRModal} onClose={() => setShowQRModal(false)} />
     </>
