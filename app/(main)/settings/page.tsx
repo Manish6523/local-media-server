@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [showOfflineMedia, setShowOfflineMedia] = useState(true);
   const [showPlayOnPc, setShowPlayOnPc] = useState(true);
   const [enableAutoTrailerBg, setEnableAutoTrailerBg] = useState(true);
+  const [showDiscoverTab, setShowDiscoverTab] = useState(true);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [customVideoPlayers, setCustomVideoPlayers] = useState<CustomVideoPlayer[]>([]);
@@ -63,6 +64,7 @@ export default function SettingsPage() {
         if (data.showOfflineMedia !== undefined) setShowOfflineMedia(data.showOfflineMedia);
         if (data.showPlayOnPc !== undefined) setShowPlayOnPc(data.showPlayOnPc);
         if (data.enableAutoTrailerBg !== undefined) setEnableAutoTrailerBg(data.enableAutoTrailerBg);
+        if (data.showDiscoverTab !== undefined) setShowDiscoverTab(data.showDiscoverTab);
         if (data.customVideoPlayers) setCustomVideoPlayers(data.customVideoPlayers);
       })
       .catch(console.error);
@@ -108,7 +110,7 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg }) });
+      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab }) });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -153,9 +155,26 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ showPlayOnPc: newValue }),
       });
+      // Refresh context or force a reload so components can pick it up
+      // window.location.reload();
     } catch (err) {
       console.error(err);
       setShowPlayOnPc(!newValue); // revert on failure
+    }
+  };
+
+  const handleDiscoverTabToggle = async (newValue: boolean) => {
+    setShowDiscoverTab(newValue);
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showDiscoverTab: newValue }),
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      setShowDiscoverTab(!newValue);
     }
   };
 
@@ -332,6 +351,29 @@ export default function SettingsPage() {
                       className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
                         showOfflineMedia ? "translate-x-5" : "translate-x-0"
                       }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-medium text-sm">Discover Tab</h3>
+                    <p className="text-white/50 text-xs mt-0.5 max-w-sm">
+                      Show or hide the Discover tab in the navigation menu.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDiscoverTabToggle(!showDiscoverTab)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                      showDiscoverTab ? "bg-emerald-500" : "bg-zinc-700"
+                    }`}
+                    role="switch"
+                    aria-checked={showDiscoverTab}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        showDiscoverTab ? "translate-x-5" : "translate-x-0"
+                      } ml-1`}
                     />
                   </button>
                 </div>

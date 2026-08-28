@@ -298,7 +298,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
       </CardWrapper>
 
       {/* Top Actions (Moved outside CardWrapper to avoid overflow clipping) */}
-      {!isUnavailable && !selectionMode && (
+      {!isUnavailable && !selectionMode && media.source !== "online" && (
         <div className="absolute top-3 right-3 flex flex-col gap-2 translate-y-2 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 z-50">
           <FavoriteButton mediaId={media.id} initialIsFavorite={media.is_favorite === 1} />
           {/* Play on PC Dropdown */}

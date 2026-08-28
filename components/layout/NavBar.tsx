@@ -22,11 +22,12 @@ export default function NavBar() {
   const [isLocalNetwork, setIsLocalNetwork] = useState(true);
   const [showShuffleMenu, setShowShuffleMenu] = useState(false);
   const [shuffleLoading, setShuffleLoading] = useState(false);
+  const [showDiscoverTab, setShowDiscoverTab] = useState(true);
   const shuffleRef = useRef<HTMLDivElement>(null);
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
-    { href: "/discover", label: "Discover", icon: Compass },
+    ...(showDiscoverTab ? [{ href: "/discover", label: "Discover", icon: Compass }] : []),
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
     { href: "/favorites", label: "Favorites", icon: Heart },
@@ -35,7 +36,7 @@ export default function NavBar() {
   // Primary mobile links (always visible)
   const primaryMobileLinks = [
     { href: "/", label: "Home", icon: Home },
-    { href: "/discover", label: "Discover", icon: Compass },
+    ...(showDiscoverTab ? [{ href: "/discover", label: "Discover", icon: Compass }] : []),
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
   ];
@@ -83,6 +84,17 @@ export default function NavBar() {
       hostname.startsWith("10.") ||
       hostname.startsWith("172.");
     setIsLocalNetwork(local);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then(res => res.json())
+      .then(data => {
+        if (data.showDiscoverTab !== undefined) {
+          setShowDiscoverTab(data.showDiscoverTab);
+        }
+      })
+      .catch(console.error);
   }, []);
 
   // ── Shuffle handler ──
