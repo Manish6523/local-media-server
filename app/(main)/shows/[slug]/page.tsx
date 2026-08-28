@@ -50,6 +50,7 @@ export default function ShowDetailPage() {
   const imdbId = searchParams.get("imdb");
   const slug = params.slug as string;
   const [episodes, setEpisodes] = useState<MediaEntry[]>([]);
+  const [tvmazeEpisodes, setTvmazeEpisodes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSeason, setActiveSeason] = useState<number>(1);
   const [showPartyModal, setShowPartyModal] = useState(false);
@@ -81,7 +82,18 @@ export default function ShowDetailPage() {
           if (!data.error) {
             setEpisodes([data]);
             setBgImage(data.backdrop || data.poster || null);
-            setActiveSeason(1);
+            
+            // Fetch TVMaze episodes for online shows
+            fetch(`/api/shows/${imdbId}/episodes`)
+              .then(r => r.json())
+              .then(epData => {
+                if (Array.isArray(epData) && epData.length > 0) {
+                  setTvmazeEpisodes(epData);
+                  const seasons = [...new Set(epData.map((e: any) => e.season).filter(Boolean))].sort((a, b) => a - b);
+                  if (seasons.length > 0) setActiveSeason(seasons[0]);
+                }
+              })
+              .catch(() => {});
           } else {
             setEpisodes([]);
           }
@@ -132,13 +144,15 @@ export default function ShowDetailPage() {
   const posterSrc = show.poster || "/placeholder.jpg";
   const bgImage = show.backdrop || show.poster || "/placeholder.jpg";
 
-  const seasons = [
-    ...new Set(episodes.map((e) => e.season).filter(Boolean)),
-  ].sort((a, b) => (a ?? 0) - (b ?? 0));
+  const isOnline = show.source === "online";
 
-  const seasonEpisodes = episodes
-    .filter((e) => e.season === activeSeason)
-    .sort((a, b) => (a.episode_start ?? 0) - (b.episode_start ?? 0));
+  const seasons = isOnline
+    ? [...new Set(tvmazeEpisodes.map((e) => e.season).filter(Boolean))].sort((a, b) => a - b)
+    : [...new Set(episodes.map((e) => e.season).filter(Boolean))].sort((a, b) => (a ?? 0) - (b ?? 0));
+
+  const seasonEpisodes = isOnline
+    ? tvmazeEpisodes.filter((e) => e.season === activeSeason).sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
+    : episodes.filter((e) => e.season === activeSeason).sort((a, b) => (a.episode_start ?? 0) - (b.episode_start ?? 0));
 
   const [titleA, titleB] = splitTitle(show.title);
   const firstAvailable = seasonEpisodes.find((ep) => ep.available);
@@ -246,11 +260,11 @@ export default function ShowDetailPage() {
             <div className="flex items-center gap-4 flex-wrap">
               {show.source === "online" ? (
                 <Link
-                  href={`/player/online?imdb=${show.omdb_id}&type=show`}
+                  href={tvmazeEpisodes.length > 0 ? `/player/online?imdb=${show.omdb_id}&type=show&s=${tvmazeEpisodes[0].season}&e=${tvmazeEpisodes[0].number}` : `/player/online?imdb=${show.omdb_id}&type=show&s=1&e=1`}
                   className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-emerald-500 text-white font-bold text-xs tracking-[0.15em] uppercase hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                 >
                   <Play className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
-                  Watch Online (S1 E1)
+                  {tvmazeEpisodes.length > 0 ? `Watch S${tvmazeEpisodes[0].season} E${tvmazeEpisodes[0].number}` : "Watch Online (S1 E1)"}
                 </Link>
               ) : firstAvailable ? (
                 <Link
@@ -316,11 +330,11 @@ export default function ShowDetailPage() {
               </div>
             </div>
 
-            {show.source === "online" ? (
+            {/* Right Column Content */}
+            {isOnline && tvmazeEpisodes.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white/[0.02] rounded-xl border border-white/5 mt-4">
-                <Tv className="w-12 h-12 text-emerald-500/40 mb-4" />
-                <p className="text-white/60 font-medium mb-2">Full Series Available Online</p>
-                <p className="text-xs text-white/30">Click "Watch Online" to stream all seasons and episodes directly from 2embed.</p>
+                <Tv className="w-12 h-12 text-emerald-500/40 mb-4 animate-pulse" />
+                <p className="text-white/60 font-medium mb-2">Loading Episodes...</p>
               </div>
             ) : (
               <>
@@ -336,6 +350,36 @@ export default function ShowDetailPage() {
                 <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-0 pb-4">
                   {/* ... Render episode cards ... */}
                   {seasonEpisodes.map((ep) => {
+                    if (isOnline) {
+                      // TVMaze Episode Rendering
+                      return (
+                        <div key={`tvm-${ep.id}`} className="group relative rounded-xl overflow-hidden transition-all duration-300 hover:ring-1 hover:ring-white/10" onMouseEnter={() => setHoveredEp(ep.id)} onMouseLeave={() => setHoveredEp(null)}>
+                          <div className="relative aspect-video">
+                            <Image
+                              src={ep.image?.original || ep.image?.medium || show.backdrop || show.poster || "/placeholder.jpg"}
+                              alt={ep.name || `Episode ${ep.number}`}
+                              fill
+                              className="object-cover transition-transform duration-700 group-hover:scale-105"
+                              sizes="400px"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            <Link href={`/player/online?imdb=${show.omdb_id}&type=show&s=${ep.season}&e=${ep.number}`} className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-12 h-12 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm group-hover:border-white/60 group-hover:bg-black/40 transition-all duration-300 group-hover:scale-110">
+                                <Play className="w-5 h-5 text-emerald-400 fill-emerald-400 ml-0.5" />
+                              </div>
+                            </Link>
+                            <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                              <span className="text-[11px] font-bold text-white/70 tracking-wider uppercase truncate pr-2">
+                                {ep.number}. {ep.name}
+                              </span>
+                              {ep.runtime && <span className="text-[10px] text-white/30 font-medium shrink-0">{ep.runtime}m</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Local Episode Rendering
                     const epProgress = ep.watch_progress && ep.runtime ? Math.min(100, (ep.watch_progress / (ep.runtime * 60)) * 100) : 0;
                     return (
                       <div key={ep.id} className={`group relative rounded-xl overflow-hidden transition-all duration-300 ${!ep.available ? "opacity-35 grayscale pointer-events-none" : "hover:ring-1 hover:ring-white/10"}`} onMouseEnter={() => setHoveredEp(ep.id)} onMouseLeave={() => setHoveredEp(null)}>
@@ -593,6 +637,34 @@ export default function ShowDetailPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {seasonEpisodes.map((ep) => {
+            if (isOnline) {
+              return (
+                <div key={`mobile-tvm-${ep.id}`} className="group relative rounded-xl overflow-hidden">
+                  <div className="relative aspect-video" onMouseEnter={() => setHoveredEp(ep.id)} onMouseLeave={() => setHoveredEp(null)}>
+                    <Image
+                      src={ep.image?.original || ep.image?.medium || show.backdrop || show.poster || "/placeholder.jpg"}
+                      alt={ep.name || `Episode ${ep.number}`}
+                      fill
+                      className="object-cover"
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-20 pointer-events-none" />
+                    <Link href={`/player/online?imdb=${show.omdb_id}&type=show&s=${ep.season}&e=${ep.number}`} className="absolute inset-0 flex items-center justify-center z-30">
+                      <div className="w-11 h-11 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                        <Play className="w-4 h-4 text-emerald-400 fill-emerald-400 ml-0.5" />
+                      </div>
+                    </Link>
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between z-30 pointer-events-none">
+                      <span className="text-[10px] font-bold text-white/70 tracking-wider uppercase truncate pr-2">
+                        {ep.number}. {ep.name}
+                      </span>
+                      {ep.runtime && <span className="text-[9px] text-white/30 font-medium shrink-0">{ep.runtime}m</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             const epProgress =
               ep.watch_progress && ep.runtime
                 ? Math.min(100, (ep.watch_progress / (ep.runtime * 60)) * 100)

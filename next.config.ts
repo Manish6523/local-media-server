@@ -8,7 +8,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*", "10.191.99.203", "10.251.238.203", "172.22.147.203", "localhost"],
   serverExternalPackages: ["better-sqlite3"],
   images: {
+    unoptimized: true,
     remotePatterns: [
+      {
+        protocol:"https",
+        hostname:"*"
+      },
       {
         protocol: "https",
         hostname: "m.media-amazon.com",
@@ -20,6 +25,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "image.tmdb.org",
+      },
+      {
+        protocol: "https",
+        hostname: "static.tvmaze.com",
       },
     ],
   },

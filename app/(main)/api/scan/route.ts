@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { scanAllSources } from "@/lib/scanner";
 import { parseFilename } from "@/lib/parser";
 import { fetchOMDB } from "@/lib/omdb";
+import { fetchTVMazeShow } from "@/lib/tvmaze";
 import { getBackdropForMovie, getBackdropForShow } from "@/lib/fanart";
 import { getDb, getMediaByFilepath, upsertMedia, setConfig, updateAvailability, getConfig, deleteMissingMedia, getShowMetadataByTitle } from "@/lib/db";
 
@@ -86,23 +87,28 @@ export async function GET() {
           console.log(`[Scanner] Show "${showTitle}" not in DB yet — fetching metadata ONCE`);
           omdbCallsForShows++;
           const representative = episodeFiles[0].parsed;
-          const omdbData = await fetchOMDB(representative.title, "show", representative.year);
+          const tvmazeData = await fetchTVMazeShow(representative.title, representative.year);
           
-          if (omdbData) {
-            showMetadata = omdbData;
-            if (omdbData.omdb_id) {
-              backdropResult = await getBackdropForShow(omdbData.omdb_id);
+          if (tvmazeData) {
+            showMetadata = tvmazeData;
+            // TVMaze provides high quality posters natively
+            // But for backdrops, always use Fanart.tv first, fallback to TVMaze if not found
+            if (tvmazeData.omdb_id) {
+              backdropResult = await getBackdropForShow(tvmazeData.omdb_id);
+            }
+            if (!backdropResult && tvmazeData.poster) {
+              backdropResult = { backdropPath: tvmazeData.poster, backdropUrl: tvmazeData.backdrop_url };
             }
 
-            // Compare titles to detect OMDB mismatches
-            if (omdbData.confirmed_title) {
+            // Compare titles to detect mismatches
+            if (tvmazeData.confirmed_title) {
               const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
               const parsedNorm = normalize(representative.title);
-              const omdbNorm = normalize(omdbData.confirmed_title);
+              const tvmazeNorm = normalize(tvmazeData.confirmed_title);
               
-              if (!parsedNorm.includes(omdbNorm) && !omdbNorm.includes(parsedNorm)) {
+              if (!parsedNorm.includes(tvmazeNorm) && !tvmazeNorm.includes(parsedNorm)) {
                 omdbConfirmed = 0;
-                console.log(`[Scan] Title mismatch! Parsed: "${representative.title}", OMDB: "${omdbData.confirmed_title}"`);
+                console.log(`[Scan] Title mismatch! Parsed: "${representative.title}", TVMaze: "${tvmazeData.confirmed_title}"`);
               }
             }
           }

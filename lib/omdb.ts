@@ -123,7 +123,7 @@ export async function fetchOMDB(
  * Download a poster image to /public/posters/[imdbID].jpg
  * Skips if file already exists.
  */
-async function downloadPoster(imdbID: string, url: string): Promise<string> {
+export async function downloadPoster(imdbID: string, url: string): Promise<string> {
   const postersDir = path.join(process.cwd(), "public", "posters");
   if (!fs.existsSync(postersDir)) {
     fs.mkdirSync(postersDir, { recursive: true });
