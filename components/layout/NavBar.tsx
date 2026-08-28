@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X } from "lucide-react";
+import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X, Compass } from "lucide-react";
 import dynamic from "next/dynamic";
 import CommandMenu from "./CommandMenu";
 import { useToast } from "@/components/Toast";
@@ -28,6 +28,7 @@ export default function NavBar() {
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
+    { href: "/discover", label: "Discover", icon: Compass },
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
     { href: "/favorites", label: "Favorites", icon: Heart },
@@ -36,6 +37,7 @@ export default function NavBar() {
   // Primary mobile links (always visible)
   const primaryMobileLinks = [
     { href: "/", label: "Home", icon: Home },
+    { href: "/discover", label: "Discover", icon: Compass },
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
   ];

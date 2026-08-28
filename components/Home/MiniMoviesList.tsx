@@ -17,10 +17,16 @@ export default function MiniMoviesList({ items, title = "Movies" }: { items: Med
       </div>
 
       <div className="flex gap-4 md:gap-5 overflow-x-auto scrollbar-hide pb-6 pt-2 px-1">
-        {items.slice(0, 10).map((item) => (
+        {items.slice(0, 10).map((item) => {
+          const slug = encodeURIComponent((item.title || "Unknown").toLowerCase().replace(/\s+/g, "-"));
+          const href = item.source === "online" 
+            ? `/movies/${slug}?imdb=${item.omdb_id}` 
+            : `/player/${item.id}`;
+            
+          return (
           <Link
             key={item.id}
-            href={`/player/${item.id}`}
+            href={href}
             className="group relative w-[140px] sm:w-[160px] md:w-[180px] shrink-0"
           >
             {/* Poster Card */}
@@ -52,7 +58,8 @@ export default function MiniMoviesList({ items, title = "Movies" }: { items: Med
               </p>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

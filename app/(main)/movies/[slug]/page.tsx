@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Tag, Users, ExternalLink, MonitorPlay, Monitor, ChevronRight } from "lucide-react";
@@ -24,6 +24,8 @@ function splitTitle(title: string): [string, string] {
 
 export default function MovieDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const imdbId = searchParams.get("imdb");
   const slug = params.slug as string;
   const [movie, setMovie] = useState<MediaEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,21 +49,36 @@ export default function MovieDetailPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/media?type=movie")
-      .then((r) => r.json())
-      .then((data: MediaEntry[]) => {
-        const found = data.find(
-          (m: MediaEntry) =>
-            m.title.toLowerCase().replace(/\s+/g, "-") === decodeURIComponent(slug)
-        );
-        setMovie(found || null);
-        if (found) {
-          setBgImage(found.backdrop || found.poster || null);
-        }
-      })
-      .catch(() => setMovie(null))
-      .finally(() => setLoading(false));
-  }, [slug, setBgImage]);
+    if (imdbId) {
+      fetch(`/api/online-details?imdb=${imdbId}&type=movie`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.error) {
+            setMovie(data);
+            setBgImage(data.backdrop || data.poster || null);
+          } else {
+            setMovie(null);
+          }
+        })
+        .catch(() => setMovie(null))
+        .finally(() => setLoading(false));
+    } else {
+      fetch("/api/media?type=movie")
+        .then((r) => r.json())
+        .then((data: MediaEntry[]) => {
+          const found = data.find(
+            (m: MediaEntry) =>
+              m.title.toLowerCase().replace(/\s+/g, "-") === decodeURIComponent(slug)
+          );
+          setMovie(found || null);
+          if (found) {
+            setBgImage(found.backdrop || found.poster || null);
+          }
+        })
+        .catch(() => setMovie(null))
+        .finally(() => setLoading(false));
+    }
+  }, [slug, setBgImage, imdbId]);
 
   // Lock scroll when menu is open
   useEffect(() => {
@@ -108,6 +125,7 @@ export default function MovieDetailPage() {
           <AutoTrailerInline 
             mediaId={movie.id} 
             exactDuration={movie.exactDuration || (movie.runtime ? movie.runtime * 60 : 0)} 
+            isOnline={movie.source === "online"}
           />
         )}
 
@@ -182,6 +200,7 @@ export default function MovieDetailPage() {
                   mediaId={movie.id} 
                   exactDuration={movie.exactDuration || (movie.runtime ? movie.runtime * 60 : 0)} 
                   isMini={true} 
+                  isOnline={movie.source === "online"}
                 />
               ) : (
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-black/50">
@@ -203,7 +222,15 @@ export default function MovieDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative z-20">
-              {movie.available ? (
+              {movie.source === "online" ? (
+                <Link
+                  href={`/player/online?imdb=${movie.omdb_id}&type=movie`}
+                  className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-emerald-500 text-white font-bold text-xs tracking-[0.15em] uppercase hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  <Play className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
+                  Watch Online
+                </Link>
+              ) : movie.available ? (
                 <Link
                   href={`/player/${movie.id}`}
                   className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-white text-black font-bold text-xs tracking-[0.15em] uppercase hover:bg-white/90 transition-all"
@@ -219,7 +246,7 @@ export default function MovieDetailPage() {
               )}
 
               {/* Play on PC Dropdown */}
-              {showPlayOnPc && (
+              {showPlayOnPc && movie.source !== "online" && (
                 <div className="relative group/play">
                   <button
                   onClick={(e) => e.preventDefault()}
@@ -460,7 +487,7 @@ export default function MovieDetailPage() {
                     </p>
                     <p className="text-[11px] text-white/25 mt-0.5">
                       Source:{" "}
-                      {movie.source === "hdd" ? "External Drive" : "Local Storage"}
+                      {movie.source === "online" ? "2embed (Web)" : movie.source === "hdd" ? "External Drive" : "Local Storage"}
                     </p>
                   </div>
                 </div>

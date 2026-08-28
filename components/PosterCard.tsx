@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor, ChevronRight } from "lucide-react";
+import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor, ChevronRight, Globe } from "lucide-react";
 import { useState, useEffect } from "react";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
@@ -94,9 +94,10 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
     ? Math.min(100, Math.max(0, (media.watch_progress / (media.runtime * 60)) * 100))
     : 0;
 
-  const href = `/${media.type === "show" ? "shows" : "movies"}/${encodeURIComponent(
-    media.title.toLowerCase().replace(/\s+/g, "-")
-  )}`;
+  const slug = encodeURIComponent(media.title.toLowerCase().replace(/\s+/g, "-"));
+  const href = `/${media.type === "movie" ? "movies" : "shows"}/${slug}${
+    media.source === "online" ? `?imdb=${media.omdb_id}` : ""
+  }`;
 
   // ─── Landscape Card Variant ──────────────────────────────────
   if (variant === "landscape") {
@@ -229,6 +230,13 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           }`}
           sizes="(max-width: 768px) 45vw, (max-width: 1024px) 30vw, 200px"
         />
+
+        {/* Online Source Indicator */}
+        {media.source === "online" && (
+          <div className="absolute top-3 right-3 z-30 bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400 p-1.5 rounded-full shadow-lg">
+            <Globe className="w-3.5 h-3.5" />
+          </div>
+        )}
 
         {/* Hover Preview Video (Only for non-selection mode) */}
         {!selectionMode && !isUnavailable && (

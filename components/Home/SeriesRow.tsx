@@ -17,10 +17,16 @@ export default function SeriesRow({ items }: { items: MediaEntry[] }) {
       </div>
 
       <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-6 pt-2 px-1">
-        {items.map((item) => (
+        {items.map((item) => {
+          const slug = encodeURIComponent((item.title || "Unknown").toLowerCase().replace(/\s+/g, "-"));
+          const href = item.source === "online" 
+            ? `/shows/${slug}?imdb=${item.omdb_id}` 
+            : `/shows/${slug}`;
+            
+          return (
           <Link
             key={item.id}
-            href={`/shows/${encodeURIComponent(item.title.toLowerCase().replace(/\s+/g, "-"))}`}
+            href={href}
             className="group relative w-[260px] md:w-[320px] lg:w-[380px] shrink-0 aspect-video rounded-2xl md:rounded-[24px] overflow-hidden bg-[#111] border border-white/[0.04] shadow-2xl transition-all duration-500 hover:shadow-[0_20px_40px_-15px_rgba(56,189,248,0.25)] hover:border-cyan-500/30"
           >
             {/* Background Image */}
@@ -58,7 +64,8 @@ export default function SeriesRow({ items }: { items: MediaEntry[] }) {
               </div>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

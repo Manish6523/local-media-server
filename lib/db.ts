@@ -10,7 +10,7 @@ export interface MediaEntry {
   id: number;
   filepath: string;
   filename: string;
-  source: "local" | "hdd";
+  source: "local" | "hdd" | "online";
   type: "movie" | "show";
   title: string;
   year: number | null;
@@ -147,7 +147,7 @@ function mapToFlatEntry(asset: any, movie: any, show: any, episode: any, progres
     id: asset.id,
     filepath: asset.filepath,
     filename: asset.filename,
-    source: asset.source as "local" | "hdd",
+    source: asset.source as "local" | "hdd" | "online",
     type: asset.type as "movie" | "show",
     title: isMovie ? movie?.title : show?.title,
     year: isMovie ? movie?.year : null,

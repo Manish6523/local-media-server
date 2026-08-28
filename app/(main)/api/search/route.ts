@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchMedia, getShowOfflineMedia } from "@/lib/db";
+import { searchOnline } from "@/lib/2embed";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    let results = searchMedia(query);
-    if (!getShowOfflineMedia()) results = results.filter(m => m.available === 1);
+    const mode = searchParams.get("mode") || "local";
+
+    let results = [];
+    if (mode === "online") {
+      const [movies, shows] = await Promise.all([
+        searchOnline(query, 1, "movie"),
+        searchOnline(query, 1, "show")
+      ]);
+      results = [...movies, ...shows];
+    } else {
+      results = searchMedia(query);
+      if (!getShowOfflineMedia()) results = results.filter(m => m.available === 1);
+    }
 
     // Deduplicate shows — return one entry per unique title
     const seen = new Set<string>();

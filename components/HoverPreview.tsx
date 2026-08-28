@@ -10,9 +10,10 @@ interface HoverPreviewProps {
   isHovered: boolean;
   clipDuration?: number; // in seconds, default 15
   randomStart?: boolean; // default false (uses 10m in)
+  isOnline?: boolean;
 }
 
-export default function HoverPreview({ mediaId, runtime, exactDuration, isHovered, clipDuration = 15, randomStart = false }: HoverPreviewProps) {
+export default function HoverPreview({ mediaId, runtime, exactDuration, isHovered, clipDuration = 15, randomStart = false, isOnline = false }: HoverPreviewProps) {
   const [shouldLoad, setShouldLoad] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -61,13 +62,15 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
       // If the video hasn't been loaded yet (first hover), set the source
       if (!video.src || video.src === "") {
         video.src = `/api/stream?id=${mediaId}`;
-        video.currentTime = computedStartTime;
       }
       
       // Play and resume from wherever it was paused
-      video.play().catch(() => {
-        // Ignore auto-play errors
-      });
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Ignore auto-play errors or abort errors
+        });
+      }
     } else {
       // Just pause the video. Do NOT clear the src!
       // This "stores" the downloaded buffer locally in the browser.
@@ -95,7 +98,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
   }, [shouldLoad, computedStartTime, clipDuration]);
 
   // If it's never been hovered, don't render anything to save DOM nodes
-  if (!shouldLoad && (!videoRef.current || !videoRef.current.src)) return null;
+  if (isOnline || (!shouldLoad && (!videoRef.current || !videoRef.current.src))) return null;
 
   return (
     <div className={`absolute inset-0 z-10 overflow-hidden pointer-events-none rounded-[20px] transition-opacity duration-300 ${shouldLoad ? 'opacity-100 bg-[#111]' : 'opacity-0'}`}>
@@ -121,6 +124,8 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
             const exactStart = Math.max(0, (video.duration / 3) - 1);
             setComputedStartTime(exactStart);
             video.currentTime = exactStart;
+          } else {
+            video.currentTime = computedStartTime;
           }
         }}
       />

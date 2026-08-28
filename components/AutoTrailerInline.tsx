@@ -7,12 +7,14 @@ interface AutoTrailerInlineProps {
   mediaId: number;
   exactDuration: number;
   isMini?: boolean;
+  isOnline?: boolean;
 }
 
 export default function AutoTrailerInline({
   mediaId,
   exactDuration,
   isMini = false,
+  isOnline = false,
 }: AutoTrailerInlineProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [clips, setClips] = useState<number[]>([]);
@@ -66,25 +68,33 @@ export default function AutoTrailerInline({
 
     const handleCanPlay = () => {
       setLoading(false);
-      video.play().catch((e) => {
-        console.error("Auto-play failed:", e);
-      });
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Ignore auto-play errors or abort errors
+        });
+      }
     };
     
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
+    const handleLoadedMetadata = () => {
+      video.currentTime = clips[0];
+    };
+
     video.addEventListener("canplay", handleCanPlay);
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
     
     video.src = streamUrl;
-    video.currentTime = clips[0];
 
     return () => {
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
     };
   }, [clips, mediaId, trailerFinished]);
 
@@ -124,7 +134,7 @@ export default function AutoTrailerInline({
     };
   }, [clips, currentClipIndex, trailerFinished]);
 
-  if (error || trailerFinished) return null;
+  if (isOnline || error || trailerFinished) return null;
 
   return (
     <div className={isMini ? "relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-black/50 bg-zinc-900 group" : "absolute inset-0 z-0 overflow-hidden"}>
@@ -167,7 +177,10 @@ export default function AutoTrailerInline({
               if (newHiddenState) {
                 videoRef.current.pause();
               } else {
-                videoRef.current.play().catch(console.error);
+                const p = videoRef.current.play();
+                if (p !== undefined) {
+                  p.catch(() => {});
+                }
               }
             }
           }}

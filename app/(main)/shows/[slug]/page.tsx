@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -46,6 +46,8 @@ function splitTitle(title: string): [string, string] {
 
 export default function ShowDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const imdbId = searchParams.get("imdb");
   const slug = params.slug as string;
   const [episodes, setEpisodes] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,28 +74,44 @@ export default function ShowDetailPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/media?type=show")
-      .then((r) => r.json())
-      .then((data: MediaEntry[]) => {
-        const filtered = data.filter(
-          (m: MediaEntry) =>
-            m.title.toLowerCase().replace(/\s+/g, "-") ===
-            decodeURIComponent(slug),
-        );
-        setEpisodes(filtered);
-        if (filtered.length > 0) {
-          setBgImage(filtered[0].backdrop || filtered[0].poster || null);
-          const seasons = [
-            ...new Set(
-              filtered.map((e: MediaEntry) => e.season).filter(Boolean),
-            ),
-          ].sort((a, b) => (a ?? 0) - (b ?? 0));
-          if (seasons.length > 0) setActiveSeason(seasons[0] ?? 1);
-        }
-      })
-      .catch(() => setEpisodes([]))
-      .finally(() => setLoading(false));
-  }, [slug, setBgImage]);
+    if (imdbId) {
+      fetch(`/api/online-details?imdb=${imdbId}&type=show`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.error) {
+            setEpisodes([data]);
+            setBgImage(data.backdrop || data.poster || null);
+            setActiveSeason(1);
+          } else {
+            setEpisodes([]);
+          }
+        })
+        .catch(() => setEpisodes([]))
+        .finally(() => setLoading(false));
+    } else {
+      fetch("/api/media?type=show")
+        .then((r) => r.json())
+        .then((data: MediaEntry[]) => {
+          const filtered = data.filter(
+            (m: MediaEntry) =>
+              m.title.toLowerCase().replace(/\s+/g, "-") ===
+              decodeURIComponent(slug),
+          );
+          setEpisodes(filtered);
+          if (filtered.length > 0) {
+            setBgImage(filtered[0].backdrop || filtered[0].poster || null);
+            const seasons = [
+              ...new Set(
+                filtered.map((e: MediaEntry) => e.season).filter(Boolean),
+              ),
+            ].sort((a, b) => (a ?? 0) - (b ?? 0));
+            if (seasons.length > 0) setActiveSeason(seasons[0] ?? 1);
+          }
+        })
+        .catch(() => setEpisodes([]))
+        .finally(() => setLoading(false));
+    }
+  }, [slug, setBgImage, imdbId]);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -226,7 +244,15 @@ export default function ShowDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-4 flex-wrap">
-              {firstAvailable ? (
+              {show.source === "online" ? (
+                <Link
+                  href={`/player/online?imdb=${show.omdb_id}&type=show`}
+                  className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-emerald-500 text-white font-bold text-xs tracking-[0.15em] uppercase hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  <Play className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
+                  Watch Online (S1 E1)
+                </Link>
+              ) : firstAvailable ? (
                 <Link
                   href={`/player/${firstAvailable.id}`}
                   className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-white text-black font-bold text-xs tracking-[0.15em] uppercase hover:bg-white/90 transition-all"
@@ -290,199 +316,67 @@ export default function ShowDetailPage() {
               </div>
             </div>
 
-            {/* Episodes header */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/25">
-                // {seasonEpisodes.length} Episode
-                {seasonEpisodes.length !== 1 ? "s" : ""}
-              </span>
-            </div>
+            {show.source === "online" ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white/[0.02] rounded-xl border border-white/5 mt-4">
+                <Tv className="w-12 h-12 text-emerald-500/40 mb-4" />
+                <p className="text-white/60 font-medium mb-2">Full Series Available Online</p>
+                <p className="text-xs text-white/30">Click "Watch Online" to stream all seasons and episodes directly from 2embed.</p>
+              </div>
+            ) : (
+              <>
+                {/* Episodes header */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/25">
+                    // {seasonEpisodes.length} Episode
+                    {seasonEpisodes.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
 
-            {/* Episode Cards */}
-            <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-0 pb-4">
-              {seasonEpisodes.map((ep) => {
-                const epProgress =
-                  ep.watch_progress && ep.runtime
-                    ? Math.min(
-                        100,
-                        (ep.watch_progress / (ep.runtime * 60)) * 100,
-                      )
-                    : 0;
-
-                return (
-                  <div
-                    key={ep.id}
-                    className={`group relative rounded-xl overflow-hidden transition-all duration-300 ${
-                      !ep.available
-                        ? "opacity-35 grayscale pointer-events-none"
-                        : "hover:ring-1 hover:ring-white/10"
-                    }`}
-                    onMouseEnter={() => setHoveredEp(ep.id)}
-                    onMouseLeave={() => setHoveredEp(null)}
-                  >
-                    <div className="relative aspect-video">
-                      <EpisodeThumbnail
-                        mediaAssetId={ep.id}
-                        fallbackSrc={ep.backdrop || show.backdrop || "/placeholder.jpg"}
-                        alt={`Episode ${ep.episode_start}`}
-                        sizes="400px"
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        filepath={ep.filepath}
-                        isAvailable={!!ep.available}
-                      />
-                      {/* Hover Preview Video */}
-                      {ep.available && (
-                        <HoverPreview 
-                          mediaId={ep.id} 
-                          runtime={ep.runtime} 
-                          exactDuration={ep.exactDuration} 
-                          isHovered={hoveredEp === ep.id} 
-                        />
-                      )}
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-
-                      {/* Center Play Button */}
-                      {ep.available && (
-                        <Link
-                          href={`/player/${ep.id}`}
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          <div className="w-12 h-12 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm group-hover:border-white/60 group-hover:bg-black/40 transition-all duration-300 group-hover:scale-110">
-                            <Play className="w-5 h-5 text-white fill-white ml-0.5" />
-                          </div>
-                        </Link>
-                      )}
-
-                      {/* Offline indicator */}
-                      {!ep.available && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <HardDrive className="w-6 h-6 text-red-400/60" />
-                        </div>
-                      )}
-
-                      {/* Hover Actions (top-right) */}
-                      {ep.available && hoveredEp === ep.id && (
-                        <div className="absolute top-2.5 right-2.5 flex items-center gap-2 z-[60] animate-in fade-in zoom-in-90 duration-150">
-                          {/* Play on PC Dropdown */}
-                          {showPlayOnPc && (
-                            <div className="relative group/play">
-                              <button
-                                onClick={(e) => e.preventDefault()}
-                                className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition-all duration-200 cursor-pointer"
-                                title="Play on PC"
-                              >
-                                <MonitorPlay className="w-3.5 h-3.5" />
-                              </button>
-                              
-                              {/* Sub-menu appearing to the left (with bridge padding) */}
-                              <div className="absolute right-full top-0 pr-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50">
-                                <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-right scale-95 group-hover/play:scale-100 transition-all duration-200">
-                                  <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "default" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                                    <MonitorPlay className="w-3.5 h-3.5 text-blue-400" /> Default Player
-                                  </button>
-                                  
-                                  {ep.watch_progress && ep.watch_progress > 0 ? (
-                                    <div className="relative group/vlc">
-                                      <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-pointer">
-                                        <div className="flex items-center gap-2">
-                                          <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
-                                        </div>
-                                        <ChevronRight className="w-3 h-3 text-white/40" />
-                                      </button>
-                                      <div className="absolute right-full top-0 -mt-1 pr-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
-                                        <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-right scale-95 group-hover/vlc:scale-100 transition-all duration-200">
-                                          <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "vlc", startTime: ep.watch_progress }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                                            Resume ({Math.floor(ep.watch_progress / 60)}m)
-                                          </button>
-                                          <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                                            Start Over
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                                      <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
-                                    </button>
-                                  )}
-                                  
-                                  {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
-                                  {customVideoPlayers.map((cp) => (
-                                    <button key={`custom-${cp.id}`} onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: cp.id }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
-                                      <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" /> {cp.name}
-                                    </button>
-                                  ))}
-                                </div>
+                {/* Episode Cards */}
+                <div className="space-y-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-0 pb-4">
+                  {/* ... Render episode cards ... */}
+                  {seasonEpisodes.map((ep) => {
+                    const epProgress = ep.watch_progress && ep.runtime ? Math.min(100, (ep.watch_progress / (ep.runtime * 60)) * 100) : 0;
+                    return (
+                      <div key={ep.id} className={`group relative rounded-xl overflow-hidden transition-all duration-300 ${!ep.available ? "opacity-35 grayscale pointer-events-none" : "hover:ring-1 hover:ring-white/10"}`} onMouseEnter={() => setHoveredEp(ep.id)} onMouseLeave={() => setHoveredEp(null)}>
+                        <div className="relative aspect-video">
+                          <EpisodeThumbnail mediaAssetId={ep.id} fallbackSrc={ep.backdrop || show.backdrop || "/placeholder.jpg"} alt={`Episode ${ep.episode_start}`} sizes="400px" className="object-cover transition-transform duration-700 group-hover:scale-105" filepath={ep.filepath} isAvailable={!!ep.available} />
+                          {ep.available && <HoverPreview mediaId={ep.id} runtime={ep.runtime} exactDuration={ep.exactDuration} isHovered={hoveredEp === ep.id} />}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                          {ep.available && (
+                            <Link href={`/player/${ep.id}`} className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-12 h-12 rounded-full border-2 border-white/30 flex items-center justify-center bg-black/20 backdrop-blur-sm group-hover:border-white/60 group-hover:bg-black/40 transition-all duration-300 group-hover:scale-110">
+                                <Play className="w-5 h-5 text-white fill-white ml-0.5" />
                               </div>
+                            </Link>
+                          )}
+                          {!ep.available && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <HardDrive className="w-6 h-6 text-red-400/60" />
                             </div>
                           )}
-
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedEpisodeForParty(ep);
-                              setShowPartyModal(true);
-                            }}
-                            className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-violet-500/60 hover:border-violet-400/30 transition-all duration-200 cursor-pointer"
-                            title="Watch Party"
-                          >
-                            <Users className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                            <span className="text-[11px] font-bold text-white/70 tracking-wider uppercase">Episode #{ep.episode_start}{ep.episode_end && ep.episode_end !== ep.episode_start ? `-${ep.episode_end}` : ""}</span>
+                            {ep.runtime && <span className="text-[10px] text-white/30 font-medium">{ep.runtime}m</span>}
+                          </div>
+                          {epProgress > 0 && (
+                            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/[0.06]"><div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" style={{ width: `${epProgress}%` }} /></div>
+                          )}
                         </div>
-                      )}
-
-                      {/* Episode label */}
-                      <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                        <span className="text-[11px] font-bold text-white/70 tracking-wider uppercase">
-                          Episode #{ep.episode_start}
-                          {ep.episode_end && ep.episode_end !== ep.episode_start
-                            ? `-${ep.episode_end}`
-                            : ""}
-                        </span>
-                        {ep.runtime && (
-                          <span className="text-[10px] text-white/30 font-medium">
-                            {ep.runtime}m
-                          </span>
-                        )}
                       </div>
+                    );
+                  })}
+                </div>
 
-                      {/* Progress bar */}
-                      {epProgress > 0 && (
-                        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/[0.06]">
-                          <div
-                            className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]"
-                            style={{ width: `${epProgress}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
+                {/* Season Selector (bottom right) */}
+                {seasons.length > 0 && (
+                  <div ref={seasonScrollRef} className="flex items-center justify-end gap-1 mt-2 overflow-x-auto no-scrollbar">
+                    {seasons.map((season) => (
+                      <button key={season} onClick={() => setActiveSeason(season ?? 1)} className={`px-4 py-2 text-[11px] font-bold tracking-[0.15em] uppercase whitespace-nowrap transition-all duration-200 ${activeSeason === season ? "text-white bg-white/10 border-b-2 border-white" : "text-white/25 hover:text-white/50"}`}>S{season}</button>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Season Selector (bottom right) */}
-            {seasons.length > 0 && (
-              <div
-                ref={seasonScrollRef}
-                className="flex items-center justify-end gap-1 mt-2 overflow-x-auto no-scrollbar"
-              >
-                {seasons.map((season) => (
-                  <button
-                    key={season}
-                    onClick={() => setActiveSeason(season ?? 1)}
-                    className={`px-4 py-2 text-[11px] font-bold tracking-[0.15em] uppercase whitespace-nowrap transition-all duration-200 ${
-                      activeSeason === season
-                        ? "text-white bg-white/10 border-b-2 border-white"
-                        : "text-white/25 hover:text-white/50"
-                    }`}
-                  >
-                    S{season}
-                  </button>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -622,7 +516,7 @@ export default function ShowDetailPage() {
                   </p>
                   <p className="text-[11px] text-white/25 mt-0.5">
                     Source:{" "}
-                    {show.source === "hdd" ? "External Drive" : "Local Storage"}
+                    {show.source === "online" ? "2embed (Web)" : show.source === "hdd" ? "External Drive" : "Local Storage"}
                   </p>
                 </div>
               </div>
@@ -740,6 +634,7 @@ export default function ShowDetailPage() {
                       runtime={ep.runtime} 
                       exactDuration={ep.exactDuration} 
                       isHovered={hoveredEp === ep.id} 
+                      isOnline={ep.source === "online"}
                     />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-20 pointer-events-none" />

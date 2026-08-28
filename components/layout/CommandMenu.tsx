@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Film, Tv, Sparkles, Loader2, Star } from "lucide-react";
+import { Film, Tv, Sparkles, Loader2, Star, Globe, HardDrive } from "lucide-react";
 import type { MediaEntry } from "@/lib/db";
 
 export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen: (o: boolean) => void }) {
@@ -18,6 +18,7 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchMode, setSearchMode] = useState<"local" | "online">("local");
 
   useEffect(() => {
     if (!query) {
@@ -28,7 +29,7 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&mode=${searchMode}`);
         if (res.ok) {
           const data = await res.json();
           setResults(data.slice(0, 10)); // Limit to 10
@@ -41,15 +42,16 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, searchMode]);
 
   const handleSelect = (item: MediaEntry) => {
     setOpen(false);
     const slug = item.title.toLowerCase().replace(/\s+/g, "-");
+    const suffix = item.source === "online" ? `?imdb=${item.omdb_id}` : "";
     if (item.type === "movie") {
-      router.push(`/movies/${slug}`);
+      router.push(`/movies/${slug}${suffix}`);
     } else {
-      router.push(`/shows/${slug}`);
+      router.push(`/shows/${slug}${suffix}`);
     }
   };
 
@@ -60,6 +62,35 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
         value={query}
         onValueChange={setQuery}
       />
+      
+      {/* Search Mode Toggle */}
+      <div className="flex items-center justify-center p-2 border-b border-white/5 bg-black/40">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10">
+          <button
+            onClick={() => setSearchMode("local")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              searchMode === "local" 
+                ? "bg-violet-500 text-white shadow-md" 
+                : "text-white/40 hover:text-white/80"
+            }`}
+          >
+            <HardDrive className="w-3.5 h-3.5" />
+            Local Library
+          </button>
+          <button
+            onClick={() => setSearchMode("online")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              searchMode === "online" 
+                ? "bg-emerald-500 text-white shadow-md" 
+                : "text-white/40 hover:text-white/80"
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            Online (2embed)
+          </button>
+        </div>
+      </div>
+
       <CommandList>
         <CommandEmpty>
           {loading ? (
@@ -90,7 +121,12 @@ export default function CommandMenu({ open, setOpen }: { open: boolean, setOpen:
                 onSelect={() => handleSelect(item)}
                 className="flex items-center gap-4 cursor-pointer p-2.5 rounded-xl mx-1 my-0.5 transition-all duration-200 data-[selected=true]:bg-white/[0.06]"
               >
-                <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 border border-white/[0.06] bg-white/[0.03]">
+                <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 border border-white/[0.06] bg-white/[0.03] relative">
+                  {item.source === "online" && (
+                    <div className="absolute top-0 right-0 p-0.5 bg-black/60 rounded-bl-md z-10">
+                      <Globe className="w-2.5 h-2.5 text-emerald-400" />
+                    </div>
+                  )}
                   {item.poster ? (
                     <img src={item.poster} alt="" className="w-full h-full object-cover" />
                   ) : (
