@@ -414,7 +414,7 @@ export default function ShowDetailPage() {
 
                 {/* Season Selector (bottom right) */}
                 {seasons.length > 0 && (
-                  <div ref={seasonScrollRef} className="flex items-center justify-end gap-1 mt-2 overflow-x-auto no-scrollbar">
+                  <div ref={seasonScrollRef} className="flex items-center gap-1 mt-2 overflow-x-auto no-scrollbar ml-auto max-w-full">
                     {seasons.map((season) => (
                       <button key={season} onClick={() => setActiveSeason(season ?? 1)} className={`px-4 py-2 text-[11px] font-bold tracking-[0.15em] uppercase whitespace-nowrap transition-all duration-200 ${activeSeason === season ? "text-white bg-white/10 border-b-2 border-white" : "text-white/25 hover:text-white/50"}`}>S{season}</button>
                     ))}
