@@ -2,6 +2,10 @@
   "name": "vidlock",
   "version": "0.1.2",
   "private": true,
+  "author": {
+    "name": "Manish",
+    "email": "ms5392363@gmail.com"
+  },
   "main": "electron/main.js",
   "scripts": {
     "dev": "tsx server.ts",

@@ -21,7 +21,7 @@
 /public/posters
 /public/episode-thumbs
 # production
-/build
+# /build
 /data
 /dist-electron
 server.js
