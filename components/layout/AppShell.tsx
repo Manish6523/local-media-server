@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Home, Film, Tv, Users, Settings, Search, Bell, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
-import CommandMenu from "./CommandMenu";
+// import CommandMenu from "./CommandMenu";
 import { useBackground } from "@/components/BackgroundContext";
 
 const WatchPartyModal = dynamic(() => import("../WatchParty/WatchPartyModal"), { ssr: false });
@@ -152,7 +152,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <CommandMenu open={isCommandOpen} setOpen={setIsCommandOpen} />
+      {/* <CommandMenu open={isCommandOpen} setOpen={setIsCommandOpen} /> */}
       <WatchPartyModal isOpen={showPartyModal} onClose={() => setShowPartyModal(false)} />
     </div>
   );
