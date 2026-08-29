@@ -157,27 +157,6 @@ export default function SettingsPage() {
     handlePathsChange(updated);
   };
 
-  const handlePathChange = async (key: 'localPath' | 'hddPath', value: string) => {
-    if (key === 'localPath') setLocalPath(value);
-    if (key === 'hddPath') setHddPath(value);
-    
-    setSaving(true);
-    setSaved(false);
-    try {
-      await fetch("/api/config", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ [key]: value }) 
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
