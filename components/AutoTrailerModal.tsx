@@ -25,7 +25,7 @@ export default function AutoTrailerModal({
   const [error, setError] = useState(false);
   // Using requestAnimationFrame to smoothly update progress
   const [progress, setProgress] = useState(0);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | null>(null);
 
   // Constants
   const numClips = 5;
