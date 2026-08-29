@@ -8,6 +8,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["electron/**/*"],
+  "include": ["electron/**/*", "server.ts", "lib/**/*"],
   "exclude": ["node_modules", ".next"]
 }

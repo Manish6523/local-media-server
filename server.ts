@@ -8,7 +8,7 @@ import os from "os";
 import path from "path";
 
 const dev = process.env.NODE_ENV !== "production";
-const app = next({ dev });
+const app = next({ dev, webpack: true });
 const handle = app.getRequestHandler();
 
 // ─── GPU Detection ───────────────────────────────────────────────
@@ -238,7 +238,7 @@ app.prepare().then(async () => {
     if (fs.existsSync(CACHE_BASE)) {
       try {
         fs.rmSync(CACHE_BASE, { recursive: true, force: true });
-      } catch {}
+      } catch { }
     }
     process.exit(0);
   };
@@ -308,7 +308,7 @@ app.prepare().then(async () => {
     });
 
     // ── List all active rooms ────────────────────────────────────
-    socket.on("list-rooms", ({}, callback) => {
+    socket.on("list-rooms", ({ }, callback) => {
       const list: { roomCode: string; mediaId: number; hostName: string; memberCount: number }[] = [];
       rooms.forEach((room, code) => {
         list.push({
@@ -336,7 +336,7 @@ app.prepare().then(async () => {
           if (room.pendingRequests.has(socket.id)) {
             room.pendingRequests.delete(socket.id);
             socket.data.isPending = false;
-            io.to(socket.id).emit('join-declined', { 
+            io.to(socket.id).emit('join-declined', {
               guestName: guestName,
               reason: 'timeout'
             });
@@ -358,10 +358,10 @@ app.prepare().then(async () => {
           guestName: guestName,
         });
 
-        return callback({ 
-          success: false, 
-          status: 'pending', 
-          memberCount: room.members.length 
+        return callback({
+          success: false,
+          status: 'pending',
+          memberCount: room.members.length
         });
       }
 
@@ -596,7 +596,7 @@ app.prepare().then(async () => {
         joinedAt: Date.now(),
         ready: false
       });
-      
+
       // We must get the target socket and make it join the Socket.IO room
       const guestSocket = io.sockets.sockets.get(requestId);
       if (guestSocket) {
@@ -663,7 +663,7 @@ app.prepare().then(async () => {
     socket.on('cancel-join-request', ({ roomCode }) => {
       const room = rooms.get(roomCode);
       if (!room) return;
-      
+
       const request = room.pendingRequests.get(socket.id);
       if (!request) return;
 

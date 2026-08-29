@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     scrollRestoration: true
   },
   allowedDevOrigins: ["*", "10.191.99.203", "10.251.238.203", "172.22.147.203", "localhost"],
-  serverExternalPackages: ["better-sqlite3"],
+  serverExternalPackages: ["better-sqlite3", "ffmpeg-static", "ffprobe-static"],
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -33,18 +33,18 @@ const nextConfig: NextConfig = {
     ],
   },
   // Suppress Turbopack/NFT dynamic filesystem warning for browse-fs route
-  turbopack: {
-    ignoreIssue: [
-      {
-        path: "app/api/browse-fs/route.ts",
-        title: "Encountered unexpected file in NFT list",
-      },
-      {
-        path: "next.config.ts",
-        title: "Encountered unexpected file in NFT list",
-      },
-    ],
-  },
+  // turbopack: {
+  //   ignoreIssue: [
+  //     {
+  //       path: "app/api/browse-fs/route.ts",
+  //       title: "Encountered unexpected file in NFT list",
+  //     },
+  //     {
+  //       path: "next.config.ts",
+  //       title: "Encountered unexpected file in NFT list",
+  //     },
+  //   ],
+  // },
 };
 
 export default nextConfig;

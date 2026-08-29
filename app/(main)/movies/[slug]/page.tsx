@@ -245,20 +245,30 @@ export default function MovieDetailPage() {
                 </div>
               )}
 
+              <a
+                href={youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 border border-white/30 text-white font-bold text-xs tracking-[0.15em] uppercase hover:border-white/60 hover:bg-white/[0.04] transition-all"
+              >
+                <ExternalLink className="w-4 h-4 transition-transform group-hover:rotate-12" />
+                Watch the Trailer
+              </a>
+
               {/* Play on PC Dropdown */}
               {showPlayOnPc && movie.source !== "online" && (
                 <div className="relative group/play">
                   <button
                   onClick={(e) => e.preventDefault()}
-                  className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 bg-[#1a1a1a]/80 backdrop-blur-md border border-white/20 text-white font-bold text-xs tracking-[0.15em] uppercase hover:bg-white/10 transition-all cursor-pointer"
+                  title="Play on PC"
+                  className="group w-full sm:w-fit inline-flex justify-center items-center px-6 py-3.5 bg-[#1a1a1a]/80 backdrop-blur-md border border-white/20 text-white hover:bg-white/10 transition-all cursor-pointer"
                 >
-                  <MonitorPlay className="w-4 h-4 transition-transform group-hover/play:scale-110" />
-                  Play on PC
+                  <MonitorPlay className="w-5 h-5 transition-transform group-hover/play:scale-110" />
                 </button>
                 
-                {/* Sub-menu appearing below */}
-                <div className="absolute top-full left-0 pt-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50 min-w-full">
-                  <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-top scale-95 group-hover/play:scale-100 transition-all duration-200">
+                {/* Sub-menu appearing above */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50 min-w-max">
+                  <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-bottom scale-95 group-hover/play:scale-100 transition-all duration-200">
                     <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: movie.id, player: "default" }) }); }} className="px-3 py-2 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-3 cursor-pointer">
                       <MonitorPlay className="w-4 h-4 text-blue-400" /> Default Player
                     </button>
@@ -300,15 +310,7 @@ export default function MovieDetailPage() {
               </div>
             )}
 
-            <a
-                href={youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group w-full sm:w-fit inline-flex justify-center sm:justify-start items-center gap-3 px-8 py-4 border border-white/30 text-white font-bold text-xs tracking-[0.15em] uppercase hover:border-white/60 hover:bg-white/[0.04] transition-all"
-              >
-                <ExternalLink className="w-4 h-4 transition-transform group-hover:rotate-12" />
-                Watch the Trailer
-              </a>
+
             </div>
           </div>
 

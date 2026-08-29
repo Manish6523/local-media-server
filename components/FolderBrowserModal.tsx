@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Folder, ChevronRight, CornerLeftUp, Loader2, HardDrive, Home } from "lucide-react";
 
 interface FolderItem {
@@ -31,6 +32,11 @@ export default function FolderBrowserModal({ isOpen, onClose, onSelect, initialP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [platform, setPlatform] = useState<string>("linux");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -60,9 +66,9 @@ export default function FolderBrowserModal({ isOpen, onClose, onSelect, initialP
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
         className="bg-[#1a1a1a] border border-white/10 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
@@ -180,6 +186,7 @@ export default function FolderBrowserModal({ isOpen, onClose, onSelect, initialP
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

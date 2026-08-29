@@ -399,9 +399,63 @@ export default function ShowDetailPage() {
                               <HardDrive className="w-6 h-6 text-red-400/60" />
                             </div>
                           )}
-                          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between z-30 pointer-events-none">
                             <span className="text-[11px] font-bold text-white/70 tracking-wider uppercase">Episode #{ep.episode_start}{ep.episode_end && ep.episode_end !== ep.episode_start ? `-${ep.episode_end}` : ""}</span>
-                            {ep.runtime && <span className="text-[10px] text-white/30 font-medium">{ep.runtime}m</span>}
+                            <div className="flex items-center gap-2 pointer-events-auto">
+                              {ep.available && showPlayOnPc && (
+                                <div className="relative group/play">
+                                  <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                    className="w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/20 transition-all duration-200 cursor-pointer"
+                                    title="Play on PC"
+                                  >
+                                    <MonitorPlay className="w-2.5 h-2.5" />
+                                  </button>
+                                  
+                                  {/* Sub-menu appearing above */}
+                                  <div className="absolute bottom-full right-0 pb-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-[70]">
+                                    <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-bottom-right scale-95 group-hover/play:scale-100 transition-all duration-200">
+                                      <button onClick={async (e) => { e.preventDefault(); e.stopPropagation(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "default" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                                        <MonitorPlay className="w-3.5 h-3.5 text-blue-400" /> Default Player
+                                      </button>
+                                      
+                                      {ep.watch_progress && ep.watch_progress > 0 ? (
+                                        <div className="relative group/vlc">
+                                          <button className="w-full px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center justify-between gap-4 cursor-pointer">
+                                            <div className="flex items-center gap-2">
+                                              <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC
+                                            </div>
+                                            <ChevronRight className="w-3 h-3 text-white/40" />
+                                          </button>
+                                          <div className="absolute bottom-full right-0 mb-1 pb-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-[70]">
+                                            <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-bottom-right scale-95 group-hover/vlc:scale-100 transition-all duration-200">
+                                              <button onClick={async (e) => { e.preventDefault(); e.stopPropagation(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "vlc", startTime: ep.watch_progress }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                                                Resume ({Math.floor(ep.watch_progress / 60)}m)
+                                              </button>
+                                              <button onClick={async (e) => { e.preventDefault(); e.stopPropagation(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                                                Start Over
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button onClick={async (e) => { e.preventDefault(); e.stopPropagation(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: "vlc" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                                          <Monitor className="w-3.5 h-3.5 text-orange-400" /> VLC Media Player
+                                        </button>
+                                      )}
+
+                                      {customVideoPlayers.length > 0 && <div className="h-[1px] w-full bg-white/10 my-1"></div>}
+                                      {customVideoPlayers.map((cp) => (
+                                        <button key={cp.id} onClick={async (e) => { e.preventDefault(); e.stopPropagation(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: ep.id, player: cp.id }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-emerald-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
+                                          <MonitorPlay className="w-3.5 h-3.5 text-emerald-400" /> {cp.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {ep.runtime && <span className="text-[10px] text-white/30 font-medium shrink-0">{ep.runtime}m</span>}
+                            </div>
                           </div>
                           {epProgress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/[0.06]"><div className="h-full bg-gradient-to-r from-violet-500 to-cyan-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" style={{ width: `${epProgress}%` }} /></div>
