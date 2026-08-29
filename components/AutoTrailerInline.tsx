@@ -75,7 +75,7 @@ export default function AutoTrailerInline({
         });
       }
     };
-    
+
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
@@ -87,7 +87,7 @@ export default function AutoTrailerInline({
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
-    
+
     video.src = streamUrl;
 
     return () => {
@@ -109,7 +109,7 @@ export default function AutoTrailerInline({
       const elapsedInClip = video.currentTime - currentClipStart;
 
       // If we've played 30 seconds of this clip
-      if (elapsedInClip >= clipDuration || elapsedInClip < 0) {
+      if (elapsedInClip >= clipDuration) {
         const nextIndex = currentClipIndex + 1;
         
         if (nextIndex < clips.length) {
@@ -147,7 +147,7 @@ export default function AutoTrailerInline({
         muted={true}
         controls={false}
       />
-      
+
       {!isMini && (
         /* We don't need additional vignette overlays for background mode since the movie page gradients are rendered on top of us */
         null
@@ -155,7 +155,7 @@ export default function AutoTrailerInline({
 
       {isMini && (
         <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-           <div className="text-xs font-bold text-white tracking-widest uppercase">Auto-Trailer</div>
+          <div className="text-xs font-bold text-white tracking-widest uppercase">Auto-Trailer</div>
         </div>
       )}
 
@@ -179,7 +179,7 @@ export default function AutoTrailerInline({
               } else {
                 const p = videoRef.current.play();
                 if (p !== undefined) {
-                  p.catch(() => {});
+                  p.catch(() => { });
                 }
               }
             }
