@@ -6,7 +6,7 @@ import { PATHS } from "./paths";
 const FANART_API_KEY = process.env.FANART_TV_API_KEY;
 
 const client = new FanartTVClient({
-  apiKey: FANART_API_KEY || "",
+  apiKey: FANART_API_KEY || "dummy_key_for_build",
   version: "v3.2",
 });
 
