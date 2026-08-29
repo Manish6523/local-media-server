@@ -47,6 +47,7 @@ mac:
     - dmg
   icon: build/icon.png
   category: public.app-category.entertainment
+  identity: null
 
 nsis:
   oneClick: false
