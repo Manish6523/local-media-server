@@ -2,6 +2,11 @@ appId: com.manish6523.vidlock
 productName: VidLock
 copyright: Copyright © 2025 Manish6523
 
+publish:
+  provider: github
+  owner: Manish6523
+  repo: local-media-server
+
 directories:
   output: dist-electron
   buildResources: build

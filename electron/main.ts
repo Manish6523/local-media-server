@@ -7,6 +7,7 @@ import ffmpegStatic from 'ffmpeg-static';
 // @ts-ignore
 import ffprobeStatic from 'ffprobe-static';
 import dotenv from 'dotenv';
+import { autoUpdater } from 'electron-updater';
 
 const store = new Store() as any;
 let mainWindow: BrowserWindow | null = null;
@@ -202,6 +203,9 @@ app.whenReady().then(async () => {
     console.log(`[Electron] Starting server on port ${serverPort}`);
     await startServer(serverPort);
     console.log('[Electron] Server ready');
+    
+    // Check for updates
+    autoUpdater.checkForUpdatesAndNotify();
   } else {
     serverPort = 2886;
     console.log(`[Electron] Dev mode: connecting to localhost:${serverPort}`);
