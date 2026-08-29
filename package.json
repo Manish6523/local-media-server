@@ -57,7 +57,7 @@
     "@types/react-dom": "^19",
     "concurrently": "^10.0.5",
     "drizzle-kit": "^0.31.10",
-    "electron": "^44.0.0",
+    "electron": "^43.0.0",
     "electron-builder": "^26.15.3",
     "electron-icon-builder": "^2.0.1",
     "eslint": "^9",
