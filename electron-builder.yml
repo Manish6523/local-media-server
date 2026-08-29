@@ -40,7 +40,7 @@ linux:
 win:
   target:
     - nsis
-  icon: build/icon.png
+  icon: build/icon.ico
 
 mac:
   target:
@@ -54,6 +54,6 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  installerIcon: build/icon.png
-  installerHeaderIcon: build/icon.png
+  installerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
   license: LICENSE
