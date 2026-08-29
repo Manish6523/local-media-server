@@ -11,6 +11,7 @@ import { autoUpdater } from 'electron-updater';
 
 const store = new Store() as any;
 let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let serverProcess: ChildProcess | null = null;
 let serverPort = 2886; // User requested port 2886
@@ -82,6 +83,31 @@ async function startServer(port: number) {
   });
 }
 
+async function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    }
+  });
+
+  await splashWindow.loadFile('electron/splash.html');
+  splashWindow.once('ready-to-show', () => {
+    splashWindow?.show();
+  });
+  
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+}
+
 async function createWindow() {
   const windowBounds = store.get('windowBounds', {
     width: 1280,
@@ -125,19 +151,7 @@ async function createWindow() {
 
   await mainWindow.loadURL(`http://localhost:${serverPort}`);
 
-  mainWindow.on('close', (event) => {
-    if (!(app as any).isQuitting) {
-      event.preventDefault();
-      mainWindow!.hide();
-      if (!store.get('trayNotified', false)) {
-        tray?.displayBalloon({
-          title: 'VidLock',
-          content: 'VidLock is still running in the background',
-        });
-        store.set('trayNotified', true);
-      }
-    }
-  });
+  // App will now fully close when clicking 'X' because we removed the preventDefault logic
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -204,7 +218,7 @@ if (!gotTheLock) {
 }
 
 app.on('second-instance', () => {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
@@ -212,6 +226,8 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
+  await createSplashWindow();
+
   if (app.isPackaged) {
     serverPort = await findFreePort(2886);
     console.log(`[Electron] Starting server on port ${serverPort}`);
@@ -227,11 +243,16 @@ app.whenReady().then(async () => {
 
   createTray();
   await createWindow();
+  
+  // Close splash screen once main window is ready
+  if (splashWindow) {
+    splashWindow.close();
+  }
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform === 'darwin') {
-    // do nothing
+  if (process.platform !== 'darwin') {
+    app.quit();
   }
 });
 
@@ -245,6 +266,9 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   (app as any).isQuitting = true;
+  if (tray) {
+    tray.destroy();
+  }
   if (serverProcess) {
     if (process.platform === 'win32') {
       spawn('taskkill', ['/pid', serverProcess.pid!.toString(), '/f', '/t']);

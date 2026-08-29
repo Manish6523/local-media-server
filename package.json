@@ -1,6 +1,6 @@
 {
   "name": "vidlock",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "author": {
     "name": "Manish",
@@ -13,7 +13,7 @@
     "start": "set NODE_ENV=production&& tsx server.ts",
     "serve": "npm run build && npm run start",
     "lint": "eslint",
-    "electron:dev": "npm rebuild better-sqlite3 && tsc -p tsconfig.electron.json && concurrently \"npm run dev\" \"wait-on http://localhost:2886 && electron .\"",
+    "electron:dev": "npm rebuild better-sqlite3 && tsc -p tsconfig.electron.json && concurrently --kill-others \"npm run dev\" \"wait-on http://localhost:2886 && electron .\"",
     "electron:build": "npm run build && tsc -p tsconfig.electron.json && electron-builder",
     "electron:build:linux": "npm run electron:build -- --linux",
     "electron:build:win": "npm run electron:build -- --win",

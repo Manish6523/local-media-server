@@ -19,6 +19,7 @@ files:
   - lib/**/*
   - electron/main.js   # compiled electron main
   - electron/preload.js
+  - electron/splash.html
   - build/tray-icon.png
 
 extraResources:
