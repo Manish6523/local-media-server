@@ -53,6 +53,7 @@ async function startServer(port: number) {
   serverProcess = spawn(nodeExecutable, args, {
     env: {
       ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
       PORT: port.toString(),
       NODE_ENV: app.isPackaged ? 'production' : 'development',
       VIDLOCK_DATA_PATH: appDataPath,
@@ -196,6 +197,19 @@ function createTray() {
     mainWindow?.focus();
   });
 }
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
 
 app.whenReady().then(async () => {
   if (app.isPackaged) {
