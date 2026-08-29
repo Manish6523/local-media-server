@@ -2,7 +2,7 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, shell, ipcMain } from 'ele
 import { join } from 'path';
 import { createServer } from 'net';
 import Store from 'electron-store';
-import { spawn, ChildProcess } from 'child_process';
+import { fork, spawn, ChildProcess } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
 // @ts-ignore
 import ffprobeStatic from 'ffprobe-static';
@@ -47,21 +47,18 @@ async function startServer(port: number) {
   if (!app.isPackaged) return;
 
   const appDataPath = getAppDataPath();
-  const serverPath = join(process.resourcesPath, 'server.js');
-  const nodeExecutable = process.execPath;
-  const args = [serverPath];
+  const serverPath = join(app.getAppPath(), 'server.js');
 
-  serverProcess = spawn(nodeExecutable, args, {
+  serverProcess = fork(serverPath, [], {
     env: {
       ...process.env,
-      ELECTRON_RUN_AS_NODE: '1',
       PORT: port.toString(),
       NODE_ENV: app.isPackaged ? 'production' : 'development',
       VIDLOCK_DATA_PATH: appDataPath,
       FFMPEG_PATH: ffmpegStatic || 'ffmpeg',
       FFPROBE_PATH: ffprobeStatic.path || 'ffprobe',
     },
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc']
   });
 
   serverProcess.stdout?.on('data', (data) => {
@@ -149,7 +146,6 @@ async function createWindow() {
     mainWindow!.show();
   });
 
-  await mainWindow.loadURL(`http://localhost:${serverPort}`);
 
   // App will now fully close when clicking 'X' because we removed the preventDefault logic
 
@@ -228,11 +224,17 @@ app.on('second-instance', () => {
 app.whenReady().then(async () => {
   await createSplashWindow();
 
+  const logPath = join(app.getPath('userData'), 'server.log');
+  const fs = require('fs');
+  fs.writeFileSync(logPath, 'Starting VidLock...\n');
+
   if (app.isPackaged) {
     serverPort = await findFreePort(2886);
     console.log(`[Electron] Starting server on port ${serverPort}`);
+    fs.appendFileSync(logPath, `Starting server on port ${serverPort}\n`);
     await startServer(serverPort);
     console.log('[Electron] Server ready');
+    fs.appendFileSync(logPath, 'Server start complete\n');
     
     // Check for updates
     autoUpdater.checkForUpdatesAndNotify();
@@ -244,6 +246,15 @@ app.whenReady().then(async () => {
   createTray();
   await createWindow();
   
+  try {
+    fs.appendFileSync(logPath, `Loading URL: http://localhost:${serverPort}\n`);
+    await mainWindow!.loadURL(`http://localhost:${serverPort}`);
+    fs.appendFileSync(logPath, `URL Loaded successfully\n`);
+  } catch (error: any) {
+    console.error('Failed to load URL:', error);
+    fs.appendFileSync(logPath, `Failed to load URL: ${error.message}\n`);
+  }
+
   // Close splash screen once main window is ready
   if (splashWindow) {
     splashWindow.close();
