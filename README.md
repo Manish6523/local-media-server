@@ -7,7 +7,7 @@
 <p align="center">
   <em>No cloud. No accounts. No subscriptions. Just your media, beautifully presented.</em>
 </p>
-
+ 
 <p align="center">
   <img src="https://img.shields.io/github/stars/Manish6523/local-media-server?style=flat-square&color=111111&label=stars" alt="Stars">
   <img src="https://img.shields.io/github/v/release/Manish6523/local-media-server?style=flat-square&color=111111&label=release" alt="Release">
