@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-export default function OnlinePlayerPage() {
+function OnlinePlayer() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const imdbId = searchParams.get("imdb");
@@ -60,5 +60,13 @@ export default function OnlinePlayerPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function OnlinePlayerPage() {
+  return (
+    <Suspense fallback={<div className="fixed inset-0 bg-black flex items-center justify-center"><Loader2 className="w-10 h-10 text-violet-500 animate-spin" /></div>}>
+      <OnlinePlayer />
+    </Suspense>
   );
 }
