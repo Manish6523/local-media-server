@@ -56,4 +56,3 @@ nsis:
   createStartMenuShortcut: true
   installerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
-  license: LICENSE
