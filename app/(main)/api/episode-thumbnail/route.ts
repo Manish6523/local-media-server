@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { PATHS } from "@/lib/paths";
 import { getDb } from "@/lib/db";
+import { FFMPEG, FFPROBE } from "@/lib/ffmpeg";
 import * as schema from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -55,17 +57,18 @@ export async function GET(request: NextRequest) {
 
   // 1. Check if thumbnail is already cached in DB and file exists on disk
   if (episode.episodeThumbnail) {
-    const fullPath = path.join(process.cwd(), "public", episode.episodeThumbnail);
+    const filename = episode.episodeThumbnail.split("/").pop() || "";
+    const fullPath = path.join(PATHS.thumbnails, filename);
     if (fs.existsSync(fullPath)) {
       return NextResponse.json({ thumbnail: episode.episodeThumbnail });
     }
   }
 
   // Also check if file exists on disk but DB wasn't updated (edge case)
-  const thumbDir = path.join(process.cwd(), "public", "episode-thumbs");
+  const thumbDir = PATHS.thumbnails;
   const thumbFilename = `${mediaAssetId}.jpg`;
   const thumbPath = path.join(thumbDir, thumbFilename);
-  const publicPath = `/episode-thumbs/${thumbFilename}`;
+  const publicPath = PATHS.thumbnailUrl(thumbFilename);
 
   if (fs.existsSync(thumbPath)) {
     // Update DB and return
@@ -144,10 +147,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File not found on disk" }, { status: 404 });
     }
 
-    const thumbDir = path.join(process.cwd(), "public", "episode-thumbs");
+    const thumbDir = PATHS.thumbnails;
     const thumbFilename = `${mediaAssetId}.jpg`;
     const thumbPath = path.join(thumbDir, thumbFilename);
-    const publicPath = `/episode-thumbs/${thumbFilename}`;
+    const publicPath = PATHS.thumbnailUrl(thumbFilename);
 
     // Delete existing thumbnail to force regeneration
     if (fs.existsSync(thumbPath)) {
@@ -182,7 +185,7 @@ async function generateThumbnailAtTimestamp(
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const publicPath = `/episode-thumbs/${mediaAssetId}.jpg`;
+  const publicPath = PATHS.thumbnailUrl(`${mediaAssetId}.jpg`);
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -197,7 +200,7 @@ async function generateThumbnailAtTimestamp(
         outputPath,
       ];
 
-      const ffmpeg = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
+      const ffmpeg = spawn(FFMPEG, args, { stdio: ["pipe", "pipe", "pipe"] });
 
       ffmpeg.on("close", (code) => {
         if (code === 0 && fs.existsSync(outputPath)) resolve();
@@ -237,7 +240,7 @@ async function generateThumbnail(
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const publicPath = `/episode-thumbs/${mediaAssetId}.jpg`;
+  const publicPath = PATHS.thumbnailUrl(`${mediaAssetId}.jpg`);
 
   try {
     // Determine duration to use for the 1/3 mark.
@@ -262,7 +265,7 @@ async function generateThumbnail(
         outputPath,
       ];
 
-      const ffmpeg = spawn("ffmpeg", args, { stdio: ["pipe", "pipe", "pipe"] });
+      const ffmpeg = spawn(FFMPEG, args, { stdio: ["pipe", "pipe", "pipe"] });
 
       let stderr = "";
       ffmpeg.stderr?.on("data", (data: Buffer) => {
@@ -301,7 +304,7 @@ async function generateThumbnail(
     // Try a fallback: extract at 0 seconds (start of file)
     try {
       await new Promise<void>((resolve, reject) => {
-        const ffmpeg = spawn("ffmpeg", [
+        const ffmpeg = spawn(FFMPEG, [
           "-hide_banner",
           "-i", filepath,
           "-vframes", "1",
@@ -342,7 +345,7 @@ async function generateThumbnail(
  */
 function getVideoDuration(filepath: string): Promise<number> {
   return new Promise((resolve) => {
-    const ffprobe = spawn("ffprobe", [
+    const ffprobe = spawn(FFPROBE, [
       "-v", "error",
       "-show_entries", "format=duration",
       "-of", "csv=p=0",

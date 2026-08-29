@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import fs from "fs";
 import { getMediaById } from "@/lib/db";
+import { FFMPEG } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // Spawn ffmpeg to extract a single frame at the given time and output to stdout
     const ffmpegProcess = spawn(
-      "ffmpeg",
+      FFMPEG,
       [
         "-ss", time.toString(),
         "-i", media.filepath,

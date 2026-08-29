@@ -51,36 +51,26 @@ function walkDirectory(dirPath: string, source: "local" | "hdd"): FileEntry[] {
 }
 
 /**
- * Scan both local and HDD sources for video files.
+ * Scan all provided media paths for video files.
  * Checks if paths exist before scanning. Missing paths are skipped silently.
  */
 export function scanAllSources(
-  localPath: string,
-  hddPath: string
-): { files: FileEntry[]; hddConnected: boolean } {
+  mediaPaths: string[]
+): { files: FileEntry[]; connectedPaths: string[] } {
   const files: FileEntry[] = [];
-  let hddConnected = false;
+  const connectedPaths: string[] = [];
 
-  // Scan local path
-  if (fs.existsSync(localPath)) {
-    console.log(`[Scanner] Scanning local path: ${localPath}`);
-    const localFiles = walkDirectory(localPath, "local");
-    files.push(...localFiles);
-    console.log(`[Scanner] Found ${localFiles.length} video files in local path`);
-  } else {
-    console.log(`[Scanner] Local path not found, skipping: ${localPath}`);
+  for (const mediaPath of mediaPaths) {
+    if (fs.existsSync(mediaPath)) {
+      connectedPaths.push(mediaPath);
+      console.log(`[Scanner] Scanning path: ${mediaPath}`);
+      const dirFiles = walkDirectory(mediaPath, "local");
+      files.push(...dirFiles);
+      console.log(`[Scanner] Found ${dirFiles.length} video files in ${mediaPath}`);
+    } else {
+      console.log(`[Scanner] Path not found or disconnected, skipping: ${mediaPath}`);
+    }
   }
 
-  // Scan HDD path
-  if (fs.existsSync(hddPath)) {
-    hddConnected = true;
-    console.log(`[Scanner] Scanning HDD path: ${hddPath}`);
-    const hddFiles = walkDirectory(hddPath, "hdd");
-    files.push(...hddFiles);
-    console.log(`[Scanner] Found ${hddFiles.length} video files on HDD`);
-  } else {
-    console.log(`[Scanner] HDD not connected, skipping: ${hddPath}`);
-  }
-
-  return { files, hddConnected };
+  return { files, connectedPaths };
 }

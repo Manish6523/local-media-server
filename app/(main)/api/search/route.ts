@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchMedia, getShowOfflineMedia } from "@/lib/db";
+import { searchMedia, getShowOfflineMedia, getConfig } from "@/lib/db";
 import { searchOnline } from "@/lib/2embed";
 
 export const dynamic = "force-dynamic";
@@ -14,14 +14,19 @@ export async function GET(request: NextRequest) {
     }
 
     const mode = searchParams.get("mode") || "local";
+    const discoverEnabled = getConfig("show_discover_tab") === "true";
 
     let results = [];
     if (mode === "online") {
-      const [movies, shows] = await Promise.all([
-        searchOnline(query, 1, "movie"),
-        searchOnline(query, 1, "show")
-      ]);
-      results = [...movies, ...shows];
+      if (discoverEnabled) {
+        const [movies, shows] = await Promise.all([
+          searchOnline(query, 1, "movie"),
+          searchOnline(query, 1, "show")
+        ]);
+        results = [...movies, ...shows];
+      } else {
+        return NextResponse.json([]);
+      }
     } else {
       results = searchMedia(query);
       if (!getShowOfflineMedia()) results = results.filter(m => m.available === 1);

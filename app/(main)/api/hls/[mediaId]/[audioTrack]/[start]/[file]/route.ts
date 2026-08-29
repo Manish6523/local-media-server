@@ -6,9 +6,10 @@ import os from "os";
 import { getMediaById } from "@/lib/db";
 import { getDetectedGPU, type GPUCapability } from "@/lib/gpu-detect";
 import { FFMPEG, FFPROBE } from "@/lib/ffmpeg";
+import { PATHS } from "@/lib/paths";
 
 export const dynamic = "force-dynamic";
-const CACHE_BASE = path.join(os.tmpdir(), "vidlock-cache");
+const CACHE_BASE = PATHS.hlsCache;
 
 // Ensure base cache dir exists
 if (!fs.existsSync(CACHE_BASE)) {
@@ -23,7 +24,7 @@ interface ActiveTranscode {
 }
 
 const activeTranscodes = new Map<string, ActiveTranscode>();
-
+ 
 // Cache ffprobe pixel format results per filepath to avoid re-probing
 const pixelFormatCache = new Map<string, boolean>();
 // Cache audio codec results per filepath+track to avoid re-probing

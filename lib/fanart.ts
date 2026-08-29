@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import FanartTVClient from "@fanart-tv/api";
+import { PATHS } from "./paths";
 
 const FANART_API_KEY = process.env.FANART_TV_API_KEY;
 
@@ -32,7 +33,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number = 4000) {
 
 async function downloadBackdrop(url: string, imdbId: string): Promise<string | null> {
   try {
-    const dir = path.join(process.cwd(), "public", "backdrops");
+    const dir = PATHS.backdrops;
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     // Use the imdbId for the filename so we can rely on it locally
@@ -41,7 +42,7 @@ async function downloadBackdrop(url: string, imdbId: string): Promise<string | n
 
     if (fs.existsSync(filepath)) {
       console.log(`[Fanart] Backdrop already exists for ${imdbId}`);
-      return `/backdrops/${filename}`;
+      return PATHS.backdropUrl(filename);
     }
 
     const res = await fetchWithTimeout(url, 5000);
@@ -51,7 +52,7 @@ async function downloadBackdrop(url: string, imdbId: string): Promise<string | n
     fs.writeFileSync(filepath, Buffer.from(buffer));
     
     console.log(`[Fanart] Downloaded backdrop for ${imdbId}`);
-    return `/backdrops/${filename}`;
+    return PATHS.backdropUrl(filename);
   } catch (error) {
     console.error(`[Fanart] Download failed for ${url}:`, error);
     return null;

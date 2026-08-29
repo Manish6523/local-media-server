@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq, like, desc, asc, and } from "drizzle-orm";
 import path from "path";
+import { PATHS } from "./paths";
 import fs from "fs";
 import crypto from "crypto";
 import * as schema from "../db/schema";
@@ -47,12 +48,7 @@ let db: ReturnType<typeof drizzle> | null = null;
 export function getDb() {
   if (db) return { sqliteDb: sqliteDb!, db };
 
-  const dbDir = path.join(process.cwd(), "db");
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  const dbPath = path.join(dbDir, "media.db");
+  const dbPath = PATHS.db;
   sqliteDb = new Database(dbPath);
   sqliteDb.pragma("journal_mode = WAL");
 
@@ -126,12 +122,15 @@ export function getDb() {
     // Generate OS-aware default path suggestions
     const isWindows = process.platform === "win32";
     const defaultLocalPath = process.env.LOCAL_MEDIA_PATH ||
-      (isWindows ? `C:\\Users\\${require("os").userInfo().username}\\Videos\\` : "");
-    const defaultHddPath = process.env.HDD_PATH || "";
+      (isWindows ? path.join(require("os").homedir(), "Videos") : "");
+
+    const initialPaths = defaultLocalPath ? [defaultLocalPath] : [];
+    if (process.env.HDD_PATH) {
+      initialPaths.push(process.env.HDD_PATH);
+    }
 
     db.insert(schema.config).values([
-      { key: "local_path", value: defaultLocalPath },
-      { key: "hdd_path", value: defaultHddPath },
+      { key: "media_paths", value: JSON.stringify(initialPaths) },
       { key: "last_scan", value: null },
     ]).onConflictDoNothing().run();
   }
@@ -389,8 +388,6 @@ export function getMediaStats(): { totalMovies: number; totalShows: number; tota
   };
 }
 
-// ---- Config helpers ----
-
 export function getConfig(key: string): string | null {
   const { db } = getDb();
   const row = db.select().from(schema.config).where(eq(schema.config.key, key)).get();
@@ -400,6 +397,20 @@ export function getConfig(key: string): string | null {
 export function setConfig(key: string, value: string | null): void {
   const { db } = getDb();
   db.insert(schema.config).values({ key, value }).onConflictDoUpdate({ target: schema.config.key, set: { value } }).run();
+}
+
+export function getMediaPaths(): string[] {
+  const val = getConfig("media_paths");
+  if (!val) return [];
+  try {
+    return JSON.parse(val);
+  } catch {
+    return [];
+  }
+}
+
+export function setMediaPaths(paths: string[]): void {
+  setConfig("media_paths", JSON.stringify(paths));
 }
 
 // ---- Show offline media setting ----

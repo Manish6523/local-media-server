@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Play, ChevronLeft, ChevronRight, Star, Clock } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Star, Clock, FolderPlus, Scan, Film } from "lucide-react";
 import { useBackground } from "@/components/BackgroundContext";
 import type { MediaEntry } from "@/lib/db";
 
@@ -36,24 +36,70 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
 
   if (!items || items.length === 0) {
     return (
-      <div className="relative w-full min-h-[60vh] flex items-center justify-center">
-        <div className="text-center px-8 glass rounded-3xl p-12 max-w-lg">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+      <div className="relative w-full min-h-[85vh] flex items-center justify-center p-6 overflow-hidden">
+        {/* Background ambient glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="relative z-10 text-center max-w-5xl w-full mt-10">
+          <div className="inline-flex items-center justify-center p-5 rounded-3xl bg-white/5 border border-white/10 shadow-2xl mb-8 backdrop-blur-xl animate-in fade-in zoom-in duration-700">
+            <Film className="w-12 h-12 text-violet-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" />
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
             Welcome to{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 drop-shadow-sm">
               VidLock
             </span>
           </h1>
-          <p className="text-white/40 mb-6">
-            Your personal offline media library. Scan your files to get started.
+          
+          <p className="text-white/50 mb-16 text-xl md:text-2xl max-w-2xl mx-auto font-medium animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+            Your media universe is waiting. Let's bring it to life.
           </p>
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 text-white font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/20"
-          >
-            <Play className="w-4 h-4 fill-current" />
-            Get Started
-          </Link>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+            {/* Step 1 */}
+            <div className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-violet-500/30 rounded-3xl p-6 transition-all duration-500 overflow-hidden text-left shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                <FolderPlus className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">1. Add Folders</h3>
+              <p className="text-white/40 leading-relaxed text-sm">Tell VidLock where your movies and TV shows are stored on your computer or external drives.</p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-cyan-500/30 rounded-3xl p-6 transition-all duration-500 overflow-hidden text-left shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                <Scan className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">2. Scan Library</h3>
+              <p className="text-white/40 leading-relaxed text-sm">Our scanner will magically pull in beautiful posters, backdrops, and metadata for your files.</p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-[#46d369]/30 rounded-3xl p-6 transition-all duration-500 overflow-hidden text-left shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#46d369]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="w-12 h-12 rounded-xl bg-[#46d369]/10 text-[#46d369] flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                <Play className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">3. Enjoy</h3>
+              <p className="text-white/40 leading-relaxed text-sm">Sit back and experience your personal streaming service, completely offline and private.</p>
+            </div>
+          </div>
+
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+            <Link
+              href="/settings"
+              className="group relative inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-black font-bold text-lg hover:scale-105 transition-all duration-300"
+            >
+              <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500" />
+              <span className="relative z-10 flex items-center gap-2">
+                Get Started <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          </div>
         </div>
       </div>
     );

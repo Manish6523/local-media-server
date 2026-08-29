@@ -20,16 +20,15 @@ export interface CustomVideoPlayer {
 }
 
 export default function SettingsPage() {
-  const [localPath, setLocalPath] = useState("");
-  const [hddPath, setHddPath] = useState("");
+  const [mediaPaths, setMediaPaths] = useState<string[]>([]);
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalMovies: 0, totalShows: 0, totalFiles: 0 });
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState({ message: "", percent: 0 });
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [osPlatform, setOsPlatform] = useState<string>("");
-  const [hddExists, setHddExists] = useState<boolean | null>(null);
   const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
   const [showOfflineMedia, setShowOfflineMedia] = useState(true);
   const [showPlayOnPc, setShowPlayOnPc] = useState(true);
@@ -53,14 +52,13 @@ export default function SettingsPage() {
       .then((data) => {
         setStats({ totalMovies: data.totalMovies || 0, totalShows: data.totalShows || 0, totalFiles: data.totalFiles || 0 });
         setLastScan(data.lastScan);
-        setLocalPath(data.localPath || "");
-        setHddPath(data.hddPath || "");
       })
       .catch(console.error);
 
     fetch(`/api/config?t=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => {
+        if (data.mediaPaths !== undefined) setMediaPaths(data.mediaPaths);
         if (data.showOfflineMedia !== undefined) setShowOfflineMedia(data.showOfflineMedia);
         if (data.showPlayOnPc !== undefined) setShowPlayOnPc(data.showPlayOnPc);
         if (data.enableAutoTrailerBg !== undefined) setEnableAutoTrailerBg(data.enableAutoTrailerBg);
@@ -75,34 +73,108 @@ export default function SettingsPage() {
       .catch(console.error);
   }, []);
 
-  // Check HDD status whenever hddPath changes
-  useEffect(() => {
-    if (!hddPath) {
-      setHddExists(null);
-      return;
-    }
-    fetch(`/api/validate-path?path=${encodeURIComponent(hddPath)}`)
-      .then(r => r.json())
-      .then(data => setHddExists(data.valid))
-      .catch(() => setHddExists(false));
-  }, [hddPath]);
-
   const handleScan = async () => {
+    if (scanning) return;
     setScanning(true);
     setScanResult(null);
+    setScanProgress({ message: "Connecting...", percent: 0 });
+
     try {
-      const res = await fetch("/api/scan");
-      const data = await res.json();
-      setScanResult(data);
-      // Refresh stats
-      const statsRes = await fetch("/api/media?stats=true");
-      const statsData = await statsRes.json();
-      setStats({ totalMovies: statsData.totalMovies || 0, totalShows: statsData.totalShows || 0, totalFiles: statsData.totalFiles || 0 });
-      setLastScan(statsData.lastScan);
+      const source = new EventSource("/api/scan");
+
+      source.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.error) {
+          setScanResult({ success: false, error: data.error });
+          source.close();
+          setScanning(false);
+        } else if (data.done) {
+          setScanResult({ success: true, summary: data.summary });
+          setScanProgress({ message: "Scan complete", percent: 100 });
+          source.close();
+          
+          fetch("/api/media?stats=true")
+            .then(res => res.json())
+            .then(statsData => {
+              setStats({ totalMovies: statsData.totalMovies || 0, totalShows: statsData.totalShows || 0, totalFiles: statsData.totalFiles || 0 });
+              setLastScan(statsData.lastScan);
+            });
+            
+          setTimeout(() => setScanning(false), 1000);
+        } else {
+          setScanProgress({ message: data.message || "Scanning...", percent: data.progress || 0 });
+        }
+      };
+
+      source.onerror = () => {
+        setScanResult({ success: false, error: "Connection to scan server lost" });
+        source.close();
+        setScanning(false);
+      };
     } catch (err) {
       setScanResult({ success: false, error: String(err) });
-    } finally {
       setScanning(false);
+    }
+  };
+
+  const handlePathsChange = async (newPaths: string[]) => {
+    // Remove duplicates
+    const uniquePaths = Array.from(new Set(newPaths.filter(p => p.trim() !== "")));
+    setMediaPaths(uniquePaths);
+    
+    setSaving(true);
+    setSaved(false);
+    try {
+      await fetch("/api/config", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ mediaPaths: uniquePaths }) 
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddPath = () => {
+    if (!mediaPaths.includes("")) {
+      setMediaPaths([...mediaPaths, ""]);
+    }
+  };
+
+  const handleUpdatePath = (index: number, newPath: string) => {
+    const updated = [...mediaPaths];
+    updated[index] = newPath;
+    handlePathsChange(updated);
+  };
+
+  const handleRemovePath = (index: number) => {
+    const updated = [...mediaPaths];
+    updated.splice(index, 1);
+    handlePathsChange(updated);
+  };
+
+  const handlePathChange = async (key: 'localPath' | 'hddPath', value: string) => {
+    if (key === 'localPath') setLocalPath(value);
+    if (key === 'hddPath') setHddPath(value);
+    
+    setSaving(true);
+    setSaved(false);
+    try {
+      await fetch("/api/config", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ [key]: value }) 
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -110,7 +182,7 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPath, hddPath, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab }) });
+      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mediaPaths: mediaPaths.filter(p => p.trim() !== ""), customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab }) });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -291,40 +363,31 @@ export default function SettingsPage() {
           <div className="glass-card overflow-hidden">
             <div className="p-6 md:p-8">
               <div className="mb-4">
-                <p className="text-white/60 text-sm mb-4">Your primary media storage — always scanned.</p>
-                <FolderPicker 
-                  label="Local Media Folder"
-                  value={localPath}
-                  onChange={(val) => { setLocalPath(val); setSaved(false); }}
-                  osPlatform={osPlatform}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card overflow-hidden">
-            <div className="p-6 md:p-8">
-              <div className="mb-4">
-                <p className="text-white/60 text-sm mb-4">Only scanned when connected (e.g. portable drives).</p>
-                <FolderPicker 
-                  label="External HDD"
-                  value={hddPath}
-                  optional={true}
-                  onChange={(val) => { setHddPath(val); setSaved(false); }}
-                  osPlatform={osPlatform}
-                />
-              </div>
-              
-              {hddPath && (
-                <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full ${hddExists === true ? "bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" : hddExists === false ? "bg-zinc-600" : "bg-transparent"}`} />
-                  <span className="text-sm font-medium text-white/70">
-                    {hddExists === true ? "Connected & Ready" : hddExists === false ? "Not connected — will scan when plugged in" : "Checking status..."}
-                  </span>
+                <p className="text-white/60 text-sm mb-6">Add any number of folders containing your movies and TV shows. VidLock will scan all of them.</p>
+                <div className="space-y-6">
+                  {mediaPaths.map((path, idx) => (
+                    <div key={idx} className="relative group">
+                      <FolderPicker 
+                        label={`Media Folder ${idx + 1}`}
+                        value={path}
+                        onChange={(val) => handleUpdatePath(idx, val)}
+                        osPlatform={osPlatform}
+                      />
+                      <button
+                        onClick={() => handleRemovePath(idx)}
+                        className="absolute -top-1 -right-1 p-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full"
+                        title="Remove Folder"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {/* Show offline media toggle */}
+                
+                <Button onClick={handleAddPath} className="mt-6 bg-white/10 hover:bg-white/20 text-white border border-white/10 w-full rounded-xl py-6">
+                  + Add Another Folder
+                </Button>
+              </div>
               <div className="mt-6 pt-6 border-t border-white/5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -378,6 +441,83 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 2 - Library */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
+            <RefreshCw className="w-5 h-5 text-cyan-400" />
+            Library Scan
+          </h2>
+          
+          <div className="glass-card overflow-hidden">
+            <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10 border-b border-white/10 bg-black/20">
+              <div className="p-4 flex flex-col items-center justify-center">
+                <Film className="w-5 h-5 text-white/40 mb-1" />
+                <span className="text-2xl font-bold text-white">{stats.totalMovies}</span>
+                <span className="text-xs text-white/50 uppercase tracking-wide">Movies</span>
+              </div>
+              <div className="p-4 flex flex-col items-center justify-center">
+                <Tv className="w-5 h-5 text-white/40 mb-1" />
+                <span className="text-2xl font-bold text-white">{stats.totalShows}</span>
+                <span className="text-xs text-white/50 uppercase tracking-wide">Shows</span>
+              </div>
+              <div className="p-4 flex flex-col items-center justify-center">
+                <FileVideo className="w-5 h-5 text-white/40 mb-1" />
+                <span className="text-2xl font-bold text-white">{stats.totalFiles}</span>
+                <span className="text-xs text-white/50 uppercase tracking-wide">Files</span>
+              </div>
+              <div className="p-4 flex flex-col items-center justify-center">
+                <HardDrive className="w-5 h-5 text-white/40 mb-1" />
+                <span className="text-2xl font-bold text-white">{mediaPaths.length}</span>
+                <span className="text-xs text-white/50 uppercase tracking-wide">Folders</span>
+              </div>
+            </div>
+
+            <div className="p-6 md:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <span className="text-sm font-medium text-white/50">Last scanned: {lastScan ? new Date(lastScan).toLocaleString() : "Never"}</span>
+              </div>
+
+              <Button 
+                onClick={handleScan} 
+                disabled={scanning} 
+                className="w-full h-14 text-base font-bold bg-white text-black hover:bg-white/90 rounded-full transition-all relative overflow-hidden"
+              >
+                {scanning ? (
+                  <>
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 bg-emerald-500/20 transition-all duration-300"
+                      style={{ width: `${scanProgress.percent}%` }}
+                    />
+                    <RefreshCw className="w-5 h-5 mr-3 animate-spin relative z-10" /> 
+                    <span className="relative z-10">{scanProgress.message} ({scanProgress.percent}%)</span>
+                  </>
+                ) : "Scan for New Files"}
+              </Button>
+
+              {scanResult && (
+                <div className={`mt-6 p-5 rounded-2xl border ${scanResult.success ? "bg-[#46d369]/5 border-[#46d369]/20" : "bg-red-500/5 border-red-500/20"}`}>
+                  {scanResult.success && scanResult.summary ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2"><Check className="w-5 h-5 text-[#46d369]" /><span className="text-base font-bold text-[#46d369]">Scan Complete</span></div>
+                      <div className="flex flex-wrap gap-6 mt-3">
+                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Total Found</span> <span className="text-lg text-white font-mono">{scanResult.summary.totalFiles}</span></div>
+                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Added</span> <span className="text-lg text-[#46d369] font-mono">{scanResult.summary.new}</span></div>
+                        {scanResult.summary.deleted > 0 && (
+                          <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Removed</span> <span className="text-lg text-[#e87c03] font-mono">{scanResult.summary.deleted}</span></div>
+                        )}
+                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Skipped</span> <span className="text-lg text-white/70 font-mono">{scanResult.summary.skipped}</span></div>
+                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Errors</span> <span className={`text-lg font-mono ${scanResult.summary.errors > 0 ? "text-red-400" : "text-white/70"}`}>{scanResult.summary.errors}</span></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2"><AlertCircle className="w-5 h-5 text-red-500" /><span className="text-sm font-medium text-red-500">{scanResult.error}</span></div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -525,76 +665,6 @@ export default function SettingsPage() {
                 </ul>
               </div>
 
-            </div>
-          </div>
-        </section>
-
-        {/* Section 2 - Library */}
-        <section className="space-y-6">
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
-            <RefreshCw className="w-5 h-5 text-cyan-400" />
-            Library Scan
-          </h2>
-          
-          <div className="glass-card overflow-hidden">
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10 border-b border-white/10 bg-black/20">
-              <div className="p-4 flex flex-col items-center justify-center">
-                <Film className="w-5 h-5 text-white/40 mb-1" />
-                <span className="text-2xl font-bold text-white">{stats.totalMovies}</span>
-                <span className="text-xs text-white/50 uppercase tracking-wide">Movies</span>
-              </div>
-              <div className="p-4 flex flex-col items-center justify-center">
-                <Tv className="w-5 h-5 text-white/40 mb-1" />
-                <span className="text-2xl font-bold text-white">{stats.totalShows}</span>
-                <span className="text-xs text-white/50 uppercase tracking-wide">Shows</span>
-              </div>
-              <div className="p-4 flex flex-col items-center justify-center">
-                <FileVideo className="w-5 h-5 text-white/40 mb-1" />
-                <span className="text-2xl font-bold text-white">{stats.totalFiles}</span>
-                <span className="text-xs text-white/50 uppercase tracking-wide">Files</span>
-              </div>
-              <div className="p-4 flex flex-col items-center justify-center">
-                <HardDrive className="w-5 h-5 text-white/40 mb-1" />
-                <span className={`text-sm font-bold ${hddExists ? "text-green-400" : "text-white/40"}`}>
-                  {hddExists ? "Online" : "Offline"}
-                </span>
-                <span className="text-xs text-white/50 uppercase tracking-wide">HDD Status</span>
-              </div>
-            </div>
-
-            <div className="p-6 md:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <span className="text-sm font-medium text-white/50">Last scanned: {lastScan ? new Date(lastScan).toLocaleString() : "Never"}</span>
-              </div>
-
-              <Button 
-                onClick={handleScan} 
-                disabled={scanning} 
-                className="w-full h-14 text-base font-bold bg-white text-black hover:bg-white/90 rounded-full transition-all"
-              >
-                {scanning ? <><RefreshCw className="w-5 h-5 mr-3 animate-spin" /> Scanning Library...</> : "Scan for New Files"}
-              </Button>
-
-              {scanResult && (
-                <div className={`mt-6 p-5 rounded-2xl border ${scanResult.success ? "bg-[#46d369]/5 border-[#46d369]/20" : "bg-red-500/5 border-red-500/20"}`}>
-                  {scanResult.success && scanResult.summary ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2"><Check className="w-5 h-5 text-[#46d369]" /><span className="text-base font-bold text-[#46d369]">Scan Complete</span></div>
-                      <div className="flex flex-wrap gap-6 mt-3">
-                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Total Found</span> <span className="text-lg text-white font-mono">{scanResult.summary.totalFiles}</span></div>
-                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Added</span> <span className="text-lg text-[#46d369] font-mono">{scanResult.summary.new}</span></div>
-                        {scanResult.summary.deleted > 0 && (
-                          <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Removed</span> <span className="text-lg text-[#e87c03] font-mono">{scanResult.summary.deleted}</span></div>
-                        )}
-                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Skipped</span> <span className="text-lg text-white/70 font-mono">{scanResult.summary.skipped}</span></div>
-                        <div className="flex flex-col"><span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Errors</span> <span className={`text-lg font-mono ${scanResult.summary.errors > 0 ? "text-red-400" : "text-white/70"}`}>{scanResult.summary.errors}</span></div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2"><AlertCircle className="w-5 h-5 text-red-500" /><span className="text-sm font-medium text-red-500">{scanResult.error}</span></div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </section>

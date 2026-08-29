@@ -1,0 +1,53 @@
+appId: com.manish6523.vidlock
+productName: VidLock
+copyright: Copyright © 2025 Manish6523
+
+directories:
+  output: dist-electron
+  buildResources: build
+
+files:
+  - .next/**/*
+  - node_modules/**/*
+  - package.json
+  - server.js          # compiled server
+  - lib/**/*
+  - electron/main.js   # compiled electron main
+  - electron/preload.js
+  - build/tray-icon.png
+
+extraResources:
+  - from: node_modules/ffmpeg-static/
+    to: ffmpeg-static/
+    filter: ['**/*']
+  - from: node_modules/ffprobe-static/
+    to: ffprobe-static/
+    filter: ['**/*']
+  - .env.local
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: AudioVideo
+  icon: build/icons/
+
+win:
+  target:
+    - nsis
+  icon: build/icon.png
+
+mac:
+  target:
+    - dmg
+  icon: build/icon.png
+  category: public.app-category.entertainment
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  installerIcon: build/icon.png
+  installerHeaderIcon: build/icon.png
+  license: LICENSE

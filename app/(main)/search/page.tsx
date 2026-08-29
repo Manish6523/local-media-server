@@ -19,6 +19,22 @@ function SearchContent() {
   const [results, setResults] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchMode, setSearchMode] = useState<"local" | "online">(initialMode);
+  const [showDiscoverTab, setShowDiscoverTab] = useState(false);
+
+  // Fetch config to check if discover features are enabled
+  useEffect(() => {
+    fetch("/api/config")
+      .then(res => res.json())
+      .then(data => {
+        if (data.showDiscoverTab !== undefined) {
+          setShowDiscoverTab(data.showDiscoverTab);
+          if (!data.showDiscoverTab && initialMode === "online") {
+            setSearchMode("local");
+          }
+        }
+      })
+      .catch(console.error);
+  }, [initialMode]);
 
   // Debounced search effect
   useEffect(() => {
@@ -92,7 +108,8 @@ function SearchContent() {
         </div>
 
         {/* Source Toggle */}
-        <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-white/10">
+        {showDiscoverTab && (
+          <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-white/10">
           <button
             onClick={() => setSearchMode("local")}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
@@ -116,6 +133,7 @@ function SearchContent() {
             Online (2embed)
           </button>
         </div>
+        )}
       </div>
 
       {/* Results Area */}

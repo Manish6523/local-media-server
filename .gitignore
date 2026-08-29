@@ -22,7 +22,12 @@
 /public/episode-thumbs
 # production
 /build
-
+/data
+/dist-electron
+server.js
+server.js.map
+electron/**/*.js
+electron/**/*.js.map
 # misc
 .DS_Store
 *.pem

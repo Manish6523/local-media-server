@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { getConfig, setConfig, getShowOfflineMedia, setShowOfflineMedia, setPin, disablePin } from "@/lib/db";
+import { getConfig, setConfig, getShowOfflineMedia, setShowOfflineMedia, setPin, disablePin, getMediaPaths, setMediaPaths } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const localPath = getConfig("local_path");
-    const hddPath = getConfig("hdd_path");
+    const mediaPaths = getMediaPaths();
     const lastScan = getConfig("last_scan");
     const showOfflineMedia = getShowOfflineMedia();
     const customVideoPlayers = getConfig("custom_video_players");
@@ -16,11 +15,10 @@ export async function GET() {
     const enableAutoTrailerBgRaw = getConfig("enable_auto_trailer_bg");
     const enableAutoTrailerBg = enableAutoTrailerBgRaw === null ? true : enableAutoTrailerBgRaw === "true";
     const showDiscoverTabRaw = getConfig("show_discover_tab");
-    const showDiscoverTab = showDiscoverTabRaw === null ? true : showDiscoverTabRaw === "true";
+    const showDiscoverTab = showDiscoverTabRaw === null ? false : showDiscoverTabRaw === "true";
     console.log('[Config] GET customVideoPlayers:', customVideoPlayers);
     return NextResponse.json({ 
-      localPath, 
-      hddPath, 
+      mediaPaths,
       lastScan, 
       showOfflineMedia, 
       customVideoPlayers: customVideoPlayers ? JSON.parse(customVideoPlayers) : [],
@@ -37,10 +35,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('[Config] Received POST body:', body);
-    const { localPath, hddPath, showOfflineMedia, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab } = body;
+    const { mediaPaths, showOfflineMedia, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab } = body;
 
-    if (localPath) setConfig("local_path", path.normalize(localPath));
-    if (hddPath) setConfig("hdd_path", path.normalize(hddPath));
+    if (mediaPaths !== undefined) {
+      const normalizedPaths = Array.isArray(mediaPaths) ? mediaPaths.map(p => path.normalize(p)) : [];
+      setMediaPaths(normalizedPaths);
+    }
     if (showOfflineMedia !== undefined) {
       console.log('[Config] Saving showOfflineMedia:', showOfflineMedia);
       setShowOfflineMedia(showOfflineMedia);

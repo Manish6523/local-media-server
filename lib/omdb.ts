@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import https from "https";
 import http from "http";
+import { PATHS } from "./paths";
 
 export interface OMDBResult {
   imdbID: string;
@@ -124,7 +125,7 @@ export async function fetchOMDB(
  * Skips if file already exists.
  */
 export async function downloadPoster(imdbID: string, url: string): Promise<string> {
-  const postersDir = path.join(process.cwd(), "public", "posters");
+  const postersDir = PATHS.posters;
   if (!fs.existsSync(postersDir)) {
     fs.mkdirSync(postersDir, { recursive: true });
   }
@@ -134,13 +135,13 @@ export async function downloadPoster(imdbID: string, url: string): Promise<strin
 
   // Don't re-download
   if (fs.existsSync(filepath)) {
-    console.log(`Poster already exists: ${imdbID}`);
-    return `/posters/${filename}`;
-  }
+      console.log(`[OMDB] Poster already exists for ${imdbID}`);
+      return PATHS.posterUrl(filename);
+    }
 
   try {
     await downloadFile(url, filepath);
-    return `/posters/${filename}`;
+    return PATHS.posterUrl(filename);
   } catch (err) {
     console.error(`[OMDB] Failed to download poster for ${imdbID}:`, err);
     return `/placeholder.jpg`;
