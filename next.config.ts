@@ -43,8 +43,10 @@ const nextConfig: NextConfig = {
   //       path: "next.config.ts",
   //       title: "Encountered unexpected file in NFT list",
   //     },
-  //   ],
   // },
+  webpack: (config, { isServer }) => {
+    return config;
+  },
 };
 
 export default nextConfig;
