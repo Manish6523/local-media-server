@@ -36,6 +36,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
           
+      - name: Configure NPM cache on Windows to avoid cross-drive Next.js tracing bug
+        if: matrix.os == 'windows-latest'
+        run: npm config set cache D:\npm-cache --global
+
       - name: Install NPM dependencies
         run: npm ci || npm install
 
@@ -49,6 +53,7 @@ jobs:
       - name: Build and Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_TELEMETRY_DISABLED: 1
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
             npm run electron:build:win -- -p always
