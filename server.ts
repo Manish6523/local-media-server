@@ -7,8 +7,14 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-const dev = process.env.NODE_ENV !== "production";
-const app = next({ dev, webpack: true });
+const dev = process.env.NODE_ENV !== 'production';
+const hostname = 'localhost';
+const port = parseInt(process.env.PORT || '2886', 10);
+
+const isPackaged = process.env.IS_PACKAGED === 'true';
+const dir = isPackaged && process.env.APP_RESOURCES_PATH ? process.env.APP_RESOURCES_PATH : __dirname;
+
+const app = next({ dev, hostname, port, dir });
 const handle = app.getRequestHandler();
 
 // ─── GPU Detection ───────────────────────────────────────────────

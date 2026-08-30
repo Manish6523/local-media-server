@@ -12,7 +12,6 @@ directories:
   buildResources: build
 
 files:
-  - .next/**/*
   - node_modules/**/*
   - package.json
   - server.js          # compiled server
@@ -26,6 +25,8 @@ asarUnpack:
   - "**/*.node"
 
 extraResources:
+  - from: .next/
+    to: .next/
   - from: node_modules/ffmpeg-static/
     to: ffmpeg-static/
     filter: ['**/*']
