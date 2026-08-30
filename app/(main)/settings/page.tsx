@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [osPlatform, setOsPlatform] = useState<string>("");
+  const [appVersion, setAppVersion] = useState<string>("");
   const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
   const [showOfflineMedia, setShowOfflineMedia] = useState(true);
   const [showPlayOnPc, setShowPlayOnPc] = useState(true);
@@ -43,6 +44,7 @@ export default function SettingsPage() {
       .then(r => r.json())
       .then(data => {
         setOsPlatform(data.platform);
+        if (data.version) setAppVersion(data.version);
         if (data.gpu) setGpuInfo(data.gpu);
       })
       .catch(console.error);
@@ -285,6 +287,11 @@ export default function SettingsPage() {
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
               Settings
             </h1>
+            {appVersion && (
+              <Badge variant="outline" className="border-white/10 text-white/50 px-3 py-1 text-xs rounded-full font-bold">
+                v{appVersion}
+              </Badge>
+            )}
           </div>
           <Button onClick={handleSave} disabled={saving} className="bg-white text-black hover:bg-white/90 font-bold px-6 rounded-full transition-all">
             {saving ? "Saving..." : (saved ? <><Check className="w-4 h-4 mr-2" /> Saved</> : "Save Changes")}
