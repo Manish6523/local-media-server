@@ -80,7 +80,7 @@ export default function AutoTrailerInline({
     const handlePause = () => setIsPlaying(false);
 
     const handleLoadedMetadata = () => {
-      video.currentTime = clips[0];
+      // Native #t= fragment handles initial seek, so no manual seek needed here
     };
 
     video.addEventListener("canplay", handleCanPlay);
@@ -88,7 +88,7 @@ export default function AutoTrailerInline({
     video.addEventListener("pause", handlePause);
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
 
-    video.src = streamUrl;
+    video.src = `${streamUrl}#t=${clips[0]}`;
 
     return () => {
       video.removeEventListener("canplay", handleCanPlay);

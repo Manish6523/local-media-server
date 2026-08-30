@@ -1,0 +1,33 @@
+Starting VidLock...
+Starting server on port 2886
+[Server] [GPU] Starting hardware encoder detection...
+[GPU] Testing NVENC (Nvidia)...
+[Server] [GPU] NVENC test command: ffmpeg -v error -f lavfi -i color=black:s=256x256:d=1 -c:v h264_nvenc -f null -
+[Server] [GPU] NVENC test failed (code 4294967295), stderr: [h264_nvenc @ 00000245f953e180] Cannot load nvcuda.dll
+[vost#0:0/h264_nvenc @ 00000245f953dc80] Error while opening encoder - maybe incorrect parameters such as bit_rate, rate, width or height.
+Error while filtering: Operation not permitted
+[out#0/null @ 00000245f953cf40] Nothing was written into output file, because at least one of its streams received no packets.
+[Server] [GPU] NVENC: ✗ not available
+[GPU] Testing AMF (AMD Radeon)...
+[GPU] AMF test command: ffmpeg -v error -f lavfi -i color=black:s=256x256:d=1 -c:v h264_amf -f null -
+[Server] [GPU] AMD Radeon AMF: ✓ ready
+[Server] > VidLock ready on http://localhost:2886
+Server start complete
+Loading URL: http://localhost:2886
+[Server Error] (node:13564) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `VidLock --trace-deprecation ...` to show where the warning was created)
+URL Loaded successfully
+[Server] [Config] GET customVideoPlayers: []
+[Server] [Media API] showOfflineMedia setting: true
+[Server] [Config] GET customVideoPlayers: []
+[Server] [Media API] showOfflineMedia setting: true
+[Server] [Config] Received POST body: { mediaPaths: [ 'C:\\Users\\krish\\Downloads\\Telegram Desktop' ] }
+[Server] [Scanner] Scanning path: C:\Users\krish\Downloads\Telegram Desktop
+[Server] [Scanner] Found 7 video files in C:\Users\krish\Downloads\Telegram Desktop
+[Server] [OMDB] Poster already exists for tt3032476
+[Server Error] [OMDB] No API key configured. Skipping fetch.
+[Server Error] [OMDB] No API key configured. Skipping fetch.
+[Server] [Media API] showOfflineMedia setting: true
+[Server] [Media API] showOfflineMedia setting: true
+[Server] [Config] GET customVideoPlayers: []
+[Server] [Media API] showOfflineMedia setting: true

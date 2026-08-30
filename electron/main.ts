@@ -274,6 +274,12 @@ app.whenReady().then(async () => {
       });
     });
 
+    autoUpdater.on('download-progress', (progressObj) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-progress', progressObj);
+      }
+    });
+
     autoUpdater.on('update-downloaded', (info) => {
       dialog.showMessageBox({
         type: 'info',

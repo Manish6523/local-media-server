@@ -9,11 +9,6 @@ if (!fs.existsSync(dbPath)) {
 }
 
 const db = new Database(dbPath);
-const rows = db.prepare(`
-  SELECT ma.filename, ma.filepath, m.title, m.poster, m.backdrop, m.omdb_id 
-  FROM media_assets ma 
-  LEFT JOIN movies m ON ma.id = m.media_asset_id
-  WHERE ma.type = 'movie'
-`).all();
+const rows = db.prepare('SELECT * FROM config').all();
 console.log(JSON.stringify(rows, null, 2));
 db.close();

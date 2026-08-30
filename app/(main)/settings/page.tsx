@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay, ExternalLink } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay, ExternalLink, Compass } from "lucide-react";
 import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const [omdbApiKey, setOmdbApiKey] = useState("");
   const [fanartTvApiKey, setFanartTvApiKey] = useState("");
   const [opensubtitlesApiKey, setOpensubtitlesApiKey] = useState("");
+  const [updateProgress, setUpdateProgress] = useState<{ percent: number, bytesPerSecond: number, total: number, transferred: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/system-info")
@@ -79,6 +80,12 @@ export default function SettingsPage() {
       .then(r => r.json())
       .then(data => setPinEnabled(data.enabled))
       .catch(console.error);
+
+    if (typeof window !== "undefined" && (window as any).electronAPI?.onUpdateProgress) {
+      (window as any).electronAPI.onUpdateProgress((progress: any) => {
+        setUpdateProgress(progress);
+      });
+    }
   }, []);
 
   const handleScan = async () => {
@@ -298,6 +305,30 @@ export default function SettingsPage() {
   return (
     <AdminPinGate>
       <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-16">
+        
+        {/* System Update Progress */}
+        {updateProgress && (
+          <section className="space-y-6 mb-8">
+            <h2 className="text-xl font-bold text-white border-b border-white/10 pb-4 flex items-center gap-2 tracking-tight">
+              <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" /> System Update Downloading
+            </h2>
+            <div className="glass-card">
+              <div className="p-6 md:p-8">
+                <div className="flex justify-between text-sm text-white/70 mb-2">
+                  <span>Downloading... {Math.round(updateProgress.percent)}%</span>
+                  <span>{(updateProgress.transferred / 1024 / 1024).toFixed(1)} / {(updateProgress.total / 1024 / 1024).toFixed(1)} MB ({(updateProgress.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s)</span>
+                </div>
+                <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500 transition-all duration-300"
+                    style={{ width: `${updateProgress.percent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
       <div className="max-w-4xl mx-auto space-y-12">
         
         {/* Header */}
@@ -424,11 +455,14 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-white font-medium text-sm">Discover Tab</h3>
-                    <p className="text-white/50 text-xs mt-0.5 max-w-sm">
-                      Show or hide the Discover tab in the navigation menu.
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <Compass className="w-4 h-4 text-white/50" />
+                    <div>
+                      <h3 className="text-white font-medium text-sm">Discover Tab</h3>
+                      <p className="text-white/50 text-xs mt-0.5 max-w-sm">
+                        Show or hide the Discover tab in the navigation menu.
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleDiscoverTabToggle(!showDiscoverTab)}

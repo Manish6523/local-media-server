@@ -97,10 +97,7 @@ export default function AutoTrailerModal({
     video.addEventListener("canplay", handleCanPlay);
 
     // Use HLS.js for Safari/iOS compatibility if needed, though direct stream usually works for local mp4
-    video.src = streamUrl;
-    
-    // Jump to the first clip
-    video.currentTime = clips[0];
+    video.src = `${streamUrl}#t=${clips[0]}`;
 
     return () => {
       video.removeEventListener("canplay", handleCanPlay);

@@ -70,7 +70,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
     if (shouldLoad) {
       // If the video hasn't been loaded yet (first hover), set the source
       if (!video.src || video.src === "") {
-        video.src = `/api/stream?id=${mediaId}`;
+        video.src = `/api/stream?id=${mediaId}#t=${computedStartTime}`;
       }
       
       // Play and resume from wherever it was paused
@@ -135,11 +135,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
           }
         }}
         onLoadedData={(e) => {
-          const video = e.currentTarget;
-          if (!hasSeekedRef.current) {
-            video.currentTime = computedStartTime;
-            hasSeekedRef.current = true;
-          }
+          // Native #t= fragment handles initial seek, so no manual seek needed here
         }}
       />
 
