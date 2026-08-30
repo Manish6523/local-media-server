@@ -18,7 +18,7 @@ if (isPackaged) {
   require('module').globalPaths.push(path.join(__dirname, 'node_modules'));
 }
 
-const app = next({ dev, hostname, port, dir });
+const app = next({ dev, hostname, port, dir, webpack: true } as any);
 const handle = app.getRequestHandler();
 
 // ─── GPU Detection ───────────────────────────────────────────────

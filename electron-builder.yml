@@ -27,6 +27,8 @@ asarUnpack:
 extraResources:
   - from: .next/
     to: .next/
+  - from: public/
+    to: public/
   - from: node_modules/ffmpeg-static/
     to: ffmpeg-static/
     filter: ['**/*']

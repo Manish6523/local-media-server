@@ -4,13 +4,17 @@ import os from "os";
 const platform = os.platform();
 const arch = os.arch();
 
-// @ts-ignore
-import ffmpeg from "ffmpeg-static";
-// @ts-ignore
-import ffprobe from "ffprobe-static";
+let resolvedFfmpeg = process.env.FFMPEG_PATH || "";
+let resolvedFfprobe = process.env.FFPROBE_PATH || "";
 
-let resolvedFfmpeg = process.env.FFMPEG_PATH || (ffmpeg as string) || "ffmpeg";
-let resolvedFfprobe = process.env.FFPROBE_PATH || ffprobe.path || "ffprobe";
+if (!resolvedFfmpeg) {
+  const ffmpeg = require("ffmpeg-static");
+  resolvedFfmpeg = (ffmpeg as string) || "ffmpeg";
+}
+if (!resolvedFfprobe) {
+  const ffprobe = require("ffprobe-static");
+  resolvedFfprobe = ffprobe.path || "ffprobe";
+}
 
 // Next.js Turbopack replaces __dirname with \ROOT\ or /ROOT/ in dev mode
 if (resolvedFfmpeg.includes("ROOT")) {
