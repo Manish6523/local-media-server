@@ -19,6 +19,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [computedStartTime, setComputedStartTime] = useState(600);
+  const hasSeekedRef = useRef(false);
 
   
   // Fixed starting point fallback
@@ -55,6 +56,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
       }, 500);
     } else {
       setShouldLoad(false);
+      hasSeekedRef.current = false;
       // We don't reset isPlaying here so that if they hover back, it resumes smoothly
     }
     
@@ -130,9 +132,13 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
           if (totalSeconds === 0 && !randomStart && isFinite(video.duration) && video.duration > 0) {
             const exactStart = Math.max(0, (video.duration / 3) - 1);
             setComputedStartTime(exactStart);
-            video.currentTime = exactStart;
-          } else {
+          }
+        }}
+        onLoadedData={(e) => {
+          const video = e.currentTarget;
+          if (!hasSeekedRef.current) {
             video.currentTime = computedStartTime;
+            hasSeekedRef.current = true;
           }
         }}
       />

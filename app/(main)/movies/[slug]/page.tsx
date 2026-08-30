@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Star, Clock, Calendar, ArrowLeft, HardDrive, Tag, Users, ExternalLink, MonitorPlay, Monitor, ChevronRight } from "lucide-react";
@@ -23,6 +23,7 @@ function splitTitle(title: string): [string, string] {
 }
 
 export default function MovieDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const imdbId = searchParams.get("imdb");
@@ -139,12 +140,12 @@ export default function MovieDetailPage() {
         {/* ─── Top Bar ───────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 md:px-10 lg:px-14 pt-8 md:pt-10 pointer-events-auto">
           {/* Left: Back + Movie Title */}
-          <Link href="/movies" className="group flex items-center gap-3">
+          <button onClick={() => router.back()} className="group flex items-center gap-3 bg-transparent border-0 p-0 cursor-pointer">
             <ArrowLeft className="w-4 h-4 text-white/30 group-hover:-translate-x-1 transition-transform shrink-0" />
             <span className="text-white/40 text-[11px] font-semibold tracking-[0.25em] uppercase truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs">
               {movie.title}
             </span>
-          </Link>
+          </button>
 
           {/* Center: Hamburger */}
           <button

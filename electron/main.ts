@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, ipcMain, dialog } from 'electron';
 import { join } from 'path';
 import { createServer } from 'net';
 import Store from 'electron-store';
@@ -19,9 +19,15 @@ let serverPort = 2886; // User requested port 2886
 const fs = require('fs');
 const logPath = join(app.getPath('userData'), 'server.log');
 
-// Load personal .env.local if available (packaged or dev)
+// Load personal .env / .env.local if available (packaged or dev)
 try {
-  dotenv.config({ path: join(process.resourcesPath, '.env.local') });
+  const envLocalPath = join(process.resourcesPath, '.env.local');
+  const envPath = join(process.resourcesPath, '.env');
+  if (fs.existsSync(envLocalPath)) {
+    dotenv.config({ path: envLocalPath });
+  } else if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
 } catch {
   // Ignore if it doesn't exist
 }
@@ -250,8 +256,45 @@ app.whenReady().then(async () => {
     console.log('[Electron] Server ready');
     fs.appendFileSync(logPath, 'Server start complete\n');
     
-    // Check for updates
-    autoUpdater.checkForUpdatesAndNotify();
+    // Configure update handlers and prompt user before downloading/installing
+    autoUpdater.autoDownload = false;
+
+    autoUpdater.on('update-available', (info) => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Available',
+        message: `A new version (${info.version}) of VidLock is available. Would you like to download it now?`,
+        buttons: ['Download Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      }).then((result) => {
+        if (result.response === 0) {
+          autoUpdater.downloadUpdate();
+        }
+      });
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: 'The update has been downloaded. Restart the application to install it now?',
+        buttons: ['Restart and Install', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      }).then((result) => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
+    });
+
+    autoUpdater.on('error', (err) => {
+      console.error('[Updater Error]', err);
+      fs.appendFileSync(logPath, `[Updater Error] ${err.message || err}\n`);
+    });
+
+    autoUpdater.checkForUpdates();
   } else {
     serverPort = 2886;
     console.log(`[Electron] Dev mode: connecting to localhost:${serverPort}`);
