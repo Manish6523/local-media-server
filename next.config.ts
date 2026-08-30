@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Allow better-sqlite3 native module to work in API routes
+  outputFileTracingRoot: process.cwd(),
   experimental: {
-    scrollRestoration: true
+    scrollRestoration: true,
   },
   allowedDevOrigins: ["*", "10.191.99.203", "10.251.238.203", "172.22.147.203", "localhost"],
   serverExternalPackages: ["better-sqlite3", "ffmpeg-static", "ffprobe-static"],
