@@ -14,6 +14,10 @@ const port = parseInt(process.env.PORT || '2886', 10);
 const isPackaged = process.env.IS_PACKAGED === 'true';
 const dir = isPackaged && process.env.APP_RESOURCES_PATH ? process.env.APP_RESOURCES_PATH : __dirname;
 
+if (isPackaged) {
+  require('module').globalPaths.push(path.join(__dirname, 'node_modules'));
+}
+
 const app = next({ dev, hostname, port, dir });
 const handle = app.getRequestHandler();
 

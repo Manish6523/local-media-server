@@ -65,6 +65,7 @@ async function startServer(port: number) {
       NODE_ENV: app.isPackaged ? 'production' : 'development',
       IS_PACKAGED: app.isPackaged ? 'true' : 'false',
       APP_RESOURCES_PATH: process.resourcesPath,
+      NODE_PATH: app.isPackaged ? join(app.getAppPath(), 'node_modules') : '',
       VIDLOCK_DATA_PATH: appDataPath,
       FFMPEG_PATH: app.isPackaged ? prodFfmpeg : (ffmpegStatic || 'ffmpeg'),
       FFPROBE_PATH: app.isPackaged ? prodFfprobe : (ffprobeStatic.path || 'ffprobe'),
