@@ -38,13 +38,13 @@ jobs:
           
       - name: Install NPM dependencies
         run: npm ci || npm install
-        
-      - name: Remove WindowsApps from PATH to fix Next.js EACCES error (Windows)
+
+      - name: Remove WindowsApps from PATH (Windows EACCES workaround)
         if: matrix.os == 'windows-latest'
-        run: |
-          $newPath = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'WindowsApps' }) -join ';'
-          echo "PATH=$newPath" >> $env:GITHUB_ENV
         shell: pwsh
+        run: |
+          $newPath = ($env:PATH -split ';' | Where-Object { $_ -notlike '*WindowsApps*' }) -join ';'
+          "PATH=$newPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Build and Publish
         env:
