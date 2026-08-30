@@ -3,6 +3,7 @@ import path from "path";
 import https from "https";
 import http from "http";
 import { PATHS } from "./paths";
+import { getConfig } from "./db";
 
 export interface OMDBResult {
   imdbID: string;
@@ -29,7 +30,6 @@ export interface FetchedMetadata {
   runtime: number | null;
 }
 
-const API_KEY = process.env.OMDB_API_KEY || "";
 const BASE_URL = "http://www.omdbapi.com/";
 
 /**
@@ -44,6 +44,9 @@ export async function fetchOMDB(
   type: "movie" | "show",
   year?: number | null
 ): Promise<FetchedMetadata | null> {
+  const dbApiKey = getConfig("omdb_api_key");
+  const API_KEY = dbApiKey || process.env.OMDB_API_KEY || "";
+  
   if (!API_KEY) {
     console.warn("[OMDB] No API key configured. Skipping fetch.");
     return null;

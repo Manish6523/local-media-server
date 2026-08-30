@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay } from "lucide-react";
+import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay, ExternalLink } from "lucide-react";
 import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,9 @@ export default function SettingsPage() {
   const [pinEnabled, setPinEnabled] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [customVideoPlayers, setCustomVideoPlayers] = useState<CustomVideoPlayer[]>([]);
+  const [omdbApiKey, setOmdbApiKey] = useState("");
+  const [fanartTvApiKey, setFanartTvApiKey] = useState("");
+  const [opensubtitlesApiKey, setOpensubtitlesApiKey] = useState("");
 
   useEffect(() => {
     fetch("/api/system-info")
@@ -66,6 +69,9 @@ export default function SettingsPage() {
         if (data.enableAutoTrailerBg !== undefined) setEnableAutoTrailerBg(data.enableAutoTrailerBg);
         if (data.showDiscoverTab !== undefined) setShowDiscoverTab(data.showDiscoverTab);
         if (data.customVideoPlayers) setCustomVideoPlayers(data.customVideoPlayers);
+        if (data.omdbApiKey !== undefined) setOmdbApiKey(data.omdbApiKey);
+        if (data.fanartTvApiKey !== undefined) setFanartTvApiKey(data.fanartTvApiKey);
+        if (data.opensubtitlesApiKey !== undefined) setOpensubtitlesApiKey(data.opensubtitlesApiKey);
       })
       .catch(console.error);
 
@@ -163,7 +169,20 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mediaPaths: mediaPaths.filter(p => p.trim() !== ""), customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab }) });
+      await fetch("/api/config", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ 
+          mediaPaths: mediaPaths.filter(p => p.trim() !== ""), 
+          customVideoPlayers, 
+          showPlayOnPc, 
+          enableAutoTrailerBg, 
+          showDiscoverTab,
+          omdbApiKey,
+          fanartTvApiKey,
+          opensubtitlesApiKey
+        }) 
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -425,6 +444,81 @@ export default function SettingsPage() {
                       } ml-1`}
                     />
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 1.2 - API Keys */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
+            <Lock className="w-5 h-5 text-indigo-400" />
+            Metadata & API Keys
+          </h2>
+          
+          <div className="glass-card overflow-hidden">
+            <div className="p-6 md:p-8 space-y-6">
+              <p className="text-white/60 text-sm">
+                Configure your API keys to automatically fetch movie details, posters, and high-quality landscape backdrops.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-white/80">OMDB API Key</label>
+                    <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:underline flex items-center gap-1">
+                      Get OMDB Key <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <input
+                    type="text"
+                    value={omdbApiKey}
+                    onChange={(e) => {
+                      setOmdbApiKey(e.target.value);
+                      setSaved(false);
+                    }}
+                    placeholder="Enter your 8-digit OMDB key"
+                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-white/80">Fanart.tv API Key</label>
+                    <a href="https://fanart.tv/get-an-api-key/" target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:underline flex items-center gap-1">
+                      Get Fanart Key <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <input
+                    type="text"
+                    value={fanartTvApiKey}
+                    onChange={(e) => {
+                      setFanartTvApiKey(e.target.value);
+                      setSaved(false);
+                    }}
+                    placeholder="Enter your 32-character Fanart.tv personal API key"
+                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-white/80">OpenSubtitles API Key</label>
+                    <a href="https://www.opensubtitles.com/en/consumers" target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:underline flex items-center gap-1">
+                      Get OpenSubtitles Key <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <input
+                    type="text"
+                    value={opensubtitlesApiKey}
+                    onChange={(e) => {
+                      setOpensubtitlesApiKey(e.target.value);
+                      setSaved(false);
+                    }}
+                    placeholder="Enter your OpenSubtitles consumer API key"
+                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
+                  />
                 </div>
               </div>
             </div>

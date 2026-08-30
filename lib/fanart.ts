@@ -1,14 +1,8 @@
+import { PATHS } from "./paths";
+import { getConfig } from "./db";
 import fs from "fs";
 import path from "path";
 import FanartTVClient from "@fanart-tv/api";
-import { PATHS } from "./paths";
-
-const FANART_API_KEY = process.env.FANART_TV_API_KEY;
-
-const client = new FanartTVClient({
-  apiKey: FANART_API_KEY || "dummy_key_for_build",
-  version: "v3.2",
-});
 
 async function fetchWithTimeout(url: string, timeoutMs: number = 4000) {
   const controller = new AbortController();
@@ -60,9 +54,16 @@ async function downloadBackdrop(url: string, imdbId: string): Promise<string | n
 }
 
 export async function getBackdropForMovie(imdbId: string): Promise<{ backdropPath: string; backdropUrl: string } | null> {
+  const dbApiKey = getConfig("fanart_api_key");
+  const FANART_API_KEY = dbApiKey || process.env.FANART_TV_API_KEY;
   if (!FANART_API_KEY || !imdbId) return null;
 
   try {
+    const client = new FanartTVClient({
+      apiKey: FANART_API_KEY,
+      version: "v3.2",
+    });
+
     const data = await client.getMovie(imdbId);
     if (!data.moviebackground || data.moviebackground.length === 0) return null;
 
@@ -82,6 +83,8 @@ export async function getBackdropForMovie(imdbId: string): Promise<{ backdropPat
 }
 
 export async function getBackdropForShow(imdbId: string): Promise<{ backdropPath: string; backdropUrl: string } | null> {
+  const dbApiKey = getConfig("fanart_api_key");
+  const FANART_API_KEY = dbApiKey || process.env.FANART_TV_API_KEY;
   if (!FANART_API_KEY || !imdbId) return null;
 
   try {
@@ -102,6 +105,11 @@ export async function getBackdropForShow(imdbId: string): Promise<{ backdropPath
     }
 
     // 2. Fetch images from Fanart.tv using the TVDB ID via the SDK
+    const client = new FanartTVClient({
+      apiKey: FANART_API_KEY,
+      version: "v3.2",
+    });
+    
     const data = await client.getShow(tvdbId);
     if (!data.showbackground || data.showbackground.length === 0) return null;
 

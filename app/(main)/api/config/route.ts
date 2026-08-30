@@ -16,6 +16,12 @@ export async function GET() {
     const enableAutoTrailerBg = enableAutoTrailerBgRaw === null ? true : enableAutoTrailerBgRaw === "true";
     const showDiscoverTabRaw = getConfig("show_discover_tab");
     const showDiscoverTab = showDiscoverTabRaw === null ? false : showDiscoverTabRaw === "true";
+    
+    // API Keys
+    const omdbApiKey = getConfig("omdb_api_key") || "";
+    const fanartTvApiKey = getConfig("fanart_api_key") || "";
+    const opensubtitlesApiKey = getConfig("opensubtitles_api_key") || "";
+
     console.log('[Config] GET customVideoPlayers:', customVideoPlayers);
     return NextResponse.json({ 
       mediaPaths,
@@ -24,7 +30,10 @@ export async function GET() {
       customVideoPlayers: customVideoPlayers ? JSON.parse(customVideoPlayers) : [],
       showPlayOnPc,
       enableAutoTrailerBg,
-      showDiscoverTab
+      showDiscoverTab,
+      omdbApiKey,
+      fanartTvApiKey,
+      opensubtitlesApiKey
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -35,7 +44,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('[Config] Received POST body:', body);
-    const { mediaPaths, showOfflineMedia, customVideoPlayers, showPlayOnPc, enableAutoTrailerBg, showDiscoverTab } = body;
+    const { 
+      mediaPaths, 
+      showOfflineMedia, 
+      customVideoPlayers, 
+      showPlayOnPc, 
+      enableAutoTrailerBg, 
+      showDiscoverTab,
+      omdbApiKey,
+      fanartTvApiKey,
+      opensubtitlesApiKey
+    } = body;
 
     if (mediaPaths !== undefined) {
       const normalizedPaths = Array.isArray(mediaPaths) ? mediaPaths.map(p => path.normalize(p)) : [];
@@ -56,6 +75,15 @@ export async function POST(request: NextRequest) {
     }
     if (showDiscoverTab !== undefined) {
       setConfig("show_discover_tab", showDiscoverTab ? "true" : "false");
+    }
+    if (omdbApiKey !== undefined) {
+      setConfig("omdb_api_key", omdbApiKey);
+    }
+    if (fanartTvApiKey !== undefined) {
+      setConfig("fanart_api_key", fanartTvApiKey);
+    }
+    if (opensubtitlesApiKey !== undefined) {
+      setConfig("opensubtitles_api_key", opensubtitlesApiKey);
     }
     
     if (body.action === 'set-pin' && body.pin) {

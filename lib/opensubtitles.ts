@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { getConfig } from "./db";
 
-const API_KEY = process.env.OPENSUBTITLES_API_KEY;
 const BASE_URL = "https://api.opensubtitles.com/api/v1";
 
 export interface OSSubtitle {
@@ -13,8 +13,10 @@ export interface OSSubtitle {
 }
 
 export async function searchSubtitles(filename: string): Promise<OSSubtitle[]> {
+  const dbApiKey = getConfig("opensubtitles_api_key");
+  const API_KEY = dbApiKey || process.env.OPENSUBTITLES_API_KEY;
   if (!API_KEY) {
-    throw new Error("OPENSUBTITLES_API_KEY is not set in .env");
+    throw new Error("OPENSUBTITLES_API_KEY is not configured.");
   }
 
   // Strip extension and try to clean up filename slightly for better search results
@@ -64,8 +66,10 @@ export async function searchSubtitles(filename: string): Promise<OSSubtitle[]> {
 }
 
 export async function downloadSubtitle(file_id: number, savePath: string): Promise<void> {
+  const dbApiKey = getConfig("opensubtitles_api_key");
+  const API_KEY = dbApiKey || process.env.OPENSUBTITLES_API_KEY;
   if (!API_KEY) {
-    throw new Error("OPENSUBTITLES_API_KEY is not set in .env");
+    throw new Error("OPENSUBTITLES_API_KEY is not configured.");
   }
 
   // 1. Get download link
