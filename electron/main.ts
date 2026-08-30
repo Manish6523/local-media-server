@@ -16,6 +16,9 @@ let tray: Tray | null = null;
 let serverProcess: ChildProcess | null = null;
 let serverPort = 2886; // User requested port 2886
 
+const fs = require('fs');
+const logPath = join(app.getPath('userData'), 'server.log');
+
 // Load personal .env.local if available (packaged or dev)
 try {
   dotenv.config({ path: join(process.resourcesPath, '.env.local') });
@@ -49,24 +52,34 @@ async function startServer(port: number) {
   const appDataPath = getAppDataPath();
   const serverPath = join(app.getAppPath(), 'server.js');
 
+  const ffmpegExe = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+  const ffprobeExe = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+  
+  const prodFfmpeg = join(process.resourcesPath, 'ffmpeg-static', ffmpegExe);
+  const prodFfprobe = join(process.resourcesPath, 'ffprobe-static', 'bin', process.platform, process.arch, ffprobeExe);
+
   serverProcess = fork(serverPath, [], {
     env: {
       ...process.env,
       PORT: port.toString(),
       NODE_ENV: app.isPackaged ? 'production' : 'development',
       VIDLOCK_DATA_PATH: appDataPath,
-      FFMPEG_PATH: ffmpegStatic || 'ffmpeg',
-      FFPROBE_PATH: ffprobeStatic.path || 'ffprobe',
+      FFMPEG_PATH: app.isPackaged ? prodFfmpeg : (ffmpegStatic || 'ffmpeg'),
+      FFPROBE_PATH: app.isPackaged ? prodFfprobe : (ffprobeStatic.path || 'ffprobe'),
     },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc']
   });
 
   serverProcess.stdout?.on('data', (data) => {
-    console.log('[Server]', data.toString().trim());
+    const msg = data.toString().trim();
+    console.log('[Server]', msg);
+    fs.appendFileSync(logPath, `[Server] ${msg}\n`);
   });
 
   serverProcess.stderr?.on('data', (data) => {
-    console.error('[Server Error]', data.toString().trim());
+    const msg = data.toString().trim();
+    console.error('[Server Error]', msg);
+    fs.appendFileSync(logPath, `[Server Error] ${msg}\n`);
   });
 
   // Wait for server to be ready
@@ -224,8 +237,6 @@ app.on('second-instance', () => {
 app.whenReady().then(async () => {
   await createSplashWindow();
 
-  const logPath = join(app.getPath('userData'), 'server.log');
-  const fs = require('fs');
   fs.writeFileSync(logPath, 'Starting VidLock...\n');
 
   if (app.isPackaged) {

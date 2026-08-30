@@ -22,6 +22,9 @@ files:
   - electron/splash.html
   - build/tray-icon.png
 
+asarUnpack:
+  - "**/*.node"
+
 extraResources:
   - from: node_modules/ffmpeg-static/
     to: ffmpeg-static/
