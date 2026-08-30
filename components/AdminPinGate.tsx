@@ -10,7 +10,7 @@ export default function AdminPinGate({ children }: { children: React.ReactNode }
   const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/pin-status')
+    fetch(`/api/admin/pin-status?t=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => {
         const alreadyUnlocked = sessionStorage.getItem('admin_unlocked') === 'true'

@@ -451,24 +451,13 @@ export function getPinEnabled(): boolean {
 }
 
 export function setPin(pin: string) {
-  const { sqliteDb } = getDb();
   const hash = hashPin(pin);
-  sqliteDb.prepare(
-    `INSERT INTO config (key, value) VALUES ('admin_pin_hash', ?)
-     ON CONFLICT(key) DO UPDATE SET value = ?`
-  ).run(hash, hash);
-  sqliteDb.prepare(
-    `INSERT INTO config (key, value) VALUES ('admin_pin_enabled', 'true')
-     ON CONFLICT(key) DO UPDATE SET value = 'true'`
-  ).run();
+  setConfig("admin_pin_hash", hash);
+  setConfig("admin_pin_enabled", "true");
 }
 
 export function disablePin() {
-  const { sqliteDb } = getDb();
-  sqliteDb.prepare(
-    `INSERT INTO config (key, value) VALUES ('admin_pin_enabled', 'false')
-     ON CONFLICT(key) DO UPDATE SET value = 'false'`
-  ).run();
+  setConfig("admin_pin_enabled", "false");
 }
 
 export function verifyPin(pin: string): boolean {

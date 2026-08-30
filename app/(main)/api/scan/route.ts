@@ -5,6 +5,8 @@ import { fetchOMDB } from "@/lib/omdb";
 import { fetchTVMazeShow } from "@/lib/tvmaze";
 import { getBackdropForMovie, getBackdropForShow } from "@/lib/fanart";
 import { getDb, getMediaByFilepath, upsertMedia, setConfig, updateAvailability, getMediaPaths, deleteMissingMedia, getShowMetadataByTitle, getAllMedia } from "@/lib/db";
+import * as schema from "@/db/schema";
+import { eq } from "drizzle-orm";
 import fs from "fs";
 
 export const dynamic = "force-dynamic";
@@ -40,14 +42,10 @@ export async function GET(request: NextRequest) {
           if (parentPath && !connectedPaths.includes(parentPath)) {
             // Path disconnected
             const { db } = getDb();
-            const schema = require("@/db/schema");
-            const { eq } = require("drizzle-orm");
             db.update(schema.mediaAssets).set({ available: 0 }).where(eq(schema.mediaAssets.id, m.id)).run();
           } else if (!fs.existsSync(m.filepath)) {
             // File is missing from a connected path -> delete
             const { db } = getDb();
-            const schema = require("@/db/schema");
-            const { eq } = require("drizzle-orm");
             db.delete(schema.episodes).where(eq(schema.episodes.mediaAssetId, m.id)).run();
             db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, m.id)).run();
             db.delete(schema.playbackProgress).where(eq(schema.playbackProgress.mediaAssetId, m.id)).run();
@@ -56,8 +54,6 @@ export async function GET(request: NextRequest) {
           } else {
             // Available
             const { db } = getDb();
-            const schema = require("@/db/schema");
-            const { eq } = require("drizzle-orm");
             db.update(schema.mediaAssets).set({ available: 1 }).where(eq(schema.mediaAssets.id, m.id)).run();
           }
         }

@@ -1,0 +1,1 @@
+const db = require('better-sqlite3')('data/vidlock.db'); try { db.prepare('INSERT INTO config (key, value) VALUES (''admin_pin_enabled'', ''true'') ON CONFLICT(key) DO UPDATE SET value = ''true''').run(); console.log('ok') } catch(e) { console.error(e.message) }

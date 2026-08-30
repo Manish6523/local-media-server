@@ -67,7 +67,7 @@ export default function SettingsPage() {
       })
       .catch(console.error);
 
-    fetch("/api/admin/pin-status")
+    fetch(`/api/admin/pin-status?t=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => setPinEnabled(data.enabled))
       .catch(console.error);
