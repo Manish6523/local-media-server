@@ -43,12 +43,12 @@ jobs:
       - name: Install NPM dependencies
         run: npm ci || npm install
 
-      - name: Remove WindowsApps from PATH (Windows EACCES workaround)
+      - name: Remove WindowsApps reparse-point stubs (Windows EACCES workaround)
         if: matrix.os == 'windows-latest'
-        shell: pwsh
+        shell: cmd
         run: |
-          $newPath = ($env:PATH -split ';' | Where-Object { $_ -notlike '*WindowsApps*' }) -join ';'
-          "PATH=$newPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          rd /s /q "%LOCALAPPDATA%\Microsoft\WindowsApps" 2>nul
+          mkdir "%LOCALAPPDATA%\Microsoft\WindowsApps"
 
       - name: Build and Publish
         env:
