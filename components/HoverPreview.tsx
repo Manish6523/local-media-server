@@ -33,7 +33,14 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
         const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
         if (randomStart) {
           if (totalSeconds > clipDuration) {
-             setComputedStartTime(Math.random() * (totalSeconds - clipDuration));
+            // Pick from the middle third of the video for more interesting content
+            const middleStart = totalSeconds * 0.3;
+            const middleEnd = totalSeconds * 0.7 - clipDuration;
+            if (middleEnd > middleStart) {
+              setComputedStartTime(middleStart + Math.random() * (middleEnd - middleStart));
+            } else {
+              setComputedStartTime(Math.random() * (totalSeconds - clipDuration));
+            }
           } else {
              setComputedStartTime(0);
           }

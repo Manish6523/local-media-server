@@ -97,7 +97,12 @@ export async function GET(request: NextRequest) {
 
             if (existing) {
               showMetadata = existing;
-              backdropResult = { backdropPath: existing.backdrop, backdropUrl: existing.backdrop_url };
+              // Re-fetch backdrop if missing from cached metadata
+              if (existing.backdrop) {
+                backdropResult = { backdropPath: existing.backdrop, backdropUrl: existing.backdrop_url };
+              } else if (existing.omdb_id) {
+                backdropResult = await getBackdropForShow(existing.omdb_id);
+              }
             } else {
               omdbCallsForShows++;
               const representative = episodeFiles[0].parsed;
@@ -175,7 +180,8 @@ export async function GET(request: NextRequest) {
           try {
             const fileExisting = getMediaByFilepath(movie.file.filepath);
 
-            if (fileExisting && fileExisting.omdb_id) {
+            // Skip only if existing entry has BOTH omdb_id AND a valid poster AND a valid backdrop
+            if (fileExisting && fileExisting.omdb_id && fileExisting.poster && fileExisting.backdrop) {
               upsertMedia({
                 ...fileExisting,
                 available: 1,
@@ -185,7 +191,28 @@ export async function GET(request: NextRequest) {
               continue;
             }
 
-            const omdbData = await fetchOMDB(movie.parsed.title, "movie", movie.parsed.year);
+            // Re-use existing OMDB data if we already have an omdb_id, only fetch if missing
+            let omdbData = null;
+            if (fileExisting?.omdb_id && fileExisting.omdb_id.startsWith('tt')) {
+              // We have a valid IMDB ID, reconstruct omdbData from existing entry
+              omdbData = {
+                omdb_id: fileExisting.omdb_id,
+                confirmed_title: fileExisting.title || movie.parsed.title,
+                year: fileExisting.year,
+                poster: fileExisting.poster,
+                overview: fileExisting.overview,
+                rating: fileExisting.rating,
+                genres: fileExisting.genres,
+                runtime: fileExisting.runtime,
+              };
+              // Re-fetch poster if missing
+              if (!fileExisting.poster) {
+                const freshOmdb = await fetchOMDB(movie.parsed.title, "movie", movie.parsed.year);
+                if (freshOmdb?.poster) omdbData.poster = freshOmdb.poster;
+              }
+            } else {
+              omdbData = await fetchOMDB(movie.parsed.title, "movie", movie.parsed.year);
+            }
 
             let omdbConfirmed = 1;
             if (omdbData && omdbData.confirmed_title) {
@@ -197,8 +224,12 @@ export async function GET(request: NextRequest) {
               }
             }
 
+            // Always try to fetch backdrop if missing
             let backdropResult = null;
-            if (omdbData?.omdb_id) {
+            const existingBackdrop = fileExisting?.backdrop;
+            if (existingBackdrop) {
+              backdropResult = { backdropPath: existingBackdrop, backdropUrl: fileExisting?.backdrop_url || existingBackdrop };
+            } else if (omdbData?.omdb_id) {
               backdropResult = await getBackdropForMovie(omdbData.omdb_id);
             }
 
@@ -222,7 +253,7 @@ export async function GET(request: NextRequest) {
               runtime: omdbData?.runtime || null,
               available: 1,
               fetched_at: omdbData ? new Date().toISOString() : null,
-              omdb_confirmed: omdbConfirmed,
+              omdb_confirmed: fileExisting ? (fileExisting.omdb_confirmed ?? omdbConfirmed) : omdbConfirmed,
             });
 
             if (fileExisting) {
