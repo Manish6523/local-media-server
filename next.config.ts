@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: process.cwd(),
+  outputFileTracingRoot: path.join(__dirname),
   experimental: {
     scrollRestoration: true,
   },
