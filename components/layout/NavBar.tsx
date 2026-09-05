@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X, Compass } from "lucide-react";
+import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X, Compass, Download } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useToast } from "@/components/Toast";
 
@@ -23,7 +23,16 @@ export default function NavBar() {
   const [showShuffleMenu, setShowShuffleMenu] = useState(false);
   const [shuffleLoading, setShuffleLoading] = useState(false);
   const [showDiscoverTab, setShowDiscoverTab] = useState(true);
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const shuffleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.onUpdateProgress) {
+      (window as any).electronAPI.onUpdateProgress((progress: any) => {
+        setUpdateProgress(progress.percent);
+      });
+    }
+  }, []);
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -232,6 +241,14 @@ export default function NavBar() {
             </kbd>
           </Link>
 
+          {/* Update Progress Indicator */}
+          {updateProgress !== null && updateProgress < 100 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/20 text-violet-400 text-xs font-medium border border-violet-500/30" title="Downloading update...">
+              <Download className="w-4 h-4 animate-bounce" />
+              <span>{Math.round(updateProgress)}%</span>
+            </div>
+          )}
+
           {/* Shuffle Button */}
           <div className="relative" ref={shuffleRef}>
             <button
@@ -385,6 +402,12 @@ export default function NavBar() {
           </div>
 
           <div className="flex items-center gap-1 pl-1 shrink-0">
+            {updateProgress !== null && updateProgress < 100 && (
+              <div className="flex items-center gap-1 px-2.5 py-1.5 mr-1 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                <Download className="w-3.5 h-3.5 animate-bounce" />
+                <span className="text-[10px] font-bold">{Math.round(updateProgress)}%</span>
+              </div>
+            )}
             <div className="w-[1px] h-6 bg-white/[0.08] mx-1" />
 
             <Link
