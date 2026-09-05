@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+/meta/
+/scripts/
+
 /public/backdrops
 /public/posters
 /public/episode-thumbs

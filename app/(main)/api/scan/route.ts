@@ -35,10 +35,13 @@ export async function GET(request: NextRequest) {
         // Delete files from disconnected paths or missing from connected paths
         // Wait, for multiple paths we need to check if the file's parent path is connected
         const allMedia = getAllMedia();
+        const isWindows = process.platform === "win32";
+        const normalizePath = (p: string) => isWindows ? p.toLowerCase() : p;
+        
         for (const m of allMedia) {
           // If a file starts with one of the connected paths, check if it exists.
           // If it starts with a disconnected path, mark it unavailable.
-          const parentPath = mediaPaths.find(p => m.filepath.startsWith(p));
+          const parentPath = mediaPaths.find(p => normalizePath(m.filepath).startsWith(normalizePath(p)));
           if (parentPath && !connectedPaths.includes(parentPath)) {
             // Path disconnected
             const { db } = getDb();

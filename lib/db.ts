@@ -195,7 +195,7 @@ function fetchAllWithRelations() {
 export function getAllMedia(): MediaEntry[] {
   const all = fetchAllWithRelations();
   return all.sort((a, b) => {
-    if (a.title !== b.title) return a.title.localeCompare(b.title);
+    if (a.title !== b.title) return (a.title || "").localeCompare(b.title || "");
     if (a.season !== b.season) return (a.season || 0) - (b.season || 0);
     return (a.episode_start || 0) - (b.episode_start || 0);
   });
@@ -214,7 +214,7 @@ export function getMediaByFilepath(filepath: string): MediaEntry | undefined {
 export function getMediaByType(type: "movie" | "show"): MediaEntry[] {
   const all = fetchAllWithRelations();
   return all.filter(m => m.type === type).sort((a, b) => {
-    if (a.title !== b.title) return a.title.localeCompare(b.title);
+    if (a.title !== b.title) return (a.title || "").localeCompare(b.title || "");
     if (a.season !== b.season) return (a.season || 0) - (b.season || 0);
     return (a.episode_start || 0) - (b.episode_start || 0);
   });
@@ -223,7 +223,7 @@ export function getMediaByType(type: "movie" | "show"): MediaEntry[] {
 export function searchMedia(query: string): MediaEntry[] {
   const all = fetchAllWithRelations();
   const lower = query.toLowerCase();
-  return all.filter(m => m.title.toLowerCase().includes(lower)).sort((a, b) => a.title.localeCompare(b.title));
+  return all.filter(m => (m.title || "").toLowerCase().includes(lower)).sort((a, b) => (a.title || "").localeCompare(b.title || ""));
 }
 
 export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_watched_at" | "watch_progress" | "is_watched" | "is_favorite">): number {
