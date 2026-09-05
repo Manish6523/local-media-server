@@ -43,6 +43,7 @@ linux:
     - deb
   category: AudioVideo
   icon: build/icons/
+  artifactName: '${productName}-${version}-${arch}.${ext}'
 
 win:
   target:
