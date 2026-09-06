@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X, Compass, Download } from "lucide-react";
+import { Home, Film, Tv, Heart, Settings, Search, Users, Sparkles, ChevronUp, Maximize, QrCode, Shuffle, Menu, X, Compass, Download, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useToast } from "@/components/Toast";
+import { useScan } from "@/components/ScanProvider";
 
 const WatchPartyModal = dynamic(() => import("../WatchParty/WatchPartyModal"), { ssr: false });
 const QRModal = dynamic(() => import("../QRModal"), { ssr: false });
@@ -25,6 +26,7 @@ export default function NavBar() {
   const [showDiscoverTab, setShowDiscoverTab] = useState(true);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const shuffleRef = useRef<HTMLDivElement>(null);
+  const { scanning, scanProgress } = useScan();
 
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).electronAPI?.onUpdateProgress) {
@@ -188,18 +190,19 @@ export default function NavBar() {
       <header
         className={`${isDetailPage ? "hidden" : "flex"} fixed top-0 left-0 right-0 z-50 items-center justify-between px-4 md:px-6 lg:px-8 py-3 transition-all duration-500 ${
           scrolled
-            ? "bg-background/60 backdrop-blur-2xl border-b border-white/[0.04] shadow-lg shadow-black/10"
+            // ? "bg-background/60 backdrop-blur-2xl border-b border-white/[0.04] shadow-lg shadow-black/10"
+            ? "bg-transparent"
             : "bg-transparent"
         }`}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0 glass-md px-4 py-1.5 rounded-full">
           <img 
             src="/logo.png" 
             alt="VidLock Logo" 
-            className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(139,92,246,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-all duration-300"
+            className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(139,92,246,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.8)] transition-all duration-300"
           />
-          <span className="text-xl font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">
+          <span className="text-lg font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">
             VidLock
           </span>
         </Link>
@@ -243,17 +246,46 @@ export default function NavBar() {
 
           {/* Update Progress Indicator */}
           {updateProgress !== null && updateProgress < 100 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/20 text-violet-400 text-xs font-medium border border-violet-500/30" title="Downloading update...">
-              <Download className="w-4 h-4 animate-bounce" />
-              <span>{Math.round(updateProgress)}%</span>
+            <div
+              className="relative p-2.5 rounded-full glass text-violet-400 transition-all"
+              title={`Downloading update... ${Math.round(updateProgress)}%`}
+            >
+              <span
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{
+                  background: `conic-gradient(#8b5cf6 ${updateProgress * 3.6}deg, transparent ${updateProgress * 3.6}deg)`,
+                  WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                  mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                }}
+              />
+              <Download className="relative w-4 h-4" />
             </div>
+          )}
+
+          {/* Scan Progress Indicator */}
+          {scanning && (
+            <Link
+              href="/settings"
+              className="relative p-2.5 rounded-full glass text-emerald-400 hover:text-emerald-300 transition-all"
+              title={`${scanProgress.message} — ${Math.round(scanProgress.percent)}%`}
+            >
+              <span
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{
+                  background: `conic-gradient(#10b981 ${scanProgress.percent * 3.6}deg, transparent ${scanProgress.percent * 3.6}deg)`,
+                  WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                  mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                }}
+              />
+              <RefreshCw className="relative w-4 h-4 animate-spin" />
+            </Link>
           )}
 
           {/* Shuffle Button */}
           <div className="relative" ref={shuffleRef}>
             <button
               onClick={() => setShowShuffleMenu(v => !v)}
-              className={`p-2.5 rounded-full glass transition-all ${
+              className={`p-2.5 rounded-full glass transition-all cursor-pointer ${
                 shuffleLoading
                   ? "text-violet-400 border-violet-500/20"
                   : "text-white/50 hover:text-white hover:border-emerald-500/20"
@@ -269,19 +301,19 @@ export default function NavBar() {
                 <div className="flex flex-col gap-1">
                   <button
                     onClick={() => triggerShuffle("movie")}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
                   >
                     <span className="text-base">🎬</span> Movies
                   </button>
                   <button
                     onClick={() => triggerShuffle("show")}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
                   >
                     <span className="text-base">📺</span> Shows
                   </button>
                   <button
                     onClick={() => triggerShuffle("both")}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
                   >
                     <span className="text-base">🎲</span> Both
                   </button>
@@ -292,7 +324,7 @@ export default function NavBar() {
 
           <button
             onClick={() => setShowPartyModal(true)}
-            className="p-2.5 rounded-full glass text-white/50 hover:text-white hover:border-violet-500/20 transition-all"
+            className="p-2.5 rounded-full glass text-white/50 hover:text-white cursor-pointer hover:border-violet-500/20 transition-all"
             title="Watch Party"
           >
             <Users className="w-4 h-4" />
@@ -301,7 +333,7 @@ export default function NavBar() {
           {isLocalNetwork && (
             <button
               onClick={() => setShowQRModal(true)}
-              className="p-2.5 rounded-full glass text-white/50 hover:text-white hover:border-cyan-500/20 transition-all"
+              className="p-2.5 rounded-full glass text-white/50 hover:text-white cursor-pointer hover:border-cyan-500/20 transition-all"
               title="Scan QR Code"
             >
               <QrCode className="w-4 h-4" />
@@ -402,10 +434,34 @@ export default function NavBar() {
           </div>
 
           <div className="flex items-center gap-1 pl-1 shrink-0">
+            {scanning && (
+              <Link href="/settings" className="relative p-3 rounded-full text-emerald-400 transition-all" title={`${scanProgress.message} — ${Math.round(scanProgress.percent)}%`}>
+                <span
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: `conic-gradient(#10b981 ${scanProgress.percent * 3.6}deg, rgba(255,255,255,0.06) ${scanProgress.percent * 3.6}deg)`,
+                    WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                    mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                  }}
+                />
+                <RefreshCw className="relative w-5 h-5 animate-spin" />
+              </Link>
+            )}
+
             {updateProgress !== null && updateProgress < 100 && (
-              <div className="flex items-center gap-1 px-2.5 py-1.5 mr-1 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/30">
-                <Download className="w-3.5 h-3.5 animate-bounce" />
-                <span className="text-[10px] font-bold">{Math.round(updateProgress)}%</span>
+              <div
+                className="relative p-3 rounded-full text-violet-400 transition-all"
+                title={`Downloading update... ${Math.round(updateProgress)}%`}
+              >
+                <span
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{
+                    background: `conic-gradient(#8b5cf6 ${updateProgress * 3.6}deg, transparent ${updateProgress * 3.6}deg)`,
+                    WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                    mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+                  }}
+                />
+                <Download className="relative w-5 h-5 animate-bounce" />
               </div>
             )}
             <div className="w-[1px] h-6 bg-white/[0.08] mx-1" />

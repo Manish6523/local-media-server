@@ -15,15 +15,23 @@ export async function GET(request: NextRequest) {
 
     const mode = searchParams.get("mode") || "local";
     const discoverEnabled = getConfig("show_discover_tab") === "true";
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = 40;
 
     let results = [];
     if (mode === "online") {
       if (discoverEnabled) {
         const [movies, shows] = await Promise.all([
-          searchOnline(query, 1, "movie"),
-          searchOnline(query, 1, "show")
+          searchOnline(query, page, "movie"),
+          searchOnline(query, page, "show")
         ]);
-        results = [...movies, ...shows];
+        
+        // Interleave movies and shows so highly relevant shows aren't buried under movies
+        const maxLength = Math.max(movies.length, shows.length);
+        for (let i = 0; i < maxLength; i++) {
+          if (i < shows.length) results.push(shows[i]);
+          if (i < movies.length) results.push(movies[i]);
+        }
       } else {
         return NextResponse.json([]);
       }
@@ -42,7 +50,10 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
-    return NextResponse.json(deduped.slice(0, 20));
+    const startIndex = (page - 1) * limit;
+    const paginated = mode === "local" ? deduped.slice(startIndex, startIndex + limit) : deduped.slice(0, limit);
+
+    return NextResponse.json(paginated);
   } catch (err) {
     console.error("[Search] Error:", err);
     return NextResponse.json([], { status: 500 });

@@ -128,11 +128,27 @@ export default function HomeContent() {
         {/* Continue Watching */}
         <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
 
-        {/* Movies */}
-        <MiniMoviesList items={movies} />
-
         {/* Series */}
         <SeriesRow items={uniqueShows} />
+
+        {/* Genre Rows */}
+        {["Action", "Comedy", "Sci-Fi", "Horror", "Drama", "Animation", "Romance", "Thriller"].map(genre => {
+          const genreMovies = movies.filter(m => m.genres?.toLowerCase().includes(genre.toLowerCase()));
+          if (genreMovies.length > 0) {
+            return (
+              <MiniMoviesList key={genre} items={genreMovies} title={genre} />
+            );
+          }
+          return null;
+        })}
+
+        {/* Favorites */}
+        {favorites.length > 0 && (
+          <MiniMoviesList items={favorites} title="Your Favorites" />
+        )}
+
+        {/* Movies */}
+        <MiniMoviesList items={movies} title="Movies" />
       </div>
     </div>
   );

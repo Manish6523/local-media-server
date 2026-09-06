@@ -103,6 +103,8 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
     return (
       <div
         className="group/card relative landscape-hover"
+        onMouseEnter={() => !selectionMode && setIsHovered(true)}
+        onMouseLeave={() => !selectionMode && setIsHovered(false)}
         onContextMenu={(e) => {
           if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
             e.preventDefault();
@@ -122,22 +124,35 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
               }`}
             sizes="(max-width: 768px) 50vw, 33vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+          {/* Hover Preview Video (Only for non-selection mode) */}
+          {!selectionMode && !isUnavailable && media.source !== "online" && (
+            <HoverPreview
+              mediaId={media.id}
+              runtime={media.runtime}
+              exactDuration={media.exactDuration}
+              isHovered={isHovered}
+              clipDuration={10}
+              randomStart={true}
+            />
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
 
           {/* Bottom info */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
             <h3 className="text-base font-semibold text-white truncate">{media.title}</h3>
             <div className="flex items-center gap-2 mt-1 text-[11px] text-white/40 font-medium">
               {media.year && <span>{media.year}</span>}
               {media.genres && (
                 <>
-                  <span className="w-1 h-1 rounded-full bg-white/20" />
+                  {media.year && <span className="w-1 h-1 rounded-full bg-white/20" />}
                   <span>{media.genres.split(",")[0]?.trim()}</span>
                 </>
               )}
               {media.type === "show" && (
                 <>
-                  <span className="w-1 h-1 rounded-full bg-white/20" />
+                  {(media.year || media.genres) && <span className="w-1 h-1 rounded-full bg-white/20" />}
                   <span>{media.season ? `${media.season} seasons` : "Series"}</span>
                 </>
               )}
@@ -146,7 +161,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
 
           {/* Play icon */}
           {!isUnavailable && (
-            <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-violet-500/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all shadow-lg shadow-violet-500/25">
+            <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-violet-500/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all shadow-lg shadow-violet-500/25 z-20">
               <Play className="w-4 h-4 text-white fill-white ml-0.5" />
             </div>
           )}
@@ -312,9 +327,9 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
                 <MonitorPlay className="w-3.5 h-3.5 text-white" />
               </button>
 
-              {/* Sub-menu appearing to the right (with invisible bridge padding) */}
-              <div className="absolute left-full top-0 pl-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50">
-                <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/play:scale-100 transition-all duration-200">
+              {/* Sub-menu appearing to the left (with invisible bridge padding) */}
+              <div className="absolute right-full top-0 pr-2 opacity-0 group-hover/play:opacity-100 pointer-events-none group-hover/play:pointer-events-auto transition-all duration-200 z-50">
+                <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-right scale-95 group-hover/play:scale-100 transition-all duration-200">
                   <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "default" }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-blue-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
                     <MonitorPlay className="w-3.5 h-3.5 text-blue-400" /> Default Player
                   </button>
@@ -328,8 +343,8 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
                         <ChevronRight className="w-3 h-3 text-white/40" />
                       </button>
                       {/* Nested Sub-menu for VLC (with invisible bridge padding to prevent closing on gap) */}
-                      <div className="absolute left-full top-0 -mt-1 pl-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
-                        <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-left scale-95 group-hover/vlc:scale-100 transition-all duration-200">
+                      <div className="absolute right-full top-0 -mt-1 pr-1 py-1 opacity-0 group-hover/vlc:opacity-100 pointer-events-none group-hover/vlc:pointer-events-auto transition-all duration-200 z-50">
+                        <div className="flex flex-col gap-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-1 shadow-xl whitespace-nowrap origin-right scale-95 group-hover/vlc:scale-100 transition-all duration-200">
                           <button onClick={async (e) => { e.preventDefault(); await fetch("/api/play-local", { method: "POST", body: JSON.stringify({ mediaId: media.id, player: "vlc", startTime: media.watch_progress }) }); }} className="px-3 py-1.5 text-xs text-left text-white/80 hover:text-white hover:bg-orange-500/20 rounded transition-colors flex items-center gap-2 cursor-pointer">
                             Resume ({Math.floor(media.watch_progress / 60)}m)
                           </button>
@@ -382,16 +397,16 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           {media.year && <span>{media.year}</span>}
           {media.rating && (
             <>
-              <span className="w-1 h-1 rounded-full bg-white/15" />
+              {media.year && <span className="w-1 h-1 rounded-full bg-white/15" />}
               <span className="flex items-center gap-0.5 text-amber-400">
                 <Star className="w-3 h-3 fill-current" />
-                {media.rating?.split('/')[0]}
+                {!isNaN(parseFloat(media.rating)) ? parseFloat(media.rating.split('/')[0]).toFixed(1) : media.rating.split('/')[0]}
               </span>
             </>
           )}
           {media.genres && (
             <>
-              <span className="w-1 h-1 rounded-full bg-white/15" />
+              {(media.year || media.rating) && <span className="w-1 h-1 rounded-full bg-white/15" />}
               <span className="truncate">{media.genres.split(",")[0]?.trim()}</span>
             </>
           )}

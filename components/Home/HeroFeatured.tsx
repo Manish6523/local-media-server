@@ -226,13 +226,13 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
 
             <button
               onClick={handlePrev}
-              className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+              className="w-10 h-10 rounded-full cursor-pointer glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={handleNext}
-              className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+              className="w-10 h-10 rounded-full cursor-pointer glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

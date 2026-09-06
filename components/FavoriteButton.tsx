@@ -53,7 +53,7 @@ export default function FavoriteButton({ mediaId, initialIsFavorite, className =
       title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
     >
       <Heart
-        className="w-4 h-4 transition-all duration-300"
+        className="w-4 h-4 cursor-pointer transition-all duration-300"
         fill={isFavorite ? "currentColor" : "none"}
       />
     </button>

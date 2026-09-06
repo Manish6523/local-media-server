@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Sparkles, Search, Globe, HardDrive } from "lucide-react";
 import type { MediaEntry } from "@/lib/db";
@@ -20,6 +20,9 @@ function SearchContent() {
   const [loading, setLoading] = useState(false);
   const [searchMode, setSearchMode] = useState<"local" | "online">(initialMode);
   const [showDiscoverTab, setShowDiscoverTab] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   // Fetch config to check if discover features are enabled
   useEffect(() => {
@@ -36,10 +39,30 @@ function SearchContent() {
       .catch(console.error);
   }, [initialMode]);
 
+  // Reset page to 1 when query or mode changes
+  useEffect(() => {
+    setPage(1);
+  }, [query, searchMode]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage(p => p + 1);
+        }
+      },
+      { rootMargin: "200px" } // trigger 200px before reaching the bottom
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
+
   // Debounced search effect
   useEffect(() => {
     if (!query) {
       setResults([]);
+      setHasMore(false);
       // Remove params if query is empty
       if (searchParams.has("q")) {
         router.replace(`/search?mode=${searchMode}`);
@@ -54,9 +77,12 @@ function SearchContent() {
       router.replace(`/search?q=${encodeURIComponent(query)}&mode=${searchMode}`);
     }
 
-    const cacheKey = `${query}-${searchMode}`;
+    const cacheKey = `${query}-${searchMode}-${page}`;
     if (searchCache.has(cacheKey)) {
-      setResults(searchCache.get(cacheKey)!);
+      const cached = searchCache.get(cacheKey)!;
+      if (page === 1) setResults(cached);
+      else setResults(prev => [...prev, ...cached]);
+      setHasMore(cached.length === 40);
       setLoading(false);
       return;
     }
@@ -64,21 +90,28 @@ function SearchContent() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&mode=${searchMode}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&mode=${searchMode}&page=${page}`);
         if (res.ok) {
           const data = await res.json();
           searchCache.set(cacheKey, data);
-          setResults(data);
+          if (page === 1) setResults(data);
+          else setResults(prev => {
+            // Deduplicate incoming data just in case
+            const existingIds = new Set(prev.map(p => p.id));
+            const newUnique = data.filter((d: MediaEntry) => !existingIds.has(d.id));
+            return [...prev, ...newUnique];
+          });
+          setHasMore(data.length === 40);
         }
       } catch (err) {
         console.error("Search error", err);
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, page === 1 ? 500 : 50);
 
     return () => clearTimeout(timer);
-  }, [query, searchMode]);
+  }, [query, searchMode, page]);
 
   return (
     <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-24 max-w-7xl mx-auto">
@@ -156,13 +189,19 @@ function SearchContent() {
                 Search Results
               </h2>
               <span className="text-sm font-medium text-white/40 bg-white/5 px-3 py-1 rounded-full">
-                {results.length} found
+                {results.length}{hasMore ? "+" : ""} found
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5" style={{ gridAutoRows: '1fr' }}>
               {results.map((media) => (
                 <PosterCard key={media.id} media={media} />
               ))}
+            </div>
+            {/* Infinite Scroll Trigger */}
+            <div ref={observerTarget} className="w-full h-12 mt-8 flex items-center justify-center">
+              {loading && page > 1 && (
+                <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+              )}
             </div>
           </div>
         ) : (

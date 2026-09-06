@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import { MediaEntry } from "@/lib/db";
 import MiniMoviesList from "@/components/Home/MiniMoviesList";
 import SeriesRow from "@/components/Home/SeriesRow";
+import HeroFeatured from "@/components/Home/HeroFeatured";
 import { Sparkles } from "lucide-react";
 
 export default function DiscoverPage() {
@@ -39,16 +39,23 @@ export default function DiscoverPage() {
     );
   }
 
+  // Build carousel items from trending movies & shows that have backdrops
+  const allTrending = [...movies, ...shows];
+  const heroItems = allTrending
+    .filter((m) => m.backdrop && m.overview)
+    .slice(0, 7);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#111] to-[#050505] pt-28 pb-32">
-      <div className="px-5 md:px-10 lg:px-14 mb-12">
-        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight flex items-center gap-4">
-          Discover
-          <Sparkles className="w-8 h-8 text-violet-400" />
-        </h1>
-        <p className="text-white/40 mt-3 text-lg font-medium">
-          Trending movies and TV shows from around the web.
-        </p>
+    <div className="min-h-screen bg-[#050505] pb-32">
+      {/* Hero Carousel — same component as the home screen */}
+      <HeroFeatured items={heroItems} />
+
+      {/* Discover Header */}
+      <div className="px-5 md:px-10 lg:px-14 mb-12 mt-12">
+        <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight flex items-center gap-3">
+          Discover More
+          <Sparkles className="w-6 h-6 text-violet-400" />
+        </h2>
       </div>
 
       <div className="relative z-10 w-full px-5 md:px-10 lg:px-14 space-y-16">

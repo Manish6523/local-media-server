@@ -5,6 +5,7 @@ import "./globals.css";
 import NavBar from "@/components/layout/NavBar";
 import { BackgroundProvider } from "@/components/BackgroundContext";
 import { ToastProvider } from "@/components/Toast";
+import { ScanProvider } from "@/components/ScanProvider";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -71,12 +72,14 @@ export default function RootLayout({
         <div className="aurora-bg" />
         
         <ToastProvider>
+        <ScanProvider>
         <BackgroundProvider>
           <NavBar />
           <main className="relative z-10 min-h-[100dvh] pb-24 lg:pb-0 flex flex-col">
             {children}
           </main>
         </BackgroundProvider>
+        </ScanProvider>
         </ToastProvider>
       </body>
     </html>

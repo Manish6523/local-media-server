@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import PosterCard from "@/components/PosterCard";
 import { Tv, Filter, Users } from "lucide-react";
 import SortDropdown, { SortOption } from "@/components/SortDropdown";
+import GenreFilter from "@/components/GenreFilter";
 import dynamic from "next/dynamic";
 
 const WatchPartyModal = dynamic(() => import("@/components/WatchParty/WatchPartyModal"), { ssr: false });
@@ -14,6 +15,7 @@ export default function ShowsPage() {
   const [shows, setShows] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showPartyModal, setShowPartyModal] = useState(false);
 
   useEffect(() => {
@@ -36,7 +38,18 @@ export default function ShowsPage() {
   }, []);
 
   const sortedShows = useMemo(() => {
-    const list = [...shows];
+    let list = [...shows];
+
+    // 1. Filter by Genre
+    if (selectedGenres.length > 0) {
+      list = list.filter(m => {
+        if (!m.genres) return false;
+        const showGenres = m.genres.split(",").map(g => g.trim().toLowerCase());
+        return selectedGenres.every(sg => showGenres.includes(sg.toLowerCase()));
+      });
+    }
+
+    // 2. Sort
     switch (sortParam) {
       case "rating_desc":
         return list.sort((a, b) => {
@@ -55,7 +68,7 @@ export default function ShowsPage() {
       default:
         return list;
     }
-  }, [shows, sortParam]);
+  }, [shows, sortParam, selectedGenres]);
 
   return (
     <div className="min-h-screen pt-24 px-5 md:px-10 lg:px-14 pb-32 bg-[#050505] relative">
@@ -63,7 +76,7 @@ export default function ShowsPage() {
       <div className="absolute top-0 left-0 right-0 h-[50vh] bg-gradient-to-b from-cyan-500/10 via-transparent to-transparent pointer-events-none" />
 
       {/* Clean Header */}
-      <div className="flex items-end justify-between mb-10 relative z-10">
+      <div className="flex items-end justify-between mb-10 relative z-40">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg">
             TV Shows
@@ -75,10 +88,8 @@ export default function ShowsPage() {
 
         <div className="flex items-center gap-3">
           {!loading && shows.length > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/[0.03] border border-white/[0.05] shadow-lg text-sm backdrop-blur-md hover:bg-white/[0.06] transition-colors cursor-pointer">
-              <Filter className="w-4 h-4 text-white/60" />
-              <span className="text-white/60 font-medium hidden sm:inline">Filter</span>
-              {/* <SortDropdown pageKey="shows" onSortChange={setSortParam} /> */}
+            <div className="flex items-center bg-white/[0.03] border border-white/[0.05] rounded-lg shadow-lg backdrop-blur-md">
+              <SortDropdown pageKey="shows" onSortChange={setSortParam} />
             </div>
           )}
           <button
@@ -90,6 +101,12 @@ export default function ShowsPage() {
           </button>
         </div>
       </div>
+
+      {!loading && shows.length > 0 && (
+        <div className="mb-8 relative z-10">
+          <GenreFilter onFilterChange={setSelectedGenres} storageKey="genre_filter_shows" />
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 md:gap-6 relative z-10">

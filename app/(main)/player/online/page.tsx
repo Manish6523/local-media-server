@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import Link from "next/link";
 
 function OnlinePlayer() {
   const searchParams = useSearchParams();
@@ -19,12 +18,47 @@ function OnlinePlayer() {
     }
   }, [imdbId, router]);
 
+  // Vidfast Message Listener
+  useEffect(() => {
+    const vidfastOrigins = [
+      'https://vidfast.pro',
+      'https://vidfast.in',
+      'https://vidfast.io',
+      'https://vidfast.me',
+      'https://vidfast.net',
+      'https://vidfast.pm',
+      'https://vidfast.xyz',
+      'https://vidfast.vc',
+      'https://vidfast.bz'
+    ];
+
+    const handleMessage = ({ origin, data }: MessageEvent) => {
+      if (!vidfastOrigins.includes(origin) || !data) {
+        return;
+      }
+
+      if (data.type === 'MEDIA_DATA') {
+        localStorage.setItem('vidFastProgress', JSON.stringify(data.data));
+      }
+
+      if (data.type === 'PLAYER_EVENT') {
+        const { event, currentTime, duration } = data.data;
+        console.log(`Player ${event} at ${currentTime}s of ${duration}s`);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   if (!imdbId) return null;
 
   // Construct iframe URL
-  let embedUrl = `https://www.2embed.cc/embed/${imdbId}`;
+  let embedUrl = `https://vidfast.vc/movie/${imdbId}?autoPlay=true`;
   if (type === "show") {
-    embedUrl = `https://www.2embed.cc/embedtv/${imdbId}&s=1&e=1`;
+    const season = searchParams.get("s") || "1";
+    const episode = searchParams.get("e") || "1";
+    embedUrl = `https://vidfast.vc/tv/${imdbId}/${season}/${episode}?autoPlay=true&nextButton=true&autoNext=true`;
   }
 
   return (
@@ -55,6 +89,8 @@ function OnlinePlayer() {
           frameBorder="0"
           scrolling="no"
           allowFullScreen
+          allow="encrypted-media"
+          referrerPolicy="no-referrer"
           onLoad={() => setLoading(false)}
           className="w-full h-full object-cover"
         />

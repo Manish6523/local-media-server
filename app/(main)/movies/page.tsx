@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import PosterCard from "@/components/PosterCard";
 import { Film, Filter, CheckSquare, X, Layers } from "lucide-react";
 import SortDropdown, { SortOption } from "@/components/SortDropdown";
+import GenreFilter from "@/components/GenreFilter";
 import GroupAsSeriesModal from "@/components/GroupAsSeriesModal";
 import { useToast } from "@/components/Toast";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ export default function MoviesPage() {
   const [movies, setMovies] = useState<MediaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Selection mode
   const [selectionMode, setSelectionMode] = useState(false);
@@ -50,7 +52,18 @@ export default function MoviesPage() {
   }, [selectionMode]);
 
   const sortedMovies = useMemo(() => {
-    const list = [...movies];
+    let list = [...movies];
+    
+    // 1. Filter by Genre
+    if (selectedGenres.length > 0) {
+      list = list.filter(m => {
+        if (!m.genres) return false;
+        const movieGenres = m.genres.split(",").map(g => g.trim().toLowerCase());
+        return selectedGenres.every(sg => movieGenres.includes(sg.toLowerCase()));
+      });
+    }
+
+    // 2. Sort
     switch (sortParam) {
       case "rating_desc":
         return list.sort((a, b) => {
@@ -72,7 +85,7 @@ export default function MoviesPage() {
       default:
         return list;
     }
-  }, [movies, sortParam]);
+  }, [movies, sortParam, selectedGenres]);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -128,7 +141,7 @@ export default function MoviesPage() {
       <div className="absolute top-0 left-0 right-0 h-[50vh] bg-gradient-to-b from-violet-500/10 via-transparent to-transparent pointer-events-none" />
 
       {/* Clean Header */}
-      <div className="flex items-end justify-between mb-10 relative z-10">
+      <div className="flex items-end justify-between mb-10 relative z-40">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg">
             Movies
@@ -143,11 +156,8 @@ export default function MoviesPage() {
         <div className="flex items-center gap-3">
           {!loading && movies.length > 0 && (
             <>
-              {/* Filter Button */}
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/[0.03] border border-white/[0.05] shadow-lg text-sm backdrop-blur-md hover:bg-white/[0.06] transition-colors cursor-pointer">
-                <Filter className="w-4 h-4 text-white/60" />
-                <span className="text-white/60 font-medium hidden sm:inline">Filter</span>
-                {/* <SortDropdown pageKey="movies" onSortChange={setSortParam} /> */}
+              <div className="flex items-center bg-white/[0.03] border border-white/[0.05] rounded-lg shadow-lg backdrop-blur-md">
+                <SortDropdown pageKey="movies" onSortChange={setSortParam} />
               </div>
 
               {/* Select Toggle */}
@@ -166,6 +176,12 @@ export default function MoviesPage() {
           )}
         </div>
       </div>
+
+      {!loading && movies.length > 0 && (
+        <div className="mb-8 relative z-10">
+          <GenreFilter onFilterChange={setSelectedGenres} storageKey="genre_filter_movies" />
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 md:gap-6 relative z-10">

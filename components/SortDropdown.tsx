@@ -75,7 +75,7 @@ export default function SortDropdown({ pageKey, onSortChange }: SortDropdownProp
               <span className={currentSort === key ? "text-white font-medium" : "text-white/70"}>
                 {label}
               </span>
-              {currentSort === key && <Check className="w-4 h-4 text-[#E50914]" />}
+              {currentSort === key && <Check className="w-4 h-4 text-violet-500" />}
             </button>
           ))}
         </div>

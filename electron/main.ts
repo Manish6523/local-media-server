@@ -9,6 +9,9 @@ import ffprobeStatic from 'ffprobe-static';
 import dotenv from 'dotenv';
 import { autoUpdater } from 'electron-updater';
 
+// Spoof the User-Agent globally for all requests so streaming sites don't block Electron
+app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 const store = new Store() as any;
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
@@ -155,6 +158,56 @@ async function createWindow() {
   });
 
   mainWindow.setMenu(null);
+
+  // Handle popup ads from streaming iframes
+  // If we completely deny them, the player's invisible ad overlay never disappears (blocking clicks).
+  // Instead, we allow them to open invisibly, and instantly close them!
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    const trustedDomains = ['youtube.com', 'youtu.be', 'omdbapi.com', 'fanart.tv', 'opensubtitles.com', 'opensubtitles.org'];
+    const isTrusted = trustedDomains.some(domain => url.includes(domain));
+    
+    if (isTrusted) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    
+    // Trick the player into thinking the ad opened successfully by creating a hidden window
+    return { 
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        show: false,
+        width: 0,
+        height: 0,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      }
+    };
+  });
+
+  // Instantly close the invisible ad windows once they are created
+  mainWindow.webContents.on('did-create-window', (window, details) => {
+    const trustedDomains = ['youtube.com', 'youtu.be', 'omdbapi.com', 'fanart.tv', 'opensubtitles.com', 'opensubtitles.org'];
+    if (!trustedDomains.some(domain => details.url.includes(domain))) {
+      // Destroy the hidden ad window
+      if (!window.isDestroyed()) {
+        window.close();
+      }
+    }
+  });
+
+  // Allow F5 or Ctrl+R (Cmd+R) to reload the window
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (
+      input.key === 'F5' || 
+      (input.control && input.key.toLowerCase() === 'r') || 
+      (input.meta && input.key.toLowerCase() === 'r')
+    ) {
+      mainWindow?.webContents.reload();
+      event.preventDefault();
+    }
+  });
 
   const saveBounds = () => {
     if (mainWindow && !mainWindow.isMaximized()) {

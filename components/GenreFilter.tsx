@@ -27,28 +27,31 @@ export default function GenreFilter({ onFilterChange, storageKey }: GenreFilterP
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setActive(parsed);
+        if (Array.isArray(parsed)) {
+          setActive(parsed);
+          onFilterChange(parsed);
+        }
       }
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   const toggle = useCallback(
     (genre: string) => {
-      setActive((prev) => {
-        const next = prev.includes(genre)
-          ? prev.filter((g) => g !== genre)
-          : [...prev, genre];
+      const next = active.includes(genre)
+        ? active.filter((g) => g !== genre)
+        : [...active, genre];
 
-        // Persist
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(next));
-        } catch {}
+      setActive(next);
 
-        onFilterChange(next);
-        return next;
-      });
+      // Persist
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {}
+
+      onFilterChange(next);
     },
-    [onFilterChange, storageKey]
+    [active, onFilterChange, storageKey]
   );
 
   const clearAll = useCallback(() => {
