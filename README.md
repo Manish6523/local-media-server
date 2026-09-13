@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">VidLock</h1>
-
+ 
 <p align="center">
   <em>No cloud. No accounts. No subscriptions. Just your media, beautifully presented.</em>
 </p>
