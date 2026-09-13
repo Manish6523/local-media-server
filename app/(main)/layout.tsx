@@ -1,14 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/layout/NavBar";
 import { BackgroundProvider } from "@/components/BackgroundContext";
 import { ToastProvider } from "@/components/Toast";
 import { ScanProvider } from "@/components/ScanProvider";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const viewport: Viewport = {
   themeColor: "#0a0a0a",
@@ -31,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", "antialiased", "font-sans", geist.variable, "dark")}>
+    <html lang="en" className="h-full antialiased font-sans dark">
       <body className="min-h-full relative" suppressHydrationWarning={false}>
         <Script
           id="pwa-and-cast-init"

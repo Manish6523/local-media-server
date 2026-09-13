@@ -408,7 +408,4 @@ app.on('before-quit', () => {
 (app as any).isQuitting = false;
 
 // IPC Handlers
-ipcMain.on('setup-complete', () => {
-  store.set('setupComplete', true);
-});
 ipcMain.handle('get-port', () => serverPort);

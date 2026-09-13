@@ -121,35 +121,37 @@ export default function HomeContent() {
   return (
     <div className="flex flex-col">
       {/* Hero — full width, no padding */}
-      <HeroFeatured items={carouselItems} />
+      <HeroFeatured items={carouselItems} enableOnboarding={media.length === 0} />
 
       {/* Content sections */}
-      <div className="relative z-10 w-full px-5 md:px-10 lg:px-14 pb-32 pt-16 -mt-20 bg-gradient-to-b from-transparent via-[#050505]/95 to-[#050505] space-y-16">
-        {/* Continue Watching */}
-        <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
+      {media.length > 0 && (
+        <div className="relative z-10 w-full px-5 md:px-10 lg:px-14 pb-32 pt-16 -mt-20 bg-gradient-to-b from-transparent via-[#050505]/95 to-[#050505] space-y-16">
+          {/* Continue Watching */}
+          <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
 
-        {/* Series */}
-        <SeriesRow items={uniqueShows} />
+          {/* Series */}
+          <SeriesRow items={uniqueShows} />
 
-        {/* Genre Rows */}
-        {["Action", "Comedy", "Sci-Fi", "Horror", "Drama", "Animation", "Romance", "Thriller"].map(genre => {
-          const genreMovies = movies.filter(m => m.genres?.toLowerCase().includes(genre.toLowerCase()));
-          if (genreMovies.length > 0) {
-            return (
-              <MiniMoviesList key={genre} items={genreMovies} title={genre} />
-            );
-          }
-          return null;
-        })}
+          {/* Genre Rows */}
+          {["Action", "Comedy", "Sci-Fi", "Horror", "Drama", "Animation", "Romance", "Thriller"].map(genre => {
+            const genreMovies = movies.filter(m => m.genres?.toLowerCase().includes(genre.toLowerCase()));
+            if (genreMovies.length > 0) {
+              return (
+                <MiniMoviesList key={genre} items={genreMovies} title={genre} />
+              );
+            }
+            return null;
+          })}
 
-        {/* Favorites */}
-        {favorites.length > 0 && (
-          <MiniMoviesList items={favorites} title="Your Favorites" />
-        )}
+          {/* Favorites */}
+          {favorites.length > 0 && (
+            <MiniMoviesList items={favorites} title="Your Favorites" />
+          )}
 
-        {/* Movies */}
-        <MiniMoviesList items={movies} title="Movies" />
-      </div>
+          {/* Movies */}
+          <MiniMoviesList items={movies} title="Movies" />
+        </div>
+      )}
     </div>
   );
 }

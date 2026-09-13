@@ -4,11 +4,19 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Play, ChevronLeft, ChevronRight, Star, Clock, FolderPlus, Scan, Film } from "lucide-react";
 import { useBackground } from "@/components/BackgroundContext";
+import OnboardingModal, { shouldShowOnboarding } from "./OnboardingModal";
 import type { MediaEntry } from "@/lib/db";
 
-export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
+export default function HeroFeatured({ items, enableOnboarding = false }: { items: MediaEntry[]; enableOnboarding?: boolean }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { setBgImage } = useBackground();
+
+  useEffect(() => {
+    if (!enableOnboarding || items.length !== 0 || !shouldShowOnboarding()) return;
+    const timer = window.setTimeout(() => setShowOnboarding(true), 0);
+    return () => window.clearTimeout(timer);
+  }, [enableOnboarding, items.length]);
 
   useEffect(() => {
     if (items && items.length > 0) {
@@ -36,7 +44,7 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
 
   if (!items || items.length === 0) {
     return (
-      <div className="relative w-full min-h-[85vh] flex items-center justify-center p-6 overflow-hidden">
+      <div className="relative z-20 w-full min-h-[85vh] flex items-center justify-center p-6 pb-12 overflow-hidden">
         {/* Background ambient glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
@@ -54,7 +62,7 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
           </h1>
           
           <p className="text-white/50 mb-16 text-xl md:text-2xl max-w-2xl mx-auto font-medium animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-            Your media universe is waiting. Let's bring it to life.
+            Your media universe is waiting. Let&apos;s bring it to life.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
@@ -89,18 +97,22 @@ export default function HeroFeatured({ items }: { items: MediaEntry[] }) {
             </div>
           </div>
 
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-            <Link
-              href="/settings"
-              className="group relative inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-black font-bold text-lg hover:scale-105 transition-all duration-300"
-            >
-              <span className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500" />
-              <span className="relative z-10 flex items-center gap-2">
-                Get Started <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
-          </div>
+          {enableOnboarding && (
+            <div className="relative z-30 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+              <button
+                type="button"
+                onClick={() => setShowOnboarding(true)}
+                className="group relative inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-black font-bold text-lg hover:scale-105 transition-all duration-300 cursor-pointer shadow-xl shadow-black/20"
+              >
+                <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500" />
+                <span className="pointer-events-none relative z-10 flex items-center gap-2">
+                  Get Started <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </button>
+            </div>
+          )}
         </div>
+        {enableOnboarding && <OnboardingModal open={showOnboarding} onOpenChange={setShowOnboarding} />}
       </div>
     );
   }

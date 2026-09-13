@@ -67,7 +67,7 @@ export default function HeroSection({ items, allMedia = [] }: HeroSectionProps) 
       <div className="relative w-full h-[70vh] bg-background flex items-center justify-center">
         <div className="text-center px-8">
           <h1 className="text-4xl md:text-6xl font-black text-foreground mb-4">
-            Welcome to <span className="text-primary">Filmaro</span>
+            Welcome to <span className="text-primary">Vidlock</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
             Your personal offline media library. Scan your media files to get started.

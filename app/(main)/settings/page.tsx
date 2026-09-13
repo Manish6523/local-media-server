@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay, ExternalLink, Compass } from "lucide-react";
 import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,8 @@ export default function SettingsPage() {
   const [mediaPaths, setMediaPaths] = useState<string[]>([]);
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalMovies: 0, totalShows: 0, totalFiles: 0 });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const configLoaded = useRef(false);
   const [osPlatform, setOsPlatform] = useState<string>("");
   const [appVersion, setAppVersion] = useState<string>("");
   const [gpuInfo, setGpuInfo] = useState<{ type: string; label: string; encoder: string } | null>(null);
@@ -73,8 +73,12 @@ export default function SettingsPage() {
         if (data.omdbApiKey !== undefined) setOmdbApiKey(data.omdbApiKey);
         if (data.fanartTvApiKey !== undefined) setFanartTvApiKey(data.fanartTvApiKey);
         if (data.opensubtitlesApiKey !== undefined) setOpensubtitlesApiKey(data.opensubtitlesApiKey);
+        configLoaded.current = true;
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error(error);
+        setSaveStatus("error");
+      });
 
     fetch(`/api/admin/pin-status?t=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
@@ -88,26 +92,46 @@ export default function SettingsPage() {
     }
   }, []);
 
-  const handlePathsChange = async (newPaths: string[]) => {
+  // Text fields, folder paths, and custom players autosave together after the
+  // user pauses editing. The initial config load is deliberately ignored.
+  useEffect(() => {
+    if (!configLoaded.current) return;
+
+    setSaveStatus("saving");
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            mediaPaths: mediaPaths.filter(path => path.trim() !== ""),
+            customVideoPlayers,
+            omdbApiKey,
+            fanartTvApiKey,
+            opensubtitlesApiKey,
+          }),
+        });
+        if (!response.ok) throw new Error("Autosave failed");
+        setSaveStatus("saved");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error(error);
+        setSaveStatus("error");
+      }
+    }, 650);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [mediaPaths, customVideoPlayers, omdbApiKey, fanartTvApiKey, opensubtitlesApiKey]);
+
+  const handlePathsChange = (newPaths: string[]) => {
     // Remove duplicates
     const uniquePaths = Array.from(new Set(newPaths.filter(p => p.trim() !== "")));
     setMediaPaths(uniquePaths);
-    
-    setSaving(true);
-    setSaved(false);
-    try {
-      await fetch("/api/config", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ mediaPaths: uniquePaths }) 
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleAddPath = () => {
@@ -126,33 +150,6 @@ export default function SettingsPage() {
     const updated = [...mediaPaths];
     updated.splice(index, 1);
     handlePathsChange(updated);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setSaved(false);
-    try {
-      await fetch("/api/config", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ 
-          mediaPaths: mediaPaths.filter(p => p.trim() !== ""), 
-          customVideoPlayers, 
-          showPlayOnPc, 
-          enableAutoTrailerBg, 
-          showDiscoverTab,
-          omdbApiKey,
-          fanartTvApiKey,
-          opensubtitlesApiKey
-        }) 
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const clearLibrary = async () => {
@@ -299,9 +296,14 @@ export default function SettingsPage() {
               </Badge>
             )}
           </div>
-          <Button onClick={handleSave} disabled={saving} className="bg-white text-black hover:bg-white/90 font-bold px-6 rounded-full transition-all">
-            {saving ? "Saving..." : (saved ? <><Check className="w-4 h-4 mr-2" /> Saved</> : "Save Changes")}
-          </Button>
+          <div aria-live="polite" className={`flex items-center gap-2 text-sm font-medium ${
+            saveStatus === "error" ? "text-red-400" : "text-white/40"
+          }`}>
+            {saveStatus === "saving" && <><RefreshCw className="w-4 h-4 animate-spin" /> Saving…</>}
+            {saveStatus === "saved" && <><Check className="w-4 h-4 text-emerald-400" /> Saved automatically</>}
+            {saveStatus === "error" && <><AlertCircle className="w-4 h-4" /> Autosave failed</>}
+            {saveStatus === "idle" && <span>Changes save automatically</span>}
+          </div>
         </div>
 
         {/* Section 0 - Hardware Acceleration */}
@@ -536,7 +538,6 @@ export default function SettingsPage() {
                     value={omdbApiKey}
                     onChange={(e) => {
                       setOmdbApiKey(e.target.value);
-                      setSaved(false);
                     }}
                     placeholder="Enter your 8-digit OMDB key"
                     className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
@@ -555,7 +556,6 @@ export default function SettingsPage() {
                     value={fanartTvApiKey}
                     onChange={(e) => {
                       setFanartTvApiKey(e.target.value);
-                      setSaved(false);
                     }}
                     placeholder="Enter your 32-character Fanart.tv personal API key"
                     className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
@@ -574,7 +574,6 @@ export default function SettingsPage() {
                     value={opensubtitlesApiKey}
                     onChange={(e) => {
                       setOpensubtitlesApiKey(e.target.value);
-                      setSaved(false);
                     }}
                     placeholder="Enter your OpenSubtitles consumer API key"
                     className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
@@ -665,7 +664,6 @@ export default function SettingsPage() {
                           size="sm" 
                           onClick={() => {
                             setCustomVideoPlayers(prev => prev.filter(p => p.id !== player.id));
-                            setSaved(false);
                           }}
                           className="bg-red-500/20 text-red-500 hover:bg-red-500/40 w-fit shrink-0"
                         >
@@ -687,7 +685,6 @@ export default function SettingsPage() {
                     const execPath = fd.get("playerPath") as string;
                     if (name && execPath) {
                       setCustomVideoPlayers(prev => [...prev, { id: Date.now().toString(), name, path: execPath }]);
-                      setSaved(false);
                       e.currentTarget.reset();
                     }
                   }}

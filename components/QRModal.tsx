@@ -22,10 +22,14 @@ export default function QRModal({ isOpen, onClose }: QRModalProps) {
     setError(null);
     try {
       const res = await fetch("/api/local-ip");
+      if (!res.ok) throw new Error("Could not detect local IP");
       const data = await res.json();
-      setLocalUrl(data.url);
+      const activePort = window.location.port;
+      const activeProtocol = window.location.protocol;
+      const url = `${activeProtocol}//${data.ip}${activePort ? `:${activePort}` : ""}`;
+      setLocalUrl(url);
 
-      const dataUrl = await QRCode.toDataURL(data.url, {
+      const dataUrl = await QRCode.toDataURL(url, {
         width: 200,
         margin: 2,
         color: {
@@ -42,10 +46,12 @@ export default function QRModal({ isOpen, onClose }: QRModalProps) {
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchAndGenerate();
+    if (!isOpen) return;
+    const timer = window.setTimeout(() => {
+      void fetchAndGenerate();
       setCopied(false);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [isOpen, fetchAndGenerate]);
 
   // Close on Escape
