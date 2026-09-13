@@ -11,6 +11,13 @@ import { useScan } from "@/components/ScanProvider";
 const WatchPartyModal = dynamic(() => import("../WatchParty/WatchPartyModal"), { ssr: false });
 const QRModal = dynamic(() => import("../QRModal"), { ssr: false });
 
+// Keep both declarations inline so production CSS optimization cannot remove
+// the variant required by the browser embedded in the desktop build.
+const NAV_GLASS_STYLE = {
+  backdropFilter: "saturate(160%) blur(32px)",
+  WebkitBackdropFilter: "saturate(160%) blur(32px)",
+};
+
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -196,7 +203,7 @@ export default function NavBar() {
         }`}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group shrink-0 glass-md px-4 py-1.5 rounded-full">
+        <Link href="/" style={NAV_GLASS_STYLE} className="flex items-center gap-2.5 group shrink-0 glass-md px-4 py-1.5 rounded-full">
           <img 
             src="/logo.png" 
             alt="VidLock Logo" 
@@ -208,7 +215,7 @@ export default function NavBar() {
         </Link>
 
         {/* Center Nav */}
-        <nav className={`${isDetailPage ? "hidden" : "hidden md:flex"} items-center gap-1 glass-md px-1.5 py-1 rounded-full`}>
+        <nav style={NAV_GLASS_STYLE} className={`${isDetailPage ? "hidden" : "hidden md:flex"} items-center gap-1 glass-md px-1.5 py-1 rounded-full`}>
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
@@ -271,7 +278,7 @@ export default function NavBar() {
           )}
 
           {/* Grouped Icons Pill */}
-          <div className="flex items-center gap-1 glass-md px-1.5 py-1 rounded-full">
+          <div style={NAV_GLASS_STYLE} className="flex items-center gap-1 glass-md px-1.5 py-1 rounded-full">
             <Link
               href="/search"
               className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-white/50 glass hover:text-white/80 hover:bg-white/[0.08] transition-all group"
