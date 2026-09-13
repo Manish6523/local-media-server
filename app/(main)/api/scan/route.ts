@@ -1,63 +1,50 @@
-import { NextRequest } from "next/server";
-import { scanAllSources } from "@/lib/scanner";
-import { parseFilename } from "@/lib/parser";
-import { fetchOMDB } from "@/lib/omdb";
-import { fetchTVMazeShow } from "@/lib/tvmaze";
-import { getBackdropForMovie, getBackdropForShow } from "@/lib/fanart";
-import { getDb, getMediaByFilepath, upsertMedia, setConfig, updateAvailability, getMediaPaths, deleteMissingMedia, getShowMetadataByTitle, getAllMedia } from "@/lib/db";
-import * as schema from "@/db/schema";
-import { eq } from "drizzle-orm";
 import fs from "fs";
+import path from "path";
+import { eq } from "drizzle-orm";
+import { scanAllSources } from "@/lib/scanner";
+import { identifyFile, processLibraryFile } from "@/lib/metadata-matcher";
+import { downloadPoster } from "@/lib/omdb";
+import { getBackdropForMovie, getBackdropForShow } from "@/lib/fanart";
+import { getDb, getMediaByFilepath, upsertMedia, setConfig, getMediaPaths, getAllMedia } from "@/lib/db";
+import * as schema from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+function firstNumber(value: number | number[] | undefined): number | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
+
+function text(value: string | undefined): string | null {
+  return value && value !== "N/A" ? value : null;
+}
+
+export async function GET() {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      function send(data: any) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-      }
-
+      const send = (data: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       try {
         const mediaPaths = getMediaPaths();
         send({ message: "Starting scan...", progress: 0 });
-
-        // Yield to event loop to flush SSE
-        await new Promise(r => setTimeout(r, 10));
-
+        await new Promise(resolve => setTimeout(resolve, 10));
         const { files, connectedPaths } = scanAllSources(mediaPaths);
-
+        const { db } = getDb();
         let deletedCount = 0;
         send({ message: "Cleaning up missing files...", progress: 10 });
-        await new Promise(r => setTimeout(r, 10));
-
-        // Delete files from disconnected paths or missing from connected paths
-        // Wait, for multiple paths we need to check if the file's parent path is connected
-        const allMedia = getAllMedia();
-        const isWindows = process.platform === "win32";
-        const normalizePath = (p: string) => isWindows ? p.toLowerCase() : p;
-        
-        for (const m of allMedia) {
-          // If a file starts with one of the connected paths, check if it exists.
-          // If it starts with a disconnected path, mark it unavailable.
-          const parentPath = mediaPaths.find(p => normalizePath(m.filepath).startsWith(normalizePath(p)));
-          if (parentPath && !connectedPaths.includes(parentPath)) {
-            // Path disconnected
-            const { db } = getDb();
-            db.update(schema.mediaAssets).set({ available: 0 }).where(eq(schema.mediaAssets.id, m.id)).run();
-          } else if (!fs.existsSync(m.filepath)) {
-            // File is missing from a connected path -> delete
-            const { db } = getDb();
-            db.delete(schema.episodes).where(eq(schema.episodes.mediaAssetId, m.id)).run();
-            db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, m.id)).run();
-            db.delete(schema.playbackProgress).where(eq(schema.playbackProgress.mediaAssetId, m.id)).run();
-            db.delete(schema.mediaAssets).where(eq(schema.mediaAssets.id, m.id)).run();
+        for (const media of getAllMedia()) {
+          const parent = mediaPaths.find(root => {
+            const relative = path.relative(root, media.filepath);
+            return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+          });
+          if (parent && !connectedPaths.includes(parent)) {
+            db.update(schema.mediaAssets).set({ available: 0 }).where(eq(schema.mediaAssets.id, media.id)).run();
+          } else if (!fs.existsSync(media.filepath)) {
+            db.delete(schema.episodes).where(eq(schema.episodes.mediaAssetId, media.id)).run();
+            db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, media.id)).run();
+            db.delete(schema.playbackProgress).where(eq(schema.playbackProgress.mediaAssetId, media.id)).run();
+            db.delete(schema.mediaAssets).where(eq(schema.mediaAssets.id, media.id)).run();
+            db.delete(schema.mediaFiles).where(eq(schema.mediaFiles.filePath, media.filepath)).run();
             deletedCount++;
-          } else {
-            // Available
-            const { db } = getDb();
-            db.update(schema.mediaAssets).set({ available: 1 }).where(eq(schema.mediaAssets.id, m.id)).run();
           }
         }
 
@@ -65,238 +52,79 @@ export async function GET(request: NextRequest) {
         let updatedCount = 0;
         let skippedCount = 0;
         let errorCount = 0;
-
-        const parsedFiles = files.map(file => ({
-          file,
-          parsed: parseFilename(file.filename)
-        }));
-
-        const movieFiles = parsedFiles.filter(f => f.parsed.type === "movie" || f.parsed.episode_start === null);
-        const showFiles = parsedFiles.filter(f => f.parsed.type === "show" || f.parsed.episode_start !== null);
-
-        const showGroups = new Map<string, typeof showFiles>();
-        for (const item of showFiles) {
-          const key = item.parsed.title.toLowerCase().trim();
-          if (!showGroups.has(key)) showGroups.set(key, []);
-          showGroups.get(key)!.push(item);
-        }
-
-        let omdbCallsForShows = 0;
-        let processedItems = 0;
-        const totalItems = showGroups.size + movieFiles.length;
-
-        // Process shows
-        for (const [showTitle, episodeFiles] of showGroups) {
-          processedItems++;
-          const percent = 10 + Math.floor((processedItems / totalItems) * 80);
-          send({ message: `Processing show: ${showTitle}`, progress: percent });
-          await new Promise(r => setTimeout(r, 10));
-
+        const shows = new Set<string>();
+        for (const [index, file] of files.entries()) {
+          send({ message: `Processing: ${file.filename}`, progress: 10 + Math.floor(index / files.length * 80) });
+          await new Promise(resolve => setTimeout(resolve, 10));
           try {
-            const existing = getShowMetadataByTitle(showTitle);
-            let showMetadata: any = null;
-            let backdropResult: any = null;
-            let omdbConfirmed = 1;
-
-            if (existing) {
-              showMetadata = existing;
-              // Re-fetch backdrop if missing from cached metadata
-              if (existing.backdrop) {
-                backdropResult = { backdropPath: existing.backdrop, backdropUrl: existing.backdrop_url };
-              } else if (existing.omdb_id) {
-                backdropResult = await getBackdropForShow(existing.omdb_id);
-              }
-            } else {
-              omdbCallsForShows++;
-              const representative = episodeFiles[0].parsed;
-              const tvmazeData = await fetchTVMazeShow(representative.title, representative.year);
-              
-              if (tvmazeData) {
-                showMetadata = tvmazeData;
-                if (tvmazeData.omdb_id) {
-                  backdropResult = await getBackdropForShow(tvmazeData.omdb_id);
-                }
-                if (!backdropResult && tvmazeData.poster) {
-                  backdropResult = { backdropPath: tvmazeData.poster, backdropUrl: tvmazeData.backdrop_url };
-                }
-
-                if (tvmazeData.confirmed_title) {
-                  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-                  const parsedNorm = normalize(representative.title);
-                  const tvmazeNorm = normalize(tvmazeData.confirmed_title);
-                  if (!parsedNorm.includes(tvmazeNorm) && !tvmazeNorm.includes(parsedNorm)) {
-                    omdbConfirmed = 0;
-                  }
-                }
-              }
+            const guess = identifyFile(file.filename);
+            const existing = getMediaByFilepath(file.filepath);
+            const result = await processLibraryFile(file.filepath);
+            const type = (result.type ?? guess.type) === "episode" ? "show" : "movie";
+            const details = result.omdb;
+            const title = result.title || guess.title || file.filename;
+            if (type === "show") shows.add(title);
+            // A cached match already has its metadata in the existing library tables.
+            const reuse = existing && existing.omdb_id === result.imdbId && result.status === "matched";
+            let poster = reuse ? existing.poster : null;
+            if (!poster && details?.Poster && details.Poster !== "N/A" && result.imdbId) {
+              poster = await downloadPoster(result.imdbId, details.Poster);
             }
-
-            for (const episode of episodeFiles) {
-              try {
-                const fileExisting = getMediaByFilepath(episode.file.filepath);
-                
-                upsertMedia({
-                  filepath: episode.file.filepath,
-                  filename: episode.file.filename,
-                  source: "local",
-                  type: "show",
-                  title: showMetadata?.confirmed_title || episode.parsed.title,
-                  year: showMetadata?.year ?? episode.parsed.year,
-                  season: episode.parsed.season,
-                  episode_start: episode.parsed.episode_start,
-                  episode_end: episode.parsed.episode_end,
-                  omdb_id: showMetadata?.omdb_id || null,
-                  poster: showMetadata?.poster || null,
-                  backdrop: backdropResult?.backdropPath || showMetadata?.backdrop || null,
-                  backdrop_url: backdropResult?.backdropUrl || showMetadata?.backdrop_url || null,
-                  overview: showMetadata?.overview || null,
-                  rating: showMetadata?.rating || null,
-                  genres: showMetadata?.genres || null,
-                  runtime: showMetadata?.runtime || null,
-                  available: 1,
-                  fetched_at: showMetadata ? new Date().toISOString() : null,
-                  omdb_confirmed: existing ? (fileExisting?.omdb_confirmed ?? 1) : omdbConfirmed,
-                });
-
-                if (fileExisting) {
-                  if (fileExisting.omdb_id && existing) skippedCount++;
-                  else updatedCount++;
-                } else {
-                  newCount++;
-                }
-              } catch (err) {
-                 errorCount++;
-              }
+            let backdrop = reuse ? existing.backdrop : null;
+            let backdropUrl = reuse ? existing.backdrop_url : null;
+            if (!backdrop && result.imdbId) {
+              const artwork = type === "show"
+                ? await getBackdropForShow(result.imdbId)
+                : await getBackdropForMovie(result.imdbId);
+              backdrop = artwork?.backdropPath ?? null;
+              backdropUrl = artwork?.backdropUrl ?? null;
             }
-          } catch (err) {
-            errorCount += episodeFiles.length;
-          }
-        }
-
-        // Process movies
-        for (const movie of movieFiles) {
-          processedItems++;
-          const percent = 10 + Math.floor((processedItems / totalItems) * 80);
-          send({ message: `Processing movie: ${movie.parsed.title}`, progress: percent });
-          await new Promise(r => setTimeout(r, 10));
-
-          try {
-            const fileExisting = getMediaByFilepath(movie.file.filepath);
-
-            // Skip only if existing entry has BOTH omdb_id AND a valid poster AND a valid backdrop
-            if (fileExisting && fileExisting.omdb_id && fileExisting.poster && fileExisting.backdrop) {
-              upsertMedia({
-                ...fileExisting,
-                available: 1,
-                fetched_at: fileExisting.fetched_at,
-              });
-              skippedCount++;
-              continue;
-            }
-
-            // Re-use existing OMDB data if we already have an omdb_id, only fetch if missing
-            let omdbData = null;
-            if (fileExisting?.omdb_id && fileExisting.omdb_id.startsWith('tt')) {
-              // We have a valid IMDB ID, reconstruct omdbData from existing entry
-              omdbData = {
-                omdb_id: fileExisting.omdb_id,
-                confirmed_title: fileExisting.title || movie.parsed.title,
-                year: fileExisting.year,
-                poster: fileExisting.poster,
-                overview: fileExisting.overview,
-                rating: fileExisting.rating,
-                genres: fileExisting.genres,
-                runtime: fileExisting.runtime,
-              };
-              // Re-fetch poster if missing
-              if (!fileExisting.poster) {
-                const freshOmdb = await fetchOMDB(movie.parsed.title, "movie", movie.parsed.year);
-                if (freshOmdb?.poster) omdbData.poster = freshOmdb.poster;
-              }
-            } else {
-              omdbData = await fetchOMDB(movie.parsed.title, "movie", movie.parsed.year);
-            }
-
-            let omdbConfirmed = 1;
-            if (omdbData && omdbData.confirmed_title) {
-              const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-              const parsedNorm = normalize(movie.parsed.title);
-              const omdbNorm = normalize(omdbData.confirmed_title);
-              if (!parsedNorm.includes(omdbNorm) && !omdbNorm.includes(parsedNorm)) {
-                omdbConfirmed = 0;
-              }
-            }
-
-            // Always try to fetch backdrop if missing
-            let backdropResult = null;
-            const existingBackdrop = fileExisting?.backdrop;
-            if (existingBackdrop) {
-              backdropResult = { backdropPath: existingBackdrop, backdropUrl: fileExisting?.backdrop_url || existingBackdrop };
-            } else if (omdbData?.omdb_id) {
-              backdropResult = await getBackdropForMovie(omdbData.omdb_id);
-            }
-
+            const episodes = Array.isArray(guess.episode) ? guess.episode : guess.episode === undefined ? [] : [guess.episode];
             upsertMedia({
-              filepath: movie.file.filepath,
-              filename: movie.file.filename,
-              source: "local",
-              type: "movie",
-              title: omdbData?.confirmed_title || movie.parsed.title,
-              year: omdbData?.year ?? movie.parsed.year,
-              season: null,
-              episode_start: null,
-              episode_end: null,
-              omdb_id: omdbData?.omdb_id || null,
-              poster: omdbData?.poster || null,
-              backdrop: backdropResult?.backdropPath || null,
-              backdrop_url: backdropResult?.backdropUrl || null,
-              overview: omdbData?.overview || null,
-              rating: omdbData?.rating || null,
-              genres: omdbData?.genres || null,
-              runtime: omdbData?.runtime || null,
+              filepath: file.filepath,
+              filename: file.filename,
+              source: file.source,
+              type,
+              title,
+              year: Number.parseInt(details?.Year ?? "", 10) || (reuse ? existing.year : guess.year ?? null),
+              season: type === "show" ? result.season ?? firstNumber(guess.season) : null,
+              episode_start: type === "show" ? result.episode ?? (episodes.length ? Math.min(...episodes) : null) : null,
+              episode_end: type === "show" ? result.episodeEnd ?? (episodes.length ? Math.max(...episodes) : null) : null,
+              omdb_id: result.imdbId,
+              poster,
+              backdrop,
+              backdrop_url: backdropUrl,
+              overview: text(details?.Plot) ?? (reuse ? existing.overview : null),
+              rating: text(details?.imdbRating) ? `${details?.imdbRating}/10` : reuse ? existing.rating : null,
+              genres: text(details?.Genre) ?? (reuse ? existing.genres : null),
+              runtime: Number.parseInt(details?.Runtime ?? "", 10) || (reuse ? existing.runtime : null),
               available: 1,
-              fetched_at: omdbData ? new Date().toISOString() : null,
-              omdb_confirmed: fileExisting ? (fileExisting.omdb_confirmed ?? omdbConfirmed) : omdbConfirmed,
+              fetched_at: result.status === "matched" ? result.updatedAt : null,
+              omdb_confirmed: result.status === "matched" ? 1 : 0,
             });
-
-            if (fileExisting) {
-              updatedCount++;
-            } else {
-              newCount++;
-            }
-          } catch (err) {
+            if (!existing) newCount++;
+            else if (reuse && !details) skippedCount++;
+            else updatedCount++;
+          } catch (error) {
+            console.error(`[Scan] Failed to process ${file.filename}:`, error);
             errorCount++;
           }
         }
-
         setConfig("last_scan", new Date().toISOString());
-
-        const summary = {
-          totalFiles: files.length,
-          uniqueShows: showGroups.size,
-          omdbCallsForShows,
-          new: newCount,
-          updated: updatedCount,
-          skipped: skippedCount,
-          errors: errorCount,
-          deleted: deletedCount,
-        };
-
-        send({ done: true, summary });
-        controller.close();
-      } catch (err) {
-        console.error("[Scan] Fatal error:", err);
-        send({ error: String(err) });
+        send({ done: true, summary: {
+          totalFiles: files.length, uniqueShows: shows.size,
+          new: newCount, updated: updatedCount, skipped: skippedCount,
+          errors: errorCount, deleted: deletedCount,
+        } });
+      } catch (error) {
+        console.error("[Scan] Fatal error:", error);
+        send({ error: String(error) });
+      } finally {
         controller.close();
       }
-    }
+    },
   });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive"
-    }
-  });
+  return new Response(stream, { headers: {
+    "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive",
+  } });
 }

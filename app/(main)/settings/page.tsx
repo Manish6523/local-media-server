@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay, ExternalLink, Compass } from "lucide-react";
 import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
@@ -348,6 +349,10 @@ export default function SettingsPage() {
         </section>
 
         {/* Section 1 - Media Sources */}
+        <Link href="/admin/unmatched" className="glass-card flex items-center justify-between gap-4 p-6 transition hover:bg-white/5">
+          <div><h2 className="font-bold text-white">Review unmatched files</h2><p className="mt-1 text-sm text-white/45">Find the right movie or match a batch of episodes to a show.</p></div>
+          <span className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm text-white">Needs review →</span>
+        </Link>
         <section className="space-y-6">
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
             <SettingsIcon className="w-5 h-5 text-violet-400" />

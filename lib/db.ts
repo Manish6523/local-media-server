@@ -112,8 +112,23 @@ export function getDb() {
       key TEXT PRIMARY KEY,
       value TEXT
     );
+    CREATE TABLE IF NOT EXISTS media_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_path TEXT NOT NULL UNIQUE,
+      imdb_id TEXT,
+      title TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('matched', 'unmatched', 'pending')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
+  // Additive migration for existing installations, including early matcher builds.
+  const matcherColumns = new Set((sqliteDb.prepare("PRAGMA table_info(media_files)").all() as { name: string }[]).map(c => c.name));
+  for (const [column, definition] of Object.entries({ imdb_id: "TEXT", type: "TEXT", season: "INTEGER", episode: "INTEGER", episode_end: "INTEGER", match_source: "TEXT" })) {
+    if (!matcherColumns.has(column)) sqliteDb.exec(`ALTER TABLE media_files ADD COLUMN ${column} ${definition}`);
+  }
   db = drizzle(sqliteDb, { schema });
 
   // Seed default config if empty
@@ -260,6 +275,7 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_
   }
 
   if (entry.type === "movie") {
+    db.delete(schema.episodes).where(eq(schema.episodes.mediaAssetId, assetId)).run();
     const existingMovie = db.select().from(schema.movies).where(eq(schema.movies.mediaAssetId, assetId)).get();
     if (existingMovie) {
       db.update(schema.movies).set({
@@ -290,8 +306,9 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_
       }).run();
     }
   } else if (entry.type === "show") {
+    db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, assetId)).run();
     // Upsert tvShow
-    let tvShow = db.select().from(schema.tvShows).where(eq(schema.tvShows.title, entry.title)).get();
+    let tvShow = db.select().from(schema.tvShows).where(entry.omdb_id ? eq(schema.tvShows.omdbId, entry.omdb_id) : eq(schema.tvShows.title, entry.title)).get();
     if (!tvShow) {
       tvShow = db.insert(schema.tvShows).values({
         title: entry.title,
@@ -367,6 +384,7 @@ export function deleteMissingMedia(source: "local" | "hdd", validPaths: string[]
 
 export function clearMediaLibrary(): void {
   const { db } = getDb();
+  db.delete(schema.mediaFiles).run();
   // Delete child tables first
   db.delete(schema.playbackProgress).run();
   db.delete(schema.movies).run();

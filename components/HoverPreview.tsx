@@ -11,9 +11,10 @@ interface HoverPreviewProps {
   clipDuration?: number; // in seconds, default 15
   randomStart?: boolean; // default false (uses 10m in)
   isOnline?: boolean;
+  startAt?: number;
 }
 
-export default function HoverPreview({ mediaId, runtime, exactDuration, isHovered, clipDuration = 15, randomStart = false, isOnline = false }: HoverPreviewProps) {
+export default function HoverPreview({ mediaId, runtime, exactDuration, isHovered, clipDuration = 15, randomStart = false, isOnline = false, startAt }: HoverPreviewProps) {
   const [shouldLoad, setShouldLoad] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -32,7 +33,9 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
       // 500ms delay to prevent accidental loading on fast mouse swipes
       timeoutId = setTimeout(() => {
         const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
-        if (randomStart) {
+        if (startAt !== undefined) {
+          setComputedStartTime(Math.max(0, startAt));
+        } else if (randomStart) {
           if (totalSeconds > clipDuration) {
             // Pick from the middle third of the video for more interesting content
             const middleStart = totalSeconds * 0.3;
@@ -61,7 +64,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
     }
     
     return () => clearTimeout(timeoutId);
-  }, [isHovered]);
+  }, [isHovered, exactDuration, runtime, clipDuration, randomStart, startAt]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -129,9 +132,10 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
         onLoadedMetadata={(e) => {
           const video = e.currentTarget;
           const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
-          if (totalSeconds === 0 && !randomStart && isFinite(video.duration) && video.duration > 0) {
+          if (startAt === undefined && totalSeconds === 0 && !randomStart && isFinite(video.duration) && video.duration > 0) {
             const exactStart = Math.max(0, (video.duration / 3) - 1);
             setComputedStartTime(exactStart);
+            video.currentTime = exactStart;
           }
         }}
         onLoadedData={(e) => {

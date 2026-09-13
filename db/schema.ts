@@ -64,3 +64,20 @@ export const config = sqliteTable("config", {
   key: text("key").primaryKey(),
   value: text("value"),
 });
+
+export const mediaFiles = sqliteTable("media_files", {
+  type: text("type", { enum: ["movie", "episode"] }),
+  season: integer("season"),
+  episode: integer("episode"),
+  episodeEnd: integer("episode_end"),
+  matchSource: text("match_source"),
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  filePath: text("file_path").notNull().unique(),
+  imdbId: text("imdb_id"),
+  title: text("title"),
+  status: text("status", { enum: ["matched", "unmatched", "pending"] })
+    .notNull()
+    .default("pending"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

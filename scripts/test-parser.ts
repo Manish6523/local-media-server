@@ -1,7 +1,7 @@
 // Test script for parser.ts
 // Run with: npx tsx scripts/test-parser.ts
 
-import { parseFilename } from "../lib/parser";
+import { guessit } from "guessit-js";
 
 const testFiles = [
   "The_Great_Indian_Kapil_Show_S04E14_The_Return_of_Samay_Raina.mp4",
@@ -24,16 +24,14 @@ const testFiles = [
 console.log("=== Parser Test Results ===\n");
 
 for (const file of testFiles) {
-  const result = parseFilename(file);
-  const epDisplay = result.episode_start === result.episode_end
-    ? `E${String(result.episode_start).padStart(2, "0")}`
-    : `E${String(result.episode_start).padStart(2, "0")}–E${String(result.episode_end).padStart(2, "0")}`;
+  const result = guessit(file);
+  const epDisplay = JSON.stringify(result.episode ?? null);
 
   console.log(`File:    ${file}`);
   console.log(`  Type:    ${result.type}`);
   console.log(`  Title:   "${result.title}"`);
   console.log(`  Year:    ${result.year ?? "null"}`);
-  if (result.type === "show") {
+  if (result.type === "episode") {
     console.log(`  Season:  ${result.season}`);
     console.log(`  Episode: ${epDisplay}`);
   }

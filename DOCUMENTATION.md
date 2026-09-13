@@ -144,7 +144,9 @@ The `last_scan` timestamp is stored in `config`. Subsequent scans are incrementa
 
 ## 8. Filename Parsing Cheat Sheet
 
-`lib/parser.ts` runs eight ordered regex patterns. First match wins:
+Filename identification now uses synchronous `guessit-js` through `identifyFile()` in `lib/metadata-matcher.ts`. The old custom parser has been removed. GuessIt returns movie/episode type, title, year, season and episode numbers; episode arrays become start/end numbers in the library.
+
+The scan calls `processLibraryFile()` for each path. Matched paths reuse the database result; new paths use OMDb IMDb-ID lookup or title/year search followed by full details. Low title similarity or no result marks the file unmatched and sets `omdb_confirmed = 0` for manual review. Successful OMDb responses are cached for five minutes to share requests between episodes. The following patterns describe the former parser only:
 
 | # | Pattern | Examples |
 | - | --- | --- |
@@ -530,8 +532,8 @@ VIDEO_EXTENSIONS = { .mp4, .mkv, .avi, .mov, .m4v, .wmv }
 ```
 Catches errors per-file and per-directory so one unreadable file doesn't crash the scan. Returns `{ files, hddConnected }`.
 
-### `parser.ts`
-See [§8](#8-filename-parsing-cheat-sheet). Pure function: `parseFilename(name): ParsedFile`. Eight ordered patterns + extensive cleanup. The `JUNK_TAGS` and `COUNTRY_CODES` lists are tunable in one place.
+### `metadata-matcher.ts`
+See [§8](#8-filename-parsing-cheat-sheet). Exposes `identifyFile`, `matchToOmdb`, and `processLibraryFile`. Uses GuessIt, OMDb confidence checks, and persisted matched-path caching.
 
 ### `omdb.ts`
 `fetchOMDB(title, type, year?)` — three-attempt strategy:

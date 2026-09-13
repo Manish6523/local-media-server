@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Lock } from 'lucide-react'
 
-export default function AdminPinGate({ children }: { children: React.ReactNode }) {
+export default function AdminPinGate({ children, requireSession = false }: { children: React.ReactNode; requireSession?: boolean }) {
   const [loading, setLoading] = useState(true)
   const [needsPin, setNeedsPin] = useState(false)
   const [pin, setPin] = useState('')
@@ -10,19 +10,19 @@ export default function AdminPinGate({ children }: { children: React.ReactNode }
   const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/admin/pin-status?t=${Date.now()}`, { cache: "no-store" })
+    fetch(requireSession ? '/api/admin/manual-match/session' : `/api/admin/pin-status?t=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => {
         const alreadyUnlocked = sessionStorage.getItem('admin_unlocked') === 'true'
-        if (!data.enabled || alreadyUnlocked) {
+        if (requireSession ? data.authorized : (!data.enabled || alreadyUnlocked)) {
           setNeedsPin(false)
         } else {
           setNeedsPin(true)
         }
         setLoading(false)
       })
-      .catch(() => setLoading(false))
-  }, [])
+      .catch(() => { setNeedsPin(true); setLoading(false) })
+  }, [requireSession])
 
   const handleSubmit = async () => {
     setVerifying(true)

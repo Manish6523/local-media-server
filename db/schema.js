@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.config = exports.playbackProgress = exports.episodes = exports.tvShows = exports.movies = exports.mediaAssets = void 0;
+exports.mediaFiles = exports.config = exports.playbackProgress = exports.episodes = exports.tvShows = exports.movies = exports.mediaAssets = void 0;
 const sqlite_core_1 = require("drizzle-orm/sqlite-core");
 const drizzle_orm_1 = require("drizzle-orm");
 exports.mediaAssets = (0, sqlite_core_1.sqliteTable)("media_assets", {
@@ -60,4 +60,20 @@ exports.playbackProgress = (0, sqlite_core_1.sqliteTable)("playback_progress", {
 exports.config = (0, sqlite_core_1.sqliteTable)("config", {
     key: (0, sqlite_core_1.text)("key").primaryKey(),
     value: (0, sqlite_core_1.text)("value"),
+});
+exports.mediaFiles = (0, sqlite_core_1.sqliteTable)("media_files", {
+    type: (0, sqlite_core_1.text)("type", { enum: ["movie", "episode"] }),
+    season: (0, sqlite_core_1.integer)("season"),
+    episode: (0, sqlite_core_1.integer)("episode"),
+    episodeEnd: (0, sqlite_core_1.integer)("episode_end"),
+    matchSource: (0, sqlite_core_1.text)("match_source"),
+    id: (0, sqlite_core_1.integer)("id").primaryKey({ autoIncrement: true }),
+    filePath: (0, sqlite_core_1.text)("file_path").notNull().unique(),
+    imdbId: (0, sqlite_core_1.text)("imdb_id"),
+    title: (0, sqlite_core_1.text)("title"),
+    status: (0, sqlite_core_1.text)("status", { enum: ["matched", "unmatched", "pending"] })
+        .notNull()
+        .default("pending"),
+    createdAt: (0, sqlite_core_1.text)("created_at").notNull().default((0, drizzle_orm_1.sql) `CURRENT_TIMESTAMP`),
+    updatedAt: (0, sqlite_core_1.text)("updated_at").notNull().default((0, drizzle_orm_1.sql) `CURRENT_TIMESTAMP`),
 });
