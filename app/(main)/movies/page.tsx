@@ -72,6 +72,12 @@ export default function MoviesPage() {
           const rB = b.rating ? parseFloat(b.rating) : 0;
           return rB - rA;
         });
+      case "rating_asc":
+        return list.sort((a, b) => {
+          const rA = a.rating ? parseFloat(a.rating) : 0;
+          const rB = b.rating ? parseFloat(b.rating) : 0;
+          return rA - rB;
+        });
       case "year_desc":
         return list.sort((a, b) => (b.year || 0) - (a.year || 0));
       case "year_asc":
@@ -81,8 +87,15 @@ export default function MoviesPage() {
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
+      case "added_asc":
+        return list.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       case "title_asc":
         return list.sort((a, b) => a.title.localeCompare(b.title));
+      case "title_desc":
+        return list.sort((a, b) => b.title.localeCompare(a.title));
       default:
         return list;
     }
@@ -157,9 +170,7 @@ export default function MoviesPage() {
         <div className="flex items-center gap-3">
           {!loading && movies.length > 0 && (
             <>
-              <div className="flex items-center bg-white/[0.03] border border-white/[0.05] rounded-lg shadow-lg backdrop-blur-md">
-                <SortDropdown pageKey="movies" onSortChange={setSortParam} />
-              </div>
+              <SortDropdown pageKey="movies" onSortChange={setSortParam} />
 
               {/* Mobile Filter Toggle */}
               <button

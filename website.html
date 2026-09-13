@@ -1,0 +1,2923 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070707">
+  <meta name="description"
+    content="VidLock turns the movies already on your computer into a beautiful, private streaming library.">
+  <title>VidLock — Your movies. Beautifully yours.</title>
+  <style>
+    :root {
+      --bg: #070707;
+      --panel: rgba(255, 255, 255, .055);
+      --line: rgba(255, 255, 255, .11);
+      --muted: #9a9997;
+      --text: #f6f4f0;
+      --red: #ff4d45;
+      --amber: #ffb448;
+      --green: #61d38a;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+      --mx: 50vw;
+      --my: 20vh
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg)
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: #070707;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden
+    }
+
+    button,
+    a {
+      font: inherit
+    }
+
+    button {
+      cursor: pointer
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      opacity: .035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
+    }
+
+    .ambient {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(500px circle at var(--mx) var(--my), rgba(255, 77, 69, .07), transparent 62%);
+      z-index: 0
+    }
+
+    .wrap {
+      width: min(1180px, calc(100% - 40px));
+      margin: auto;
+      position: relative;
+      z-index: 1
+    }
+
+    .glass {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .025));
+      box-shadow: inset 0 1px rgba(255, 255, 255, .06), 0 20px 60px rgba(0, 0, 0, .25);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px)
+    }
+
+    .nav {
+      position: fixed;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      width: min(1180px, calc(100% - 28px));
+      height: 64px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 6px 6px 20px;
+      background: rgba(20, 20, 20, 0.4);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      z-index: 30;
+      transition: .35s var(--ease)
+    }
+
+    .nav.scrolled {
+      top: 10px;
+      background: rgba(13, 13, 13, .82);
+      box-shadow: 0 16px 60px rgba(0, 0, 0, .45)
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 750;
+      letter-spacing: -.03em;
+      font-size: 20px
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      filter: drop-shadow(0 6px 14px rgba(255, 77, 69, .2))
+    }
+
+    .navlinks {
+      display: flex;
+      gap: 4px;
+      margin: auto
+    }
+
+    .navlinks a {
+      padding: 11px 16px;
+      border-radius: 13px;
+      color: #a3a19f;
+      font-size: 14px;
+      font-weight: 600;
+      transition: .25s
+    }
+
+    .navlinks a:hover,
+    .navlinks a.active {
+      background: rgba(255, 255, 255, .08);
+      color: #fff
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px
+    }
+
+    .nav-actions .download {
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px;
+      padding: 9px 18px;
+      background: rgba(255,255,255,0.9);
+      color: #0b0b0b;
+      font-weight: 750;
+      transition: .25s var(--ease);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      text-decoration: none;
+    }
+
+    .nav-actions .download:hover {
+      background: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(255,255,255,0.25);
+    }
+
+    .primary {
+      border: 0;
+      border-radius: 13px;
+      padding: 12px 18px;
+      background: #f5f3ef;
+      color: #0b0b0b;
+      font-weight: 750;
+      transition: transform .25s var(--ease), box-shadow .25s
+    }
+
+    .primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(255, 255, 255, .14)
+    }
+
+    .menu {
+      display: none;
+      background: transparent;
+      border: 0;
+      color: white;
+      padding: 10px
+    }
+
+    .hero {
+      min-height: 100vh;
+      padding: 150px 0 72px;
+      display: grid;
+      place-items: center;
+      position: relative
+    }
+
+    .hero:before {
+      content: "";
+      position: absolute;
+      width: 760px;
+      height: 760px;
+      left: 50%;
+      top: -330px;
+      transform: translateX(-50%);
+      background: radial-gradient(circle, rgba(255, 72, 65, .15), rgba(255, 132, 63, .045) 35%, transparent 68%);
+      filter: blur(10px)
+    }
+
+    .hero-copy {
+      text-align: center;
+      position: relative;
+      z-index: 2
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .045);
+      border-radius: 999px;
+      padding: 8px 13px;
+      color: #c5c2bd;
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(97, 211, 138, .1)
+    }
+
+    h1 {
+      font-size: clamp(56px, 8vw, 108px);
+      max-width: 1000px;
+      margin: 28px auto 24px;
+      line-height: .91;
+      letter-spacing: -.075em;
+      font-weight: 800
+    }
+
+    .warm {
+      background: linear-gradient(110deg, #fff 5%, #f8d1bb 55%, #ff6961);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent
+    }
+
+    .lede {
+      max-width: 650px;
+      margin: 0 auto;
+      color: #aaa7a3;
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.55
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 34px
+    }
+
+    .primary {
+      padding: 15px 23px;
+      border-radius: 15px
+    }
+
+    .secondary {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .045);
+      color: white;
+      border-radius: 15px;
+      padding: 14px 21px;
+      font-weight: 700;
+      transition: .25s
+    }
+
+    .secondary:hover {
+      background: rgba(255, 255, 255, .09);
+      transform: translateY(-2px)
+    }
+
+    .os-note {
+      margin-top: 15px;
+      color: #747270;
+      font-size: 12px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center
+    }
+
+    .os-note svg {
+      width: 13px
+    }
+
+    .app-stage {
+      width: min(1120px, 96vw);
+      height: 580px;
+      margin: 62px auto 0;
+      border-radius: 28px;
+      padding: 10px;
+      position: relative;
+      perspective: 1200px
+    }
+
+    .app-window {
+      height: 100%;
+      border-radius: 20px;
+      background: #090909;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .12);
+      box-shadow: 0 60px 140px rgba(0, 0, 0, .75);
+      transform: rotateX(2deg);
+      transition: transform .3s var(--ease);
+      position: relative
+    }
+
+    .app-stage:hover .app-window {
+      transform: rotateX(0)
+    }
+
+    .windowbar {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .07);
+      background: rgba(255, 255, 255, .025)
+    }
+
+    .dots {
+      display: flex;
+      gap: 7px
+    }
+
+    .dots i {
+      display: block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #393939
+    }
+
+    .mini-brand {
+      margin: auto;
+      font-size: 12px;
+      color: #777
+    }
+
+    .demo {
+      height: calc(100% - 48px);
+      display: grid;
+      grid-template-columns: 1fr 1.22fr
+    }
+
+    .demo-copy {
+      padding: 48px 42px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: radial-gradient(circle at 20% 50%, rgba(255, 77, 69, .08), transparent 45%)
+    }
+
+    .demo-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .16em;
+      color: #e69e7c;
+      font-weight: 800
+    }
+
+    .demo-copy h2 {
+      font-size: 43px;
+      line-height: 1.02;
+      letter-spacing: -.055em;
+      margin: 15px 0
+    }
+
+    .demo-copy p {
+      color: #8e8b87;
+      line-height: 1.55;
+      margin: 0 0 25px
+    }
+
+    .scan-button {
+      align-self: flex-start;
+      border: 0;
+      background: #f5f2ed;
+      border-radius: 14px;
+      padding: 14px 18px;
+      color: #111;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 190px;
+      justify-content: center
+    }
+
+    .scan-button svg {
+      width: 17px
+    }
+
+    .scan-button.running {
+      background: #252525;
+      color: #eee;
+      pointer-events: none
+    }
+
+    .demo-library {
+      padding: 30px 28px;
+      background: linear-gradient(130deg, #10100f, #080808);
+      overflow: hidden
+    }
+
+    .demo-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .demo-top h3 {
+      font-size: 20px;
+      margin: 0
+    }
+
+    .counter {
+      font-size: 12px;
+      color: #777
+    }
+
+    .file-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 22px
+    }
+
+    .file {
+      height: 62px;
+      border: 1px solid rgba(255, 255, 255, .075);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .035);
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+      transition: .5s var(--ease)
+    }
+
+    .file-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: #1c1b1a;
+      display: grid;
+      place-items: center;
+      color: #aaa;
+      flex: none
+    }
+
+    .file-name {
+      font-size: 12px;
+      color: #aaa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .file small {
+      display: block;
+      color: #5f5d5a;
+      margin-top: 4px
+    }
+
+    .file-status {
+      margin-left: auto;
+      font-size: 11px;
+      color: #6c6a67;
+      white-space: nowrap
+    }
+
+    .file .bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 0;
+      background: linear-gradient(90deg, var(--red), var(--amber))
+    }
+
+    .scanning .file .bar {
+      animation: scan 1.6s var(--ease) forwards
+    }
+
+    .scanning .file:nth-child(2) .bar {
+      animation-delay: .35s
+    }
+
+    .scanning .file:nth-child(3) .bar {
+      animation-delay: .7s
+    }
+
+    .file.matched {
+      border-color: rgba(97, 211, 138, .22);
+      background: rgba(97, 211, 138, .045)
+    }
+
+    .file.matched .file-status {
+      color: var(--green)
+    }
+
+    .file.matched .file-icon {
+      background: rgba(97, 211, 138, .1);
+      color: var(--green)
+    }
+
+    @keyframes scan {
+      to {
+        width: 100%
+      }
+    }
+
+    .poster-row {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 20px
+    }
+
+    .poster-row.show {
+      display: grid;
+      animation: rise .65s var(--ease) both
+    }
+
+    .poster {
+      aspect-ratio: 2/2.75;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      background: #222;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, .4)
+    }
+
+    .poster:after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(transparent 52%, rgba(0, 0, 0, .92))
+    }
+
+    .poster span {
+      position: absolute;
+      z-index: 2;
+      bottom: 12px;
+      left: 12px;
+      font-size: 12px;
+      font-weight: 800
+    }
+
+    .poster span small {
+      font-weight: 500;
+      color: #aaa;
+      display: block;
+      margin-top: 3px
+    }
+
+    .float-chip {
+      position: absolute;
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-size: 12px;
+      color: #c3c0bc;
+      z-index: 4;
+      animation: float 4s ease-in-out infinite
+    }
+
+    .chip-one {
+      right: -34px;
+      top: 90px
+    }
+
+    .chip-two {
+      left: -38px;
+      bottom: 76px;
+      animation-delay: -2s
+    }
+
+    .float-chip b {
+      color: white
+    }
+
+    @keyframes float {
+      50% {
+        transform: translateY(-10px)
+      }
+    }
+
+    section {
+      padding: 120px 0
+    }
+
+    .section-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .18em;
+      font-weight: 800;
+      color: #e79c78
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 40px;
+      margin-bottom: 52px
+    }
+
+    .section-head h2 {
+      font-size: clamp(40px, 5.5vw, 72px);
+      letter-spacing: -.06em;
+      line-height: .98;
+      margin: 14px 0 0;
+      max-width: 720px
+    }
+
+    .section-head p {
+      color: #92908c;
+      line-height: 1.55;
+      max-width: 390px;
+      margin: 0
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      grid-template-rows: 360px 360px;
+      gap: 16px
+    }
+
+    .feature {
+      border-radius: 28px;
+      padding: 31px;
+      overflow: hidden;
+      position: relative;
+      transition: transform .35s var(--ease), border-color .35s
+    }
+
+    .feature:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 255, 255, .2)
+    }
+
+    .feature h3 {
+      font-size: 24px;
+      letter-spacing: -.035em;
+      margin: 14px 0 8px
+    }
+
+    .feature p {
+      color: #8f8c88;
+      line-height: 1.5;
+      max-width: 400px;
+      margin: 0
+    }
+
+    .tag {
+      font-size: 11px;
+      color: #d9a085;
+      text-transform: uppercase;
+      letter-spacing: .13em;
+      font-weight: 800
+    }
+
+    .feature-privacy {
+      grid-row: span 2;
+      background: radial-gradient(circle at 50% 75%, rgba(255, 86, 70, .16), transparent 42%), linear-gradient(145deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025))
+    }
+
+    .vault {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      left: 50%;
+      bottom: -40px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, .12);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 70px rgba(255, 77, 69, .08), 0 0 80px rgba(255, 77, 69, .05)
+    }
+
+    .vault:before,
+    .vault:after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, .09)
+    }
+
+    .vault:before {
+      inset: 28px
+    }
+
+    .vault:after {
+      inset: 62px
+    }
+
+    .vault-center {
+      width: 94px;
+      height: 94px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #2b2926, #111);
+      border: 1px solid rgba(255, 255, 255, .14);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 18px 35px #000;
+      z-index: 2
+    }
+
+    .vault-center svg {
+      width: 34px
+    }
+
+    .orbit {
+      position: absolute;
+      inset: 13px;
+      animation: spin 12s linear infinite
+    }
+
+    .orbit i {
+      position: absolute;
+      top: -4px;
+      left: 50%;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 16px var(--red)
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .devices {
+      position: absolute;
+      right: -25px;
+      bottom: -35px;
+      width: 330px;
+      height: 230px
+    }
+
+    .screen {
+      position: absolute;
+      border: 1px solid rgba(255, 255, 255, .15);
+      background: #0d0d0d;
+      box-shadow: 0 20px 45px #000;
+      overflow: hidden
+    }
+
+    .laptop {
+      width: 270px;
+      height: 168px;
+      right: 0;
+      top: 0;
+      border-radius: 14px
+    }
+
+    .phone {
+      width: 72px;
+      height: 145px;
+      left: 4px;
+      bottom: 0;
+      border-radius: 16px;
+      z-index: 2
+    }
+
+    .clean-ui {
+      position: absolute;
+      bottom: 22px;
+      left: 30px;
+      right: 30px;
+      height: 135px;
+      display: flex;
+      gap: 11px;
+      align-items: end
+    }
+
+    .mini-poster {
+      flex: 1;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #74412e, #12100f);
+      height: 90%;
+      transform-origin: bottom;
+      transition: .3s var(--ease)
+    }
+
+    .mini-poster:nth-child(2) {
+      height: 100%;
+      background: linear-gradient(145deg, #48545c, #121212)
+    }
+
+    .mini-poster:nth-child(3) {
+      height: 82%;
+      background: linear-gradient(145deg, #9b7646, #18130d)
+    }
+
+    .feature:hover .mini-poster {
+      transform: translateY(-7px)
+    }
+
+    .how {
+      border-top: 1px solid rgba(255, 255, 255, .06)
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      position: relative
+    }
+
+    .step {
+      min-height: 280px;
+      border-radius: 24px;
+      padding: 28px;
+      position: relative
+    }
+
+    .step-num {
+      font-size: 12px;
+      color: #696764;
+      font-weight: 800
+    }
+
+    .step-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .08);
+      display: grid;
+      place-items: center;
+      margin: 44px 0 22px;
+      color: #e7a17f
+    }
+
+    .step-icon svg {
+      width: 22px
+    }
+
+    .step h3 {
+      font-size: 21px;
+      margin: 0 0 9px
+    }
+
+    .step p {
+      color: #85827e;
+      line-height: 1.5;
+      font-size: 14px;
+      margin: 0
+    }
+
+    .connector {
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      width: 20px;
+      height: 1px;
+      background: rgba(255, 255, 255, .15);
+      z-index: 3
+    }
+
+    .step:last-child .connector {
+      display: none
+    }
+
+    .capabilities {
+      padding-top: 40px
+    }
+
+    .cap-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px
+    }
+
+    .cap {
+      min-height: 185px;
+      border-radius: 22px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .cap:after {
+      content: "";
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      right: -50px;
+      bottom: -55px;
+      background: rgba(255, 94, 74, .06);
+      filter: blur(18px)
+    }
+
+    .cap svg {
+      width: 22px;
+      color: #e9a080
+    }
+
+    .cap h3 {
+      font-size: 17px;
+      margin: 28px 0 8px
+    }
+
+    .cap p {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #85827e;
+      margin: 0
+    }
+
+    .techline {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px
+    }
+
+    .techline span {
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 999px;
+      padding: 7px 11px;
+      color: #76736f;
+      font-size: 11px;
+      background: rgba(255, 255, 255, .025)
+    }
+
+    .experience {
+      overflow: hidden
+    }
+
+    .showcase {
+      border-radius: 32px;
+      height: 650px;
+      position: relative;
+      background: radial-gradient(circle at 70% 50%, rgba(200, 70, 48, .13), transparent 40%), #0a0a0a;
+      overflow: hidden
+    }
+
+    .showcase-copy {
+      position: absolute;
+      left: 55px;
+      top: 55px;
+      z-index: 3;
+      max-width: 420px
+    }
+
+    .showcase-copy h2 {
+      font-size: 55px;
+      line-height: .98;
+      letter-spacing: -.055em;
+      margin: 15px 0
+    }
+
+    .showcase-copy p {
+      color: #94918c;
+      line-height: 1.55
+    }
+
+    .party-card {
+      position: absolute;
+      width: 420px;
+      right: 75px;
+      top: 70px;
+      border-radius: 26px;
+      padding: 26px;
+      transform: rotate(3deg);
+      transition: .5s var(--ease)
+    }
+
+    .showcase:hover .party-card {
+      transform: rotate(0) translateY(-8px)
+    }
+
+    .party-head {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .party-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 14px;
+      background: linear-gradient(145deg, var(--red), #ff9c52);
+      display: grid;
+      place-items: center
+    }
+
+    .party-card h3 {
+      margin: 0;
+      font-size: 20px
+    }
+
+    .party-card small {
+      color: #777
+    }
+
+    .room-code {
+      margin: 25px 0;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 17px;
+      padding: 24px;
+      text-align: center;
+      background: rgba(0, 0, 0, .22)
+    }
+
+    .room-code span {
+      display: block;
+      color: #777;
+      font-size: 10px;
+      letter-spacing: .17em;
+      text-transform: uppercase
+    }
+
+    .room-code b {
+      display: block;
+      font-size: 32px;
+      letter-spacing: .24em;
+      margin-top: 9px
+    }
+
+    .friends {
+      display: flex;
+      padding: 14px 0 22px
+    }
+
+    .friend {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid #181818;
+      margin-left: -8px;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      background: #5b342b
+    }
+
+    .friend:first-child {
+      margin-left: 0;
+      background: #4a654f
+    }
+
+    .friend:nth-child(2) {
+      background: #56506f
+    }
+
+    .friend:nth-child(3) {
+      background: #716044
+    }
+
+    .waiting {
+      color: #777;
+      font-size: 11px;
+      align-self: center;
+      margin-left: 10px
+    }
+
+    .party-button {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 14px;
+      background: #f5f3ef;
+      font-weight: 800
+    }
+
+    .player-bar {
+      position: absolute;
+      left: 45px;
+      right: 45px;
+      bottom: 38px;
+      height: 84px;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      gap: 18px
+    }
+
+    .play {
+      width: 46px;
+      height: 46px;
+      border: 0;
+      border-radius: 50%;
+      background: #fff;
+      display: grid;
+      place-items: center
+    }
+
+    .timeline {
+      height: 4px;
+      background: #393939;
+      border-radius: 5px;
+      flex: 1;
+      overflow: hidden
+    }
+
+    .timeline i {
+      display: block;
+      width: 37%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--amber))
+    }
+
+    .time {
+      font-size: 12px;
+      color: #888
+    }
+
+    .cta {
+      padding-top: 70px
+    }
+
+    .cta-box {
+      text-align: center;
+      border-radius: 34px;
+      padding: 90px 25px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .cta-box:before {
+      content: "";
+      position: absolute;
+      width: 600px;
+      height: 280px;
+      top: -160px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 77, 69, .18);
+      filter: blur(90px)
+    }
+
+    .cta-box h2 {
+      font-size: clamp(44px, 6vw, 76px);
+      letter-spacing: -.065em;
+      line-height: .95;
+      margin: 0 auto 20px;
+      max-width: 760px;
+      position: relative
+    }
+
+    .cta-box p {
+      color: #979490;
+      margin: 0 auto 30px;
+      max-width: 520px;
+      line-height: 1.55
+    }
+
+    .footer {
+      padding: 45px 0 28px;
+      border-top: 1px solid rgba(255, 255, 255, .07);
+      margin-top: 100px
+    }
+
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #6f6d69;
+      font-size: 13px
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px
+    }
+
+    .footer-links a:hover {
+      color: white
+    }
+
+    .modal-wrap {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      backdrop-filter: blur(14px);
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: .3s
+    }
+
+    .modal-wrap.open {
+      opacity: 1;
+      visibility: visible
+    }
+
+    .modal {
+      width: min(650px, 100%);
+      border-radius: 28px;
+      padding: 28px;
+      transform: translateY(25px) scale(.98);
+      transition: .4s var(--ease);
+      background: rgba(17, 17, 17, .88)
+    }
+
+    .modal-wrap.open .modal {
+      transform: none
+    }
+
+    .modal-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .close {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .04);
+      color: white
+    }
+
+    .progress {
+      display: flex;
+      gap: 6px;
+      margin: 27px 0
+    }
+
+    .progress i {
+      height: 3px;
+      border-radius: 5px;
+      background: #333;
+      flex: 1;
+      transition: .4s
+    }
+
+    .progress i.on {
+      background: linear-gradient(90deg, var(--red), var(--amber))
+    }
+
+    .slide {
+      display: none;
+      animation: rise .4s var(--ease)
+    }
+
+    .slide.on {
+      display: block
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(14px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .slide h3 {
+      font-size: 30px;
+      letter-spacing: -.04em;
+      margin: 6px 0 8px
+    }
+
+    .slide>p {
+      color: #8f8c88;
+      margin: 0 0 24px
+    }
+
+    .folder-choice,
+    .api-input {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .035);
+      padding: 17px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      width: 100%;
+      color: white;
+      text-align: left
+    }
+
+    .folder-choice:hover {
+      background: rgba(255, 255, 255, .07)
+    }
+
+    .folder-choice span {
+      color: #888;
+      font-size: 13px
+    }
+
+    .api-input {
+      margin-bottom: 10px;
+      outline: none
+    }
+
+    .api-input:focus {
+      border-color: rgba(255, 150, 100, .55)
+    }
+
+    .modal-bottom {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 25px;
+      gap: 10px
+    }
+
+    .done-mark {
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      margin: 20px auto;
+      background: rgba(97, 211, 138, .08);
+      border: 1px solid rgba(97, 211, 138, .2);
+      display: grid;
+      place-items: center;
+      color: var(--green)
+    }
+
+    .done-mark svg {
+      width: 34px
+    }
+
+    .center {
+      text-align: center
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(25px);
+      transition: opacity .8s var(--ease), transform .8s var(--ease)
+    }
+
+    .reveal.in {
+      opacity: 1;
+      transform: none
+    }
+
+    @media(max-width:850px) {
+      .nav {
+        height: 58px
+      }
+
+      .navlinks {
+        display: none;
+        position: absolute;
+        top: 68px;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-radius: 17px;
+        background: rgba(15, 15, 15, .95);
+        border: 1px solid var(--line);
+        flex-direction: column
+      }
+
+      .navlinks.open {
+        display: flex
+      }
+
+      .download {
+        /* display: none override by explicit rules below */
+      }
+
+      .menu {
+        display: block
+      }
+
+      .hero {
+        padding-top: 130px
+      }
+
+      .app-stage {
+        height: auto
+      }
+
+      .app-window {
+        transform: none
+      }
+
+      .demo {
+        grid-template-columns: 1fr
+      }
+
+      .demo-copy {
+        padding: 34px
+      }
+
+      .demo-library {
+        min-height: 400px
+      }
+
+      .float-chip {
+        display: none
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+        grid-template-rows: 480px 310px 310px
+      }
+
+      .feature-privacy {
+        grid-row: auto
+      }
+
+      .steps,
+      .cap-grid {
+        grid-template-columns: 1fr
+      }
+
+      .connector {
+        display: none
+      }
+
+      .showcase {
+        height: 790px
+      }
+
+      .showcase-copy {
+        left: 28px;
+        top: 35px;
+        right: 28px
+      }
+
+      .showcase-copy h2 {
+        font-size: 43px
+      }
+
+      .party-card {
+        left: 28px;
+        right: 28px;
+        top: 290px;
+        width: auto
+      }
+
+      .player-bar {
+        left: 20px;
+        right: 20px
+      }
+
+      .section-head {
+        display: block
+      }
+
+      .section-head p {
+        margin-top: 20px
+      }
+
+      .footer-row {
+        gap: 25px;
+        align-items: flex-start;
+        flex-direction: column
+      }
+    }
+
+    @media(max-width:560px) {
+      .wrap {
+        width: min(100% - 24px, 1180px)
+      }
+
+      h1 {
+        font-size: 52px
+      }
+
+      .hero-actions {
+        flex-direction: column
+      }
+
+      .hero-actions>* {
+        width: 100%
+      }
+
+      .demo-copy h2 {
+        font-size: 34px
+      }
+
+      .app-stage {
+        width: 100vw;
+        margin-left: calc(50% - 50vw)
+      }
+
+      .app-window {
+        border-radius: 0
+      }
+
+      .demo-library {
+        padding: 25px 16px
+      }
+
+      .poster-row {
+        gap: 7px
+      }
+
+      .features {
+        grid-template-rows: 460px 320px 320px
+      }
+
+      .devices {
+        transform: scale(.82);
+        transform-origin: right bottom
+      }
+
+      .showcase {
+        height: 760px
+      }
+
+      .party-card {
+        padding: 19px
+      }
+
+      .room-code b {
+        font-size: 25px
+      }
+
+      .showcase-copy h2 {
+        font-size: 38px
+      }
+
+      .time {
+        display: none
+      }
+
+      .footer-links {
+        flex-wrap: wrap
+      }
+
+      .modal {
+        padding: 20px
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      * {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important
+      }
+    }
+
+    .screens {
+      border-top: 1px solid rgba(255, 255, 255, .06)
+    }
+
+    .screen-grid {
+      display: grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 16px
+    }
+
+    .shot {
+      border-radius: 25px;
+      overflow: hidden;
+      min-height: 240px;
+      position: relative;
+      background: #111;
+      border: 1px solid var(--line);
+      transition: .45s var(--ease)
+    }
+
+    .shot:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 255, 255, .25)
+    }
+
+    .shot img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: top center;
+      transition: transform .7s var(--ease)
+    }
+
+    .shot:hover img {
+      transform: scale(1.035)
+    }
+
+    .shot-label {
+      position: absolute;
+      left: 18px;
+      bottom: 16px;
+      z-index: 2;
+      border-radius: 10px;
+      padding: 8px 11px;
+      background: rgba(8, 8, 8, .7);
+      border: 1px solid rgba(255, 255, 255, .13);
+      font-size: 11px;
+      font-weight: 800;
+      backdrop-filter: blur(12px)
+    }
+
+    .shot-hero {
+      height: 410px
+    }
+
+    .shot-stack {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 16px
+    }
+
+    .shot-stack .shot {
+      min-height: 197px
+    }
+
+    .shot-stack img {
+      object-position: center 22%
+    }
+
+    @media(max-width:850px) {
+      .screen-grid {
+        grid-template-columns: 1fr
+      }
+
+      .shot-hero {
+        height: 300px
+      }
+
+      .shot-stack {
+        grid-template-rows: 240px 240px
+      }
+    }
+
+    .brand-asset {
+      margin: 16px auto 0;
+      max-width: 280px;
+      border-radius: 18px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #999;
+      font-size: 12px
+    }
+
+    .brand-asset img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain
+    }
+    /* Hero Stacked Redesign CSS */
+    .hero-stacked .hero-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 40px;
+      width: 100%;
+    }
+
+    .hero-stacked .hero-copy-top h1 {
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      margin-bottom: 24px;
+    }
+    
+    .hero-stacked .hero-copy-top .lede {
+      font-size: 1.25rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .hero-stacked .hero-actions {
+      justify-content: center;
+    }
+
+    .hero-stacked .hero-devices {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      aspect-ratio: 16/11;
+      perspective: 1400px;
+      transform-style: preserve-3d;
+      margin: 0 auto;
+    }
+
+    .hero-stacked .hero-laptop {
+      position: absolute;
+      width: 90%;
+      left: 5%;
+      top: 5%;
+      transform: rotateY(-12deg) rotateX(4deg) translateZ(0);
+      transform-style: preserve-3d;
+      filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8));
+      border-radius: 20px;
+    }
+
+    .hero-stacked .hero-phone {
+      position: absolute;
+      width: 25%;
+      left: 0%;
+      bottom: 0%;
+      z-index: 2;
+      filter: drop-shadow(-20px 40px 60px rgba(0,0,0,0.9));
+      border-radius: 24px;
+    }
+
+    .float-anim {
+      animation: float 7s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px) rotateY(-12deg) rotateX(4deg) translateZ(60px); }
+      50% { transform: translateY(-20px) rotateY(-12deg) rotateX(4deg) translateZ(60px); }
+      100% { transform: translateY(0px) rotateY(-12deg) rotateX(4deg) translateZ(60px); }
+    }
+
+    @media(max-width: 950px) {
+      .hero-stacked .hero-devices {
+        perspective: none;
+        transform-style: flat;
+        aspect-ratio: 16/11;
+        margin-top: 20px;
+      }
+      .hero-stacked .hero-laptop {
+        width: 85%;
+        left: 15%;
+        top: 0;
+        transform: none;
+        filter: drop-shadow(0 20px 40px rgba(0,0,0,0.6));
+      }
+      .hero-stacked .hero-phone {
+        width: 25%;
+        left: 5%;
+        bottom: -5%;
+        transform: none;
+        animation: none;
+        filter: drop-shadow(0 30px 50px rgba(0,0,0,0.7));
+      }
+    }
+
+    .hero-split .hero-devices {
+      margin: 0;
+      width: 100%;
+      aspect-ratio: 16/14;
+      perspective: 1400px;
+      transform-style: preserve-3d;
+    }
+
+    .hero-3d .hero-laptop {
+      position: absolute;
+      width: 110%;
+      right: -25%;
+      top: 15%;
+      transform: rotateY(-22deg) rotateX(4deg) translateZ(0);
+      transform-style: preserve-3d;
+      filter: drop-shadow(-30px 40px 60px rgba(0,0,0,0.8));
+      border-radius: 20px;
+    }
+
+    .hero-3d .hero-phone {
+      position: absolute;
+      width: 32%;
+      left: 0;
+      bottom: 5%;
+      z-index: 2;
+      filter: drop-shadow(-40px 50px 80px rgba(0,0,0,0.9));
+      border-radius: 24px;
+    }
+
+    .float-anim {
+      animation: float 7s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px) rotateY(-22deg) rotateX(4deg) translateZ(80px); }
+      50% { transform: translateY(-25px) rotateY(-22deg) rotateX(4deg) translateZ(80px); }
+      100% { transform: translateY(0px) rotateY(-22deg) rotateX(4deg) translateZ(80px); }
+    }
+
+    @media(max-width: 950px) {
+      .hero-stacked .hero-devices {
+        perspective: none;
+        transform-style: flat;
+        aspect-ratio: 16/11;
+        margin-top: 20px;
+      }
+      .hero-stacked .hero-laptop {
+        width: 85%;
+        left: 15%;
+        top: 0;
+        transform: none;
+        filter: drop-shadow(0 20px 40px rgba(0,0,0,0.6));
+      }
+      .hero-stacked .hero-phone {
+        width: 25%;
+        left: 5%;
+        bottom: -5%;
+        transform: none;
+        animation: none;
+        filter: drop-shadow(0 30px 50px rgba(0,0,0,0.7));
+      }
+    }
+    .github-star {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.08);
+      border-radius: 100px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      transition: .2s;
+      border: 1px solid rgba(255,255,255,0.15);
+      text-decoration: none;
+      overflow: hidden;
+    }
+    .github-star:hover {
+      background: rgba(255,255,255,0.12);
+    }
+    .github-star-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+    }
+    .github-star-right {
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.08);
+      border-left: 1px solid rgba(255,255,255,0.15);
+    }
+    .download-icon {
+      display: none;
+    }
+
+    @media(max-width: 850px) {
+      .download-text {
+        display: none;
+      }
+      .download-icon {
+        display: block;
+      }
+      .nav-actions .download {
+        display: flex;
+        padding: 4px 5px;
+        border-radius: 100px;
+      }
+    }
+    @keyframes float-img {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+    .float-img-anim {
+      animation: float-img 7s ease-in-out infinite;
+    }
+  
+      /* --- DEMO FLOW ANIMATION STYLES --- */
+      .demo-flow {
+        padding: 100px 0;
+        background: linear-gradient(to bottom, #000, #0a0a0a);
+        overflow: hidden;
+      }
+      .demo-theater {
+        width: 100%;
+        max-width: 900px;
+        height: 500px;
+        margin: 40px auto 0;
+        position: relative;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #050505;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+        overflow: hidden;
+      }
+      .demo-state {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 0.8s ease, transform 0.8s ease;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        transform: scale(0.95);
+      }
+      .demo-state.active {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+      }
+      
+      /* State 1: Messy Folder */
+      .mock-window-header {
+        height: 40px;
+        background: rgba(255,255,255,0.05);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 8px;
+      }
+      .mock-dots span {
+        width: 12px; height: 12px; border-radius: 50%;
+        display: inline-block;
+      }
+      .mock-dots span:nth-child(1) { background: #ff5f56; }
+      .mock-dots span:nth-child(2) { background: #ffbd2e; }
+      .mock-dots span:nth-child(3) { background: #27c93f; }
+      
+      .messy-file-list {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .messy-file {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 8px;
+        font-family: monospace;
+        color: #888;
+        font-size: 14px;
+      }
+      
+      /* State 2 & 3: Modal & Scan */
+      .demo-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+      .demo-state.active .demo-overlay {
+        opacity: 1;
+      }
+      .mock-modal {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+        background-color: rgba(15, 15, 20, 0.8);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 32px;
+        border-radius: 20px;
+        width: 360px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      }
+      .mock-modal h3 { margin-bottom: 12px; font-size: 20px; }
+      .mock-modal p { color: #888; font-size: 14px; margin-bottom: 24px; }
+      .mock-btn {
+        background: linear-gradient(90deg, oklch(65% 0.22 280), oklch(70% 0.15 200));
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-weight: 600;
+        display: inline-block;
+      }
+      
+      /* Progress Bar */
+      .scan-progress-container {
+        width: 100%;
+        height: 6px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 12px;
+      }
+      .scan-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, oklch(65% 0.22 280), oklch(70% 0.15 200));
+        transition: width 0.1s linear;
+      }
+      
+      /* State 4: Posters */
+      .posters-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        padding: 24px;
+        height: 100%;
+      }
+      .poster-item {
+        border-radius: 12px;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .demo-state.active .poster-item {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .poster-item:nth-child(1) { transition-delay: 0.1s; }
+      .poster-item:nth-child(2) { transition-delay: 0.2s; }
+      .poster-item:nth-child(3) { transition-delay: 0.3s; }
+      .poster-item:nth-child(4) { transition-delay: 0.4s; }
+      .poster-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      /* Controls */
+      .demo-controls {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .demo-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 5px;
+        background: rgba(255,255,255,0.2);
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .demo-dot.active {
+        background: oklch(65% 0.22 280);
+        width: 24px;
+      }
+
+
+      @keyframes cursorMoveAndClick {
+        0% { transform: translate(150px, 150px); opacity: 0; }
+        15% { opacity: 1; }
+        60% { transform: translate(10px, 15px); }
+        70% { transform: translate(10px, 15px) scale(0.9); }
+        85% { transform: translate(10px, 15px) scale(1); opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .demo-state.active .animated-cursor {
+        animation: cursorMoveAndClick 2.5s forwards;
+      }
+      .mock-btn {
+        transition: transform 0.1s;
+      }
+      .demo-state.active .mock-btn {
+        animation: btnClick 2.5s forwards;
+      }
+      @keyframes btnClick {
+        0%, 65% { transform: scale(1); filter: brightness(1); }
+        70% { transform: scale(0.95); filter: brightness(0.8); }
+        75%, 100% { transform: scale(1); filter: brightness(1); }
+      }
+
+    .menu svg,.close svg,.play svg,.party-button svg,.folder-choice svg,.wf-window-actions svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.party-button svg{width:15px;vertical-align:-3px;margin-right:7px}.folder-choice>svg{width:24px;height:24px;flex:none}.wf-window-actions span svg{width:13px;height:13px}.party-avatar svg{width:22px;height:22px;fill:none;stroke:white;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.privacy-flow{margin-top:28px;display:grid;gap:9px;width:min(100%,410px)}.privacy-node{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid rgba(255,255,255,.09);border-radius:13px;background:rgba(5,5,5,.24)}.privacy-node svg{width:19px;height:19px;flex:none;color:#e4a083;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.privacy-node b{display:block;font-size:12px}.privacy-node small{display:block;color:#777;margin-top:2px;font-size:10px}.privacy-arrow{height:9px;margin-left:22px;border-left:1px dashed rgba(255,255,255,.2)}.privacy-facts{position:absolute;left:31px;bottom:30px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:calc(100% - 265px)}.privacy-fact{border-radius:12px;padding:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.075)}.privacy-fact b{display:block;font-size:11px;color:#eee}.privacy-fact span{font-size:9px;color:#777}.feature-privacy .vault{width:170px;height:170px;left:auto;right:30px;bottom:25px;transform:none}.feature-privacy .vault-center{width:62px;height:62px}.feature-privacy .vault-center svg{width:25px}@media(max-width:850px){.privacy-facts{width:calc(100% - 235px)}.feature-privacy .vault{width:145px;height:145px}}@media(max-width:560px){.privacy-flow{margin-top:18px}.privacy-facts{left:24px;bottom:22px;width:calc(100% - 48px)}.feature-privacy .vault{display:none}}
+
+    /* Continuous Windows workflow */
+    .workflow-section{padding:110px 0;background:linear-gradient(#050505,#0a0a0a)}.workflow-pc{position:relative;width:min(100%,1040px);aspect-ratio:16/9;min-height:550px;margin:42px auto 0;border-radius:28px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:radial-gradient(circle at 67% 35%,#174d75,transparent 25%),radial-gradient(circle at 30% 72%,#0d446b,transparent 29%),linear-gradient(145deg,#06111d,#102c45 55%,#07101b);box-shadow:0 45px 100px rgba(0,0,0,.7),inset 0 1px rgba(255,255,255,.12)}.workflow-pc:before{content:"";position:absolute;inset:0;background:linear-gradient(107deg,transparent 49.7%,rgba(255,255,255,.06) 50%,transparent 50.3%)}.wf-status{position:absolute;z-index:60;top:15px;right:17px;border:1px solid rgba(255,255,255,.12);background:rgba(5,9,14,.62);backdrop-filter:blur(12px);border-radius:999px;padding:7px 11px;font-size:9px;color:#e4e6e8}.wf-taskbar{position:absolute;z-index:50;bottom:0;left:0;right:0;height:55px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(11,18,27,.82);border-top:1px solid rgba(255,255,255,.15);backdrop-filter:blur(22px)}.wf-task{width:40px;height:40px;border:0;border-radius:10px;background:transparent;display:grid;place-items:center;position:relative}.wf-task.running{background:rgba(255,255,255,.11)}.wf-task.running:after{content:"";position:absolute;bottom:2px;width:16px;height:2px;background:#6cc4ff;border-radius:2px}.wf-task svg{width:22px}.wf-task img{width:25px;height:25px;object-fit:contain}.wf-time{position:absolute;right:14px;color:#ddd;font-size:9px;line-height:1.35;text-align:right}.wf-window{position:absolute;z-index:10;inset:40px 54px 75px;border:1px solid rgba(255,255,255,.17);border-radius:13px;overflow:hidden;background:rgba(23,28,35,.97);box-shadow:0 25px 65px rgba(0,0,0,.55);opacity:0;transform:translateY(35px) scale(.93);pointer-events:none;transition:.42s var(--ease)}.wf-window.open{opacity:1;transform:none;pointer-events:auto}.wf-titlebar{height:42px;display:flex;align-items:center;padding:0 14px;gap:9px;background:rgba(255,255,255,.055);border-bottom:1px solid rgba(255,255,255,.08);font-size:11px}.wf-window-actions{margin-left:auto;display:flex;height:42px}.wf-window-actions span{width:38px;display:grid;place-items:center;color:#aaa}.wf-window-actions .wf-close:hover{background:#c42b1c;color:#fff}.wf-address{height:38px;margin:9px 12px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:#171b20;display:flex;align-items:center;padding:0 12px;font-size:10px;color:#aeb4bb}.wf-files{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:4px 14px}.wf-file{padding:12px 8px;text-align:center;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.045);border-radius:9px;min-width:0}.wf-file.selected{background:rgba(63,144,206,.2);border-color:rgba(91,176,236,.4)}.wf-file svg{width:30px;color:#69b4e7}.wf-file span{display:block;margin-top:7px;color:#bec3ca;font:9px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wf-vidlock{inset:25px 78px 70px;background:#090909}.wf-appbar{height:48px;display:flex;align-items:center;padding:0 15px;border-bottom:1px solid rgba(255,255,255,.08)}.wf-brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.wf-brand img{width:25px;height:25px;object-fit:contain}.wf-content{position:absolute;inset:48px 0 0}.wf-panel{position:absolute;width:min(500px,calc(100% - 34px));left:50%;top:50%;transform:translate(-50%,-50%);padding:24px;border-radius:18px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);box-shadow:0 22px 55px #000;transition:.35s var(--ease)}.wf-kicker{color:#e2a184;font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.wf-panel h3{font-size:23px;letter-spacing:-.04em;margin:8px 0 5px}.wf-panel p{font-size:11px;color:#898989;margin:0 0 16px}.wf-input{height:43px;margin-top:9px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#111;color:#ddd;display:flex;align-items:center;padding:0 12px;font:10px ui-monospace,monospace;position:relative}.wf-input.focused{border-color:rgba(255,121,91,.7);box-shadow:0 0 0 3px rgba(255,91,70,.1)}.wf-placeholder{color:#666}.wf-check{margin-left:auto;color:#61d38a}.wf-next{float:right;margin-top:16px;border:0;border-radius:10px;padding:11px 17px;background:#f4f2ee;color:#101010;font-size:10px;font-weight:800}.wf-step{opacity:0;pointer-events:none;transform:translateX(18px);transition:.3s var(--ease)}.wf-step.active{opacity:1;pointer-events:auto;transform:none}.wf-library{position:absolute;inset:0;background:#080808;opacity:0;transform:scale(.98);pointer-events:none;transition:.55s var(--ease)}.wf-library.active{opacity:1;transform:none}.wf-libnav{height:49px;display:flex;align-items:center;padding:0 15px;border-bottom:1px solid rgba(255,255,255,.07);gap:20px}.wf-libnav small{color:#777}.wf-libnav small.on{color:#fff}.wf-posters{padding:17px;display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.wf-poster{aspect-ratio:2/3;border-radius:9px;overflow:hidden;box-shadow:0 10px 24px #000;opacity:0;transform:translateY(20px)}.wf-library.active .wf-poster{animation:posterIn .5s var(--ease) forwards}.wf-library.active .wf-poster:nth-child(2){animation-delay:.1s}.wf-library.active .wf-poster:nth-child(3){animation-delay:.2s}.wf-library.active .wf-poster:nth-child(4){animation-delay:.3s}.wf-poster img{width:100%;height:100%;object-fit:cover}.wf-loader{width:60px;height:60px;margin:12px auto;border-radius:50%;border:3px solid rgba(255,255,255,.08);border-top-color:#ff6957;animation:spin 1s linear infinite}.wf-progress{height:5px;background:#282828;border-radius:5px;overflow:hidden}.wf-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#ff574c,#ffae59)}.wf-scanning .wf-progress i{animation:wfScan 4.2s linear forwards}@keyframes wfScan{to{width:100%}}.wf-scan-text{text-align:center;min-height:13px;margin-top:10px;color:#929292;font-size:10px}.wf-cursor{position:absolute;z-index:100;left:50%;top:50%;width:23px;height:23px;pointer-events:none;filter:drop-shadow(0 2px 2px #000);will-change:left,top,transform}.wf-cursor.clicking{transform:scale(.72)}.wf-click-ring{position:absolute;z-index:99;width:24px;height:24px;border:1px solid rgba(255,255,255,.8);border-radius:50%;opacity:0;pointer-events:none;transform:translate(-50%,-50%)}.wf-click-ring.pop{animation:wfRing .45s ease-out}@keyframes wfRing{0%{opacity:.8;transform:translate(-50%,-50%) scale(.25)}to{opacity:0;transform:translate(-50%,-50%) scale(1.7)}}.wf-timeline{display:flex;gap:5px;margin:18px auto 0;max-width:720px}.wf-timeline i{height:3px;flex:1;border-radius:4px;background:#292929;overflow:hidden}.wf-timeline i:after{content:"";display:block;width:0;height:100%;background:linear-gradient(90deg,#ff584e,#ffae59)}.wf-timeline i.done:after{width:100%}.wf-timeline i.live:after{animation:wfTimeline 4s linear forwards}@keyframes wfTimeline{to{width:100%}}
+    @media(max-width:720px){.workflow-pc{min-height:440px}.wf-window{inset:28px 10px 67px}.wf-vidlock{inset:18px 10px 65px}.wf-files{grid-template-columns:repeat(3,1fr)}.wf-file:nth-child(n+7){display:none}.wf-panel{padding:17px}.wf-panel h3{font-size:19px}.wf-posters{gap:6px;padding:11px}.wf-status{top:8px;right:8px}.wf-time{display:none}}
+
+    .wf-panel.wf-step{transform:translate(calc(-50% + 18px),-50%)}.wf-panel.wf-step.active{transform:translate(-50%,-50%)}.wf-library-shot{width:100%;height:100%;display:block;object-fit:cover;object-position:top center}.wf-library.has-real-ui .wf-libnav,.wf-library.has-real-ui .wf-posters{display:none}.wf-library.has-real-ui:after{content:"Actual VidLock Movies library";position:absolute;left:14px;bottom:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(5,5,5,.68);backdrop-filter:blur(10px);color:#ddd;font-size:8px;letter-spacing:.04em}
+
+    .workflow-pc{background-image:linear-gradient(rgba(5,12,19,.16),rgba(5,12,19,.3)),url("assets/web/windows-wallpaper.jpg");background-size:cover;background-position:center;background-repeat:no-repeat}.workflow-pc:before{background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.12))}
+
+    /* Windows journey theater */
+    #demo-flow{display:none}.win-demo-section{padding:110px 0;background:linear-gradient(#050505,#0a0a0a)}
+    .win-theater{position:relative;width:min(100%,1040px);aspect-ratio:16/9;min-height:540px;margin:42px auto 0;border:1px solid rgba(255,255,255,.15);border-radius:28px;overflow:hidden;background:#10151d;box-shadow:0 45px 100px rgba(0,0,0,.68),inset 0 1px rgba(255,255,255,.12)}
+    .win-wallpaper{position:absolute;inset:0;background:radial-gradient(circle at 65% 35%,rgba(53,125,181,.7),transparent 23%),radial-gradient(circle at 34% 70%,rgba(21,84,130,.7),transparent 28%),linear-gradient(145deg,#06111e,#102f4b 52%,#09111d)}
+    .win-wallpaper:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 49.5%,rgba(255,255,255,.08) 50%,transparent 50.5%),linear-gradient(15deg,transparent 49.5%,rgba(255,255,255,.05) 50%,transparent 50.5%);opacity:.5}
+    .win-desktop-label{position:absolute;top:18px;left:20px;font-size:11px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:7px}.win-desktop-label:before{content:"";width:8px;height:8px;border-radius:50%;background:#69c1ff;box-shadow:0 0 12px #69c1ff}
+    .win-taskbar{position:absolute;z-index:30;left:0;right:0;bottom:0;height:54px;background:rgba(12,18,27,.78);border-top:1px solid rgba(255,255,255,.13);backdrop-filter:blur(22px);display:flex;justify-content:center;align-items:center;gap:8px}
+    .task-icon{width:39px;height:39px;border:0;border-radius:10px;background:transparent;color:#fff;display:grid;place-items:center;position:relative;transition:.25s}.task-icon:hover,.task-icon.on{background:rgba(255,255,255,.12)}.task-icon.on:after{content:"";position:absolute;bottom:2px;width:15px;height:2px;border-radius:3px;background:#7dc8ff}.task-icon svg{width:22px;height:22px}.task-icon img{width:24px;height:24px;object-fit:contain}.win-clock{position:absolute;right:16px;text-align:right;font-size:9px;color:#ddd;line-height:1.4}
+    .win-scene{position:absolute;inset:0 0 54px;z-index:2;opacity:0;transform:scale(.985);pointer-events:none;transition:opacity .5s var(--ease),transform .5s var(--ease)}.win-scene.active{opacity:1;transform:none;pointer-events:auto}.win-scene.desktop-scene{opacity:1}
+    .win-window{position:absolute;inset:38px 55px 24px;border-radius:13px;overflow:hidden;background:rgba(24,28,35,.94);border:1px solid rgba(255,255,255,.17);box-shadow:0 24px 65px rgba(0,0,0,.48);transform-origin:center bottom}.win-scene.active .win-window{animation:windowOpen .55s var(--ease) both}@keyframes windowOpen{from{opacity:0;transform:translateY(35px) scale(.92)}to{opacity:1;transform:none}}
+    .win-titlebar{height:43px;background:rgba(255,255,255,.05);display:flex;align-items:center;padding:0 15px;border-bottom:1px solid rgba(255,255,255,.08);gap:10px}.win-titlebar b{font-size:12px}.win-controls{margin-left:auto;display:flex;gap:17px;color:#aaa;font-size:11px}.win-address{height:39px;margin:9px 12px;border:1px solid rgba(255,255,255,.09);border-radius:7px;background:rgba(0,0,0,.18);padding:0 13px;display:flex;align-items:center;color:#aaa;font-size:11px}.win-files{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:4px 14px}.win-file{min-width:0;border-radius:9px;padding:12px 8px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.045);text-align:center}.win-file svg{width:30px;color:#70b8e8}.win-file span{display:block;font:9px ui-monospace,monospace;color:#b6bbc1;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vid-window{inset:24px 80px 20px;background:#090909}.vid-top{height:48px;display:flex;align-items:center;padding:0 17px;border-bottom:1px solid rgba(255,255,255,.08)}.vid-brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.vid-brand img{width:24px;height:24px;object-fit:contain}.setup-card{width:min(500px,calc(100% - 34px));margin:44px auto 0;border-radius:18px;padding:25px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);box-shadow:0 25px 60px #000}.setup-step{color:#dc9c7c;text-transform:uppercase;letter-spacing:.14em;font-size:9px;font-weight:800}.setup-card h3{font-size:24px;letter-spacing:-.04em;margin:9px 0 6px}.setup-card p{font-size:12px;color:#858585;margin:0 0 18px}.setup-field{height:43px;border:1px solid rgba(255,255,255,.1);background:#111;border-radius:10px;margin-top:9px;padding:0 13px;display:flex;align-items:center;color:#aaa;font-size:11px}.setup-field.done{border-color:rgba(97,211,138,.25);color:#ddd}.setup-field em{margin-left:auto;color:#61d38a;font-style:normal}.win-primary{margin-top:17px;border:0;border-radius:10px;background:#f4f2ee;color:#101010;font-weight:800;font-size:11px;padding:12px 18px;float:right}.scene-cursor{position:absolute;z-index:50;width:22px;filter:drop-shadow(0 2px 2px #000);opacity:0}.active .cursor-file{animation:cursorFile 2.3s var(--ease) both}.active .cursor-app{animation:cursorApp 2.3s var(--ease) both}.active .cursor-next{animation:cursorNext 2.3s var(--ease) both}@keyframes cursorFile{0%{left:72%;top:15%;opacity:0}20%{opacity:1}75%{left:49%;top:54%;transform:scale(1)}82%{transform:scale(.75)}100%{left:49%;top:54%;opacity:0}}@keyframes cursorApp{0%{left:75%;top:30%;opacity:0}20%{opacity:1}75%{left:51%;top:91%;transform:scale(1)}82%{transform:scale(.75)}100%{left:51%;top:91%;opacity:0}}@keyframes cursorNext{0%{left:25%;top:20%;opacity:0}20%{opacity:1}75%{left:68%;top:78%;transform:scale(1)}82%{transform:scale(.75)}100%{left:68%;top:78%;opacity:0}}
+    .scan-ring{width:62px;height:62px;border-radius:50%;margin:15px auto;border:3px solid rgba(255,255,255,.08);border-top-color:#ff6957;animation:spin 1s linear infinite}.win-progress{height:5px;background:#272727;border-radius:5px;overflow:hidden}.win-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff574c,#ffae59)}.active .win-progress i{animation:winScan 3.3s linear forwards}@keyframes winScan{to{width:100%}}.scan-message{text-align:center;color:#999;font-size:10px;margin-top:11px;min-height:14px}
+    .library-scene{background:#080808}.lib-nav{height:55px;padding:0 19px;display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,.07);gap:22px}.lib-nav .vid-brand{margin-right:auto}.lib-tab{font-size:10px;color:#777}.lib-tab.active-tab{color:#fff}.lib-grid{padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.lib-poster{aspect-ratio:2/3;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 10px 24px #000;opacity:0;transform:translateY(22px)}.active .lib-poster{animation:posterIn .5s var(--ease) forwards}.active .lib-poster:nth-child(2){animation-delay:.1s}.active .lib-poster:nth-child(3){animation-delay:.2s}.active .lib-poster:nth-child(4){animation-delay:.3s}@keyframes posterIn{to{opacity:1;transform:none}}.lib-poster img{width:100%;height:100%;object-fit:cover}.win-caption{position:absolute;z-index:40;top:16px;right:19px;border:1px solid rgba(255,255,255,.12);background:rgba(5,5,5,.62);backdrop-filter:blur(12px);border-radius:999px;padding:7px 11px;font-size:9px;color:#ddd}.win-dots{display:flex;justify-content:center;gap:7px;margin-top:20px}.win-dot{width:8px;height:8px;border:0;border-radius:9px;background:#3c3c3c;padding:0;transition:.3s}.win-dot.active{width:25px;background:linear-gradient(90deg,#ff5d50,#ffad58)}
+    @media(max-width:720px){.win-theater{min-height:430px}.win-window{inset:30px 12px 18px}.vid-window{inset:18px 12px 12px}.win-files{grid-template-columns:repeat(3,1fr)}.win-file:nth-child(n+7){display:none}.setup-card{margin-top:25px;padding:18px}.setup-card h3{font-size:20px}.lib-grid{gap:7px;padding:13px}.win-caption{top:8px;right:8px}.win-clock{display:none}}
+</style>
+</head>
+
+<body>
+  <div class="noise"></div>
+  <div class="ambient"></div>
+  <nav class="nav glass" id="nav">
+    <a class="brand" href="#top" aria-label="VidLock home">
+      <img class="logo" src="assets/web/logo.png" alt="VidLock" aria-hidden="true">
+      VidLock
+    </a>
+    <div class="navlinks" id="navlinks"><a href="#features">Features</a><a href="#how">How it works</a><a
+        href="#playback">Playback</a><a href="#together">Watch together</a><a
+        href="https://github.com/Manish6523/local-media-server" target="_blank" rel="noreferrer">GitHub ↗</a></div>
+      <div class="nav-actions">
+        <a class="github-star" href="https://github.com/Manish6523/local-media-server" target="_blank" aria-label="Star on GitHub">
+          <div class="github-star-left">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"></path></svg>
+          </div>
+          <div class="github-star-right">
+            <span class="star-count">...</span>
+          </div>
+        </a>
+        <a class="download" href="https://github.com/Manish6523/local-media-server/releases/latest">
+          <span class="download-text">Download for Windows</span>
+          <svg class="download-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        </a>
+        <button class="menu" id="menu" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero hero-stacked">
+      <div class="wrap hero-wrap">
+        <div class="hero-copy hero-copy-top reveal">
+          <div class="eyebrow"><i class="pulse"></i> Your library never leaves your computer</div>
+          <h1>Your movies.<br><span class="warm">Beautifully yours.</span></h1>
+          <p class="lede">Turn the videos already on your drives into a personal streaming library—with rich artwork, a
+            beautiful player, and zero cloud uploads.</p>
+        </div>
+
+        <div class="hero-devices reveal" style="max-width: 1050px; margin: 0 auto; padding: 20px;">
+          <div class="float-img-anim" id="mix-carousel" style="position: relative;">
+            <img class="mix-frame" src="assets/web/devices/mix01.png" alt="VidLock Experience" style="width:100%; height:auto; display:block; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8)); transition: opacity 0.8s ease; opacity: 1;">
+            <img class="mix-frame" src="assets/web/devices/mix02.png" alt="VidLock Experience" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display:block; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8)); transition: opacity 0.8s ease; opacity: 0;">
+            <img class="mix-frame" src="assets/web/devices/mix03.png" alt="VidLock Experience" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display:block; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8)); transition: opacity 0.8s ease; opacity: 0;">
+            <img class="mix-frame" src="assets/web/devices/mix04.png" alt="VidLock Experience" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display:block; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.8)); transition: opacity 0.8s ease; opacity: 0;">
+          </div>
+        </div>
+
+        <div class="hero-copy hero-copy-bottom reveal" style="position: relative; z-index: 10;">
+          <div class="hero-actions"><a class="primary" id="cta-release"
+              href="https://github.com/Manish6523/local-media-server/releases/latest">Download for Windows&nbsp;
+              ↓</a><button class="secondary open-demo">Experience the setup&nbsp; →</button></div>
+          <div class="os-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z" />
+            </svg> Open source · MIT licensed · No account · No subscription</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div><span class="section-label">Built around your collection</span>
+            <h2>Everything a streaming app should be.</h2>
+          </div>
+          <p>Without the catalog disappearing, another monthly fee, or your watch history becoming someone else's data.
+          </p>
+        </div>
+        <div class="features">
+          <article class="feature feature-privacy glass reveal" id="privacy"><span class="tag">Local first</span>
+            <h3>Your media stays yours.</h3>
+            <p>VidLock indexes and streams directly from your computer. Your films aren't uploaded to a cloud or copied
+              to someone else's server.</p>
+            <div class="privacy-flow">
+              <div class="privacy-node"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/></svg><div><b>Your existing movie folders</b><small>Files remain exactly where you keep them</small></div></div>
+              <i class="privacy-arrow"></i>
+              <div class="privacy-node"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg><div><b>Local SQLite library</b><small>Progress, favorites, metadata, and settings</small></div></div>
+              <i class="privacy-arrow"></i>
+              <div class="privacy-node"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><div><b>Streams across your home network</b><small>Direct play or local FFmpeg transcoding</small></div></div>
+            </div>
+            <div class="privacy-facts"><div class="privacy-fact"><b>No account</b><span>Nothing to register</span></div><div class="privacy-fact"><b>No cloud upload</b><span>Media stays local</span></div><div class="privacy-fact"><b>Internet optional</b><span>Only for metadata</span></div><div class="privacy-fact"><b>MIT licensed</b><span>Open-source code</span></div></div>
+            <div class="vault">
+              <div class="orbit"><i></i></div>
+              <div class="vault-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="5" y="10" width="14" height="11" rx="3" />
+                  <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                </svg></div>
+            </div>
+          </article>
+          <article class="feature glass reveal"><span class="tag">Any screen at home</span>
+            <h3>From hard drive to couch.</h3>
+            <p>Open VidLock from a phone, computer, or its lightweight LG webOS interface—and continue exactly where you
+              stopped.</p>
+            <div class="devices">
+              <div class="screen laptop"><img src="assets/web/herosection2.png" alt="Laptop View"
+                  style="width:100%;height:100%;object-fit:cover;border-radius:14px"></div>
+              <div class="screen phone"><img src="assets/web/herosectionmobile.png" alt="Mobile View"
+                  style="width:100%;height:100%;object-fit:cover;border-radius:16px"></div>
+            </div>
+          </article>
+          <article class="feature glass reveal"><span class="tag">Automatic</span>
+            <h3>Artwork, ratings, details.</h3>
+            <p>Real-world release filenames become a library worth browsing with OMDb metadata and optional Fanart.tv
+              backdrops.</p>
+            <div class="clean-ui"><img class="mini-poster" src="assets/web/poster/tt0080339.jpg"
+                style="object-fit:cover;background:none" alt=""><img class="mini-poster"
+                src="assets/web/poster/tt0903747.jpg" style="object-fit:cover;background:none" alt=""><img
+                class="mini-poster" src="assets/web/poster/tt14688458.jpg" style="object-fit:cover;background:none"
+                alt="">
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    
+    <section class="workflow-section" id="how"><div class="wrap"><div class="section-head reveal"><div><span class="section-label">One continuous workflow</span><h2>Watch the whole setup happen.</h2></div><p>Every window, click, keystroke, scan, and result plays out on one persistent Windows desktop.</p></div>
+      <div class="workflow-pc reveal" id="workflow-pc"><span class="wf-status" id="wf-status">Windows desktop</span>
+        <div class="wf-window" id="wf-explorer"><div class="wf-titlebar"><svg width="18" viewBox="0 0 24 24" fill="#e9b84f"><path d="M2 6h8l2 2h10v12H2z"/></svg><b>Movies — File Explorer</b><div class="wf-window-actions"><span aria-label="Minimize"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span><span aria-label="Maximize"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></span><span class="wf-close" id="wf-explorer-close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></span></div></div><div class="wf-address">This PC&nbsp; › &nbsp;Media Drive&nbsp; › &nbsp;Movies</div><div class="wf-files"><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Whiplash.2014.BluRay.x265.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>This.Is.the.End.2013.HEVC.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Pulp.Fiction.1994.REMASTERED.mp4</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>dfuuhdw4789gf.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Fight.Club.1999.1080p.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Airplane.1980.DVDRip.avi</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Interstellar.2014.IMAX.mp4</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Se7en.1995.10bit.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>The.Dark.Knight.2008.2160p.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>The.Godfather.1972.1080p.mp4</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>12.Angry.Men.1957.BluRay.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Inception.2010.DTS.x264.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>The.Shawshank.Redemption.1994.mp4</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>LOTR.Return.of.the.King.2003.Extended.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Kill.Bill.Vol.1.2003.HEVC.mkv</span></div><div class="wf-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>movie_final_REAL_v2_1080p.mkv</span></div></div></div>
+        <div class="wf-window wf-vidlock" id="wf-vidlock"><div class="wf-appbar"><div class="wf-brand"><img src="assets/web/logo.png" alt="">VidLock</div><div class="wf-window-actions"><span aria-label="Minimize"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span><span aria-label="Maximize"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></span><span class="wf-close" id="wf-app-close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></span></div></div><div class="wf-content">
+          <div class="wf-panel wf-step active" data-wf-step="path"><span class="wf-kicker">Step 1 of 3</span><h3>Where are your movies?</h3><p>Enter or browse to the folder containing your library.</p><div class="wf-input" id="wf-path"><span id="wf-path-text" class="wf-placeholder">Choose a folder…</span><em class="wf-check" id="wf-path-check"></em></div><button class="wf-next" id="wf-path-next">Continue</button></div>
+          <div class="wf-panel wf-step" data-wf-step="keys"><span class="wf-kicker">Step 2 of 3</span><h3>Make it beautiful.</h3><p>Add metadata credentials for posters, ratings, and details.</p><div class="wf-input" id="wf-omdb"><span class="wf-placeholder" id="wf-omdb-text">OMDb API key</span><em class="wf-check" id="wf-omdb-check"></em></div><div class="wf-input" id="wf-fanart"><span class="wf-placeholder" id="wf-fanart-text">Fanart.tv API key</span><em class="wf-check" id="wf-fanart-check"></em></div><div class="wf-input"><span class="wf-placeholder">OpenSubtitles key (optional)</span></div><button class="wf-next" id="wf-keys-next">Continue</button></div>
+          <div class="wf-panel wf-step" data-wf-step="ready"><span class="wf-kicker">Step 3 of 3</span><h3>Ready to scan.</h3><p>VidLock found sixteen video files in your Movies folder.</p><div class="wf-input"><span>D:\Media\Movies</span><em class="wf-check">16 files ✓</em></div><button class="wf-next" id="wf-scan">Scan 16 movies</button></div>
+          <div class="wf-panel wf-step" data-wf-step="scan" style="text-align:center"><span class="wf-kicker">Building your library</span><div class="wf-loader"></div><h3>Scanning Library</h3><div class="wf-progress"><i></i></div><div class="wf-scan-text" id="wf-scan-text">Parsing filenames…</div></div>
+          <div class="wf-library has-real-ui" id="wf-library"><img class="wf-library-shot" src="assets/web/library.png" alt="VidLock Movies library"><div class="wf-libnav"><div class="wf-brand" style="margin-right:auto"><img src="assets/web/logo.png" alt="">VidLock</div><small class="on">Home</small><small>Movies</small><small>Shows</small><small>Favorites</small></div><div class="wf-posters"><div class="wf-poster"><img src="assets/web/poster/tt0080339.jpg" alt="Airplane"></div><div class="wf-poster"><img src="assets/web/poster/tt1245492.jpg" alt="This Is the End"></div><div class="wf-poster"><img src="assets/web/poster/tt0903747.jpg" alt="Breaking Bad"></div><div class="wf-poster"><img src="assets/web/poster/tt14688458.jpg" alt="Silo"></div></div></div>
+        </div></div>
+        <div class="wf-taskbar"><button class="wf-task" aria-label="Start"><svg viewBox="0 0 24 24" fill="#5cb8ff"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg></button><button class="wf-task" id="wf-explorer-task" aria-label="File Explorer"><svg viewBox="0 0 24 24" fill="#e9b84f"><path d="M2 6h8l2 2h10v12H2z"/></svg></button><button class="wf-task" id="wf-vidlock-task" aria-label="VidLock"><img src="assets/web/logo.png" alt=""></button><button class="wf-task" aria-label="Browser"><svg viewBox="0 0 24 24" fill="#4ca8e8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5" fill="#55d6a1"/></svg></button><div class="wf-time">10:24 AM<br>Movie night</div></div>
+        <svg class="wf-cursor" id="wf-cursor" viewBox="0 0 24 24"><path fill="#fff" stroke="#111" stroke-width="1.2" d="M4 2v18l5-5 4 7 3-2-4-7h7z"/></svg><i class="wf-click-ring" id="wf-click-ring"></i>
+      </div><div class="wf-timeline" id="wf-timeline"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div></section>
+
+    <section class="win-demo-section" id="how-old" style="display:none"><div class="wrap"><div class="section-head reveal"><div><span class="section-label">See the journey</span><h2>From a messy folder to movie night.</h2></div><p>A complete VidLock setup, played out inside one familiar Windows desktop.</p></div>
+      <div class="win-theater reveal" id="windows-demo"><div class="win-wallpaper"></div><div class="win-desktop-label">VIDLOCK-PC · Local desktop</div><span class="win-caption" id="win-caption">Your Windows desktop</span>
+        <div class="win-scene desktop-scene active" data-win-state="1"></div>
+        <div class="win-scene" data-win-state="2"><div class="win-window"><div class="win-titlebar"><svg width="18" viewBox="0 0 24 24" fill="#eab64e"><path d="M3 6h7l2 2h9v11H3z"/></svg><b>Movies — File Explorer</b><div class="win-controls"><span aria-label="Minimize"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span><span aria-label="Maximize"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></span><span>×</span></div></div><div class="win-address">This PC&nbsp; › &nbsp;Media Drive&nbsp; › &nbsp;Movies</div><div class="win-files">
+          <div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Whiplash.2014.BluRay.x265.mkv</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>This.Is.the.End.2013.HEVC.mkv</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Pulp.Fiction.1994.REMASTERED.mp4</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>dfuuhdw4789gf.mkv</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Fight.Club.1999.1080p.mkv</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Airplane.1980.DVDRip.avi</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Interstellar.2014.IMAX.mp4</span></div><div class="win-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v6h6"/><path d="m10 13 4 2.5-4 2.5z"/></svg><span>Se7en.1995.10bit.mkv</span></div></div></div><svg class="scene-cursor cursor-file" viewBox="0 0 24 24"><path fill="#fff" stroke="#111" d="M4 2v18l5-5 4 7 3-2-4-7h7z"/></svg></div>
+        <div class="win-scene" data-win-state="3"><div class="win-window vid-window"><div class="vid-top"><div class="vid-brand"><img src="assets/web/logo.png" alt="">VidLock</div></div><div class="setup-card"><span class="setup-step">Step 1 of 3</span><h3>Where are your movies?</h3><p>Select the folder VidLock should turn into your library.</p><div class="setup-field done">📁&nbsp; D:\Media\Movies <em>Selected ✓</em></div><button class="win-primary">Continue</button></div></div><svg class="scene-cursor cursor-app" viewBox="0 0 24 24"><path fill="#fff" stroke="#111" d="M4 2v18l5-5 4 7 3-2-4-7h7z"/></svg></div>
+        <div class="win-scene" data-win-state="4"><div class="win-window vid-window"><div class="vid-top"><div class="vid-brand"><img src="assets/web/logo.png" alt="">VidLock</div></div><div class="setup-card"><span class="setup-step">Step 2 of 3</span><h3>Make it beautiful.</h3><p>Add metadata credentials for artwork, ratings, and details.</p><div class="setup-field done">OMDb API key <em>Connected ✓</em></div><div class="setup-field done">Fanart.tv API key <em>Connected ✓</em></div><div class="setup-field">OpenSubtitles key <em style="color:#777">Optional</em></div><button class="win-primary">Continue</button></div></div><svg class="scene-cursor cursor-next" viewBox="0 0 24 24"><path fill="#fff" stroke="#111" d="M4 2v18l5-5 4 7 3-2-4-7h7z"/></svg></div>
+        <div class="win-scene" data-win-state="5"><div class="win-window vid-window"><div class="vid-top"><div class="vid-brand"><img src="assets/web/logo.png" alt="">VidLock</div></div><div class="setup-card"><span class="setup-step">Step 3 of 3</span><h3>Ready to scan.</h3><p>VidLock found the folder and is ready to build your library.</p><div class="setup-field done">📁&nbsp; D:\Media\Movies <em>8 files</em></div><button class="win-primary">Scan 16 movies</button></div></div><svg class="scene-cursor cursor-next" viewBox="0 0 24 24"><path fill="#fff" stroke="#111" d="M4 2v18l5-5 4 7 3-2-4-7h7z"/></svg></div>
+        <div class="win-scene" data-win-state="6"><div class="win-window vid-window"><div class="vid-top"><div class="vid-brand"><img src="assets/web/logo.png" alt="">VidLock</div></div><div class="setup-card" style="text-align:center"><span class="setup-step">Building your library</span><div class="scan-ring"></div><h3 id="win-scan-title">Scanning Library</h3><div class="win-progress"><i></i></div><div class="scan-message" id="win-scan-message">Parsing filenames…</div></div></div></div>
+        <div class="win-scene library-scene" data-win-state="7"><div class="lib-nav"><div class="vid-brand"><img src="assets/web/logo.png" alt="">VidLock</div><span class="lib-tab active-tab">Home</span><span class="lib-tab">Movies</span><span class="lib-tab">Shows</span><span class="lib-tab">Favorites</span></div><div class="lib-grid"><div class="lib-poster"><img src="assets/web/poster/tt0080339.jpg" alt="Whiplash"></div><div class="lib-poster"><img src="assets/web/poster/tt1245492.jpg" alt="This Is the End"></div><div class="lib-poster"><img src="assets/web/poster/tt0903747.jpg" alt="Pulp Fiction"></div><div class="lib-poster"><img src="assets/web/poster/tt14688458.jpg" alt="Fight Club"></div></div></div>
+        <div class="win-taskbar"><button class="task-icon" aria-label="Start"><svg viewBox="0 0 24 24" fill="#5cb8ff"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg></button><button class="task-icon" id="explorer-task" aria-label="File Explorer"><svg viewBox="0 0 24 24" fill="#e9b84f"><path d="M2 6h8l2 2h10v12H2z"/></svg></button><button class="task-icon" id="vidlock-task" aria-label="VidLock"><img src="assets/web/logo.png" alt=""></button><button class="task-icon" aria-label="Browser"><svg viewBox="0 0 24 24" fill="#4ca8e8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5" fill="#55d6a1"/></svg></button><div class="win-clock">10:24 AM<br>Movie night</div></div>
+      </div><div class="win-dots" aria-label="Demo steps"><button class="win-dot active" data-go="1" aria-label="Desktop"></button><button class="win-dot" data-go="2" aria-label="Open movies folder"></button><button class="win-dot" data-go="3" aria-label="Select folder"></button><button class="win-dot" data-go="4" aria-label="Add credentials"></button><button class="win-dot" data-go="5" aria-label="Start scan"></button><button class="win-dot" data-go="6" aria-label="Scanning"></button><button class="win-dot" data-go="7" aria-label="Library ready"></button></div>
+    </div></section>
+
+      <section class="demo-flow" id="demo-flow">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div><span class="section-label">See the Magic</span>
+              <h2>From Messy Folders to a Cinematic Library</h2>
+            </div>
+            <p>Watch how VidLock instantly organizes your scattered video files.</p>
+          </div>
+          
+          <div class="demo-theater reveal">
+            
+            <!-- State 1: Messy Folder -->
+            <div class="demo-state active" id="demo-state-1">
+              <div class="mock-window-header">
+                <div class="mock-dots"><span></span><span></span><span></span></div>
+                <span style="color:#666; font-size:12px; margin-left:12px;">/Volumes/Storage/Movies</span>
+              </div>
+                            <div class="messy-file-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 24px;">
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">the.matrix.1999.1080p.x264.mkv</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">bb_s01e01_hdtv_xvid.avi</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">Interstellar.2014.IMAX.720p.mp4</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">The_Office_US_S03E05.mkv</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">Fight.Club.1999.Bluray.mkv</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">Silo_S01E01.mp4</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">Airplane.1980.avi</span>
+                </div>
+                <div class="messy-file-item" style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <svg width="48" height="48" fill="none" stroke="#666" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <span style="font-family: monospace; color: #888; font-size: 11px; word-break: break-all;">This.Is.The.End.mp4</span>
+                </div>
+              </div>
+            </div>
+
+                          <!-- State 2: Setup Modal -->
+              <div class="demo-state" id="demo-state-2">
+                <div class="mock-window-header" style="opacity: 0.5">
+                  <div class="mock-dots"><span></span><span></span><span></span></div>
+                </div>
+                <div class="demo-overlay">
+                  <div class="mock-modal">
+                    <h3>Add to VidLock</h3>
+                    <p>Choose folder and add metadata API keys.</p>
+                    <div class="mock-btn" style="position: relative;">
+                      Start Scan
+                      <svg class="animated-cursor" width="24" height="24" viewBox="0 0 24 24" style="position: absolute; top: 0; left: 50%; opacity: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); z-index: 10;">
+                        <path fill="#fff" stroke="#000" stroke-width="1.5" d="M5.5 3.21 V20.8 c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.87a.5.5 0 00.35-.85L5.5 3.21z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- State 3: Scanning -->
+            <div class="demo-state" id="demo-state-3">
+              <div class="mock-window-header" style="opacity: 0.3">
+                <div class="mock-dots"><span></span><span></span><span></span></div>
+              </div>
+              <div class="demo-overlay">
+                <div class="mock-modal">
+                  <h3>Scanning Library</h3>
+                  <div class="scan-progress-container">
+                    <div class="scan-progress-bar" id="mock-scan-bar"></div>
+                  </div>
+                  <p id="mock-scan-text">Parsing bb_s01e01_hdtv_xvid.avi...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- State 4: Result (Posters) -->
+            <div class="demo-state" id="demo-state-4" style="background: #050505;">
+              <!-- Mock VidLock Navbar -->
+              <div class="mock-app-navbar" style="height: 64px; display: flex; align-items: center; padding: 0 32px; gap: 32px; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <div style="font-weight: 700; font-size: 18px; color: #fff; display: flex; align-items: center; gap: 10px;">
+                  <img src="assets/web/logo.png" style="width: 24px; height: 24px; object-fit: contain;">
+                  VidLock
+                </div>
+                <div style="display: flex; gap: 24px; color: #888; font-size: 15px; font-weight: 600; height: 100%; align-items: center;">
+                  <span style="color: #fff; border-bottom: 2px solid oklch(65% 0.22 280); height: 100%; display: flex; align-items: center; padding-top: 2px;">Library</span>
+                  <span>Movies</span>
+                  <span>Shows</span>
+                </div>
+              </div>
+              
+              <div class="posters-grid" style="padding: 32px; gap: 24px; align-items: start; display: grid; grid-template-columns: repeat(4, 1fr);">
+                <div class="poster-item" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.6); aspect-ratio: 2/3; overflow: hidden;">
+                  <img src="assets/web/poster/tt0080339.jpg" alt="Airplane" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                </div>
+                <div class="poster-item" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.6); aspect-ratio: 2/3; overflow: hidden;">
+                  <img src="assets/web/poster/tt0903747.jpg" alt="Breaking Bad" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                </div>
+                <div class="poster-item" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.6); aspect-ratio: 2/3; overflow: hidden;">
+                  <img src="assets/web/poster/tt1245492.jpg" alt="This Is The End" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                </div>
+                <div class="poster-item" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.6); aspect-ratio: 2/3; overflow: hidden;">
+                  <img src="assets/web/poster/tt14688458.jpg" alt="Silo" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                </div>
+              </div>
+            </div>
+
+          </div>
+          
+          <div class="demo-controls">
+            <div class="demo-dot active" onclick="setDemoState(1)"></div>
+            <div class="demo-dot" onclick="setDemoState(2)"></div>
+            <div class="demo-dot" onclick="setDemoState(3)"></div>
+            <div class="demo-dot" onclick="setDemoState(4)"></div>
+          </div>
+        </div>
+      </section>
+
+
+    <section class="screens" id="screens">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div><span class="section-label">The real VidLock</span>
+            <h2>See the experience before you install.</h2>
+          </div>
+          <p>Real product screens from the local library, movie details, player, and LAN Watch Party.</p>
+        </div>
+        <div class="screen-grid"><a class="shot shot-hero reveal" href="assets/web/herosection.png" target="_blank"
+            rel="noreferrer"><img src="assets/web/herosection.png" alt="VidLock home screen"><span
+              class="shot-label">Home · cinematic dashboard ↗</span></a>
+          <div class="shot-stack"><a class="shot reveal" href="assets/web/library.png" target="_blank"
+              rel="noreferrer"><img src="assets/web/library.png" alt="VidLock Movies library"><span
+                class="shot-label">Movies library ↗</span></a><a class="shot reveal" href="assets/web/moviedetails.png"
+              target="_blank" rel="noreferrer"><img src="assets/web/moviedetails.png" alt="VidLock movie details"><span
+                class="shot-label">Movie details ↗</span></a></div>
+        </div>
+        <div class="screen-grid" style="margin-top:16px"><a class="shot reveal" href="assets/web/player.png"
+            target="_blank" rel="noreferrer"><img src="assets/web/player.png" alt="VidLock player"><span
+              class="shot-label">Player · direct play + transcode ↗</span></a><a class="shot reveal"
+            href="assets/web/watchpartywaitingroom.png" target="_blank" rel="noreferrer"><img
+              src="assets/web/watchpartywaitingroom.png" alt="VidLock Watch Party"><span class="shot-label">LAN Watch
+              Party ↗</span></a></div>
+        <!-- <div class="screen-grid" style="margin-top:16px;grid-template-columns:1fr"><a class="shot reveal"
+            href="assets/web/herosection2.png" target="_blank" rel="noreferrer"><img src="assets/web/herosection2.png"
+              alt="VidLock alternate desktop hero"><span class="shot-label">Desktop hero · alternate ↗</span></a></div> -->
+        <div class="brand-asset glass reveal"><img src="assets/web/logo.png" alt="VidLock logo"><span>VidLock visual
+            identity</span></div>
+      </div>
+    </section>
+
+    <section class="capabilities" id="playback">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div><span class="section-label">Serious playback</span>
+            <h2>Whatever the file, just press play.</h2>
+          </div>
+          <p>VidLock chooses the most efficient playback path automatically and remembers the details that matter.</p>
+        </div>
+        <div class="cap-grid">
+          <article class="cap glass reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7">
+              <path d="m8 5 11 7-11 7z" />
+            </svg>
+            <h3>Smart direct play</h3>
+            <p>Browser-compatible video streams directly with HTTP Range requests—no unnecessary conversion.</p>
+          </article>
+          <article class="cap glass reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7">
+              <path d="M4 4h16v16H4zM4 9h16M9 9v11" />
+            </svg>
+            <h3>Hardware transcoding</h3>
+            <p>Unsupported formats become HLS using NVIDIA NVENC, VAAPI, Intel QSV, or a reliable CPU fallback.</p>
+          </article>
+          <article class="cap glass reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7">
+              <path d="M5 8h14M5 12h9M5 16h14" />
+            </svg>
+            <h3>Audio and subtitles</h3>
+            <p>Switch between multiple audio tracks and use external or embedded subtitles right inside the player.</p>
+          </article>
+          <article class="cap glass reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7">
+              <path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6V4m8 4v5l3 2" />
+            </svg>
+            <h3>Continue watching</h3>
+            <p>Progress updates while you watch, with automatic watched status after 90% and resume on your next visit.
+            </p>
+          </article>
+          <article class="cap glass reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7">
+              <path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z" />
+            </svg>
+            <h3>Favorites and discovery</h3>
+            <p>Keep a personal shortlist, search instantly, and move through movies and shows without losing your place.
+            </p>
+          </article>
+          <article class="cap glass reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.7">
+              <path d="M5 4h14v16H5zM8 7h8M8 11h8M8 15h4" />
+            </svg>
+            <h3>Drive-aware library</h3>
+            <p>Disconnected external drives are marked unavailable instead of deleting their carefully built library
+              entries.</p>
+          </article>
+        </div>
+        <div class="techline reveal"><span>FFmpeg + ffprobe</span><span>10-bit HEVC
+            handling</span><span>HLS.js</span><span>SQLite local storage</span><span>Next.js 16</span><span>React
+            19</span></div>
+      </div>
+    </section>
+
+    <section class="experience" id="together">
+      <div class="wrap">
+        <div class="showcase glass reveal">
+          <div class="showcase-copy"><span class="section-label">LAN Watch Party</span>
+            <h2>Together, across your network.</h2>
+            <p>Create a room, share its six-character code or QR link, and keep play, pause, and seek in sync on devices
+              connected to your local network.</p>
+          </div>
+          <div class="party-card glass">
+            <div class="party-head">
+              <div class="party-avatar"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+              <div>
+                <h3>Friday movie night</h3><small>Waiting for friends</small>
+              </div>
+            </div>
+            <div class="room-code"><span>Room code</span><b>7K3QCA</b></div>
+            <div class="friends"><i class="friend">MA</i><i class="friend">AK</i><i class="friend">SP</i><span
+                class="waiting">3 friends are ready</span></div><button class="party-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>Start
+              watching</button>
+          </div>
+          <div class="player-bar glass"><button class="play" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg></button>
+            <div class="timeline"><i></i></div><span class="time">42:18 / 1:46:45</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta" id="download">
+      <div class="wrap">
+        <div class="cta-box glass reveal">
+          <h2>Your collection deserves a better screen.</h2>
+          <p>One local server. No external database, Redis service, authentication provider, or cloud media storage.
+            Just your hardware and your network.</p>
+          <div class="hero-actions"><a class="primary"
+              href="https://github.com/Manish6523/local-media-server/releases/latest">Get the latest release&nbsp;
+              ↓</a><a class="secondary" href="https://github.com/Manish6523/local-media-server" target="_blank"
+              rel="noreferrer">View source on GitHub&nbsp; ↗</a></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-row"><a class="brand" href="#top"><img class="logo" src="assets/web/logo.png"
+          alt="VidLock">VidLock</a><span>© 2026 VidLock · MIT License · Built by Manish</span>
+      <div class="footer-links"><a href="https://github.com/Manish6523/local-media-server#readme">Documentation</a><a
+          href="https://github.com/Manish6523/local-media-server/issues">Issues</a><a href="#top">Back to top ↑</a>
+      </div>
+    </div>
+  </footer>
+
+  <div class="modal-wrap" id="modal" role="dialog" aria-modal="true" aria-label="VidLock setup demo">
+    <div class="modal glass">
+      <div class="modal-top">
+        <div class="brand"><img class="logo" src="assets/web/logo.png" alt="VidLock">Set up VidLock</div><button
+          class="close" id="close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="progress"><i class="on"></i><i></i><i></i></div>
+      <div class="slide on"><span class="section-label">Step 1 of 3</span>
+        <h3>Where are your movies?</h3>
+        <p>Select the folder VidLock should turn into your personal library.</p><button class="folder-choice"
+          id="folder"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/><path d="M12 12v5M9.5 14.5h5"/></svg>
+          <div><b id="folderText">Browse for a folder</b><br><span>Internal or external drives</span></div>
+        </button>
+      </div>
+      <div class="slide"><span class="section-label">Step 2 of 3</span>
+        <h3>Make it beautiful.</h3>
+        <p>Metadata keys let VidLock add artwork, ratings, cast details, and subtitles.</p><input class="api-input"
+          placeholder="OMDb API key"><input class="api-input" placeholder="Fanart.tv API key"><input class="api-input"
+          placeholder="OpenSubtitles key (optional)">
+      </div>
+      <div class="slide center">
+        <div class="done-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m5 12 4 4L19 6" />
+          </svg></div><span class="section-label">Ready to scan</span>
+        <h3>Your library starts here.</h3>
+        <p>VidLock will scan <b>Movies</b> and find artwork for every title it recognizes.</p>
+      </div>
+      <div class="modal-bottom"><button class="secondary" id="back" style="display:none">Back</button><button
+          class="primary" id="next">Continue</button></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
+    const nav = $('#nav'), links = $$('.navlinks a');
+    addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 30), { passive: true });
+    addEventListener('pointermove', e => { document.documentElement.style.setProperty('--mx', e.clientX + 'px'); document.documentElement.style.setProperty('--my', e.clientY + 'px') }, { passive: true });
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('in') }), { threshold: .12 }); $$('.reveal').forEach(el => io.observe(el));
+    const sectionIo = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id)) } }), { rootMargin: '-45% 0px -50%' }); $$('section[id]').forEach(s => sectionIo.observe(s));
+    $('#menu').onclick = () => $('#navlinks').classList.toggle('open'); links.forEach(a => a.onclick = () => $('#navlinks').classList.remove('open'));
+    let scanning = false; 
+    const scanEl = $('#scan');
+    if (scanEl) {
+      scanEl.onclick = () => { if (scanning) return; scanning = true; const btn = scanEl, lib = $('#library'), files = [...$$('.file')]; btn.classList.add('running'); btn.querySelector('span').textContent = 'Recognizing movies…'; if (lib) lib.classList.add('scanning'); files.forEach((f, i) => setTimeout(() => { f.classList.add('matched'); f.querySelector('.file-status').textContent = 'Matched ✓' }, 850 + i * 380)); setTimeout(() => { const filesEl = $('#files'); if (filesEl) filesEl.style.display = 'none'; const postersEl = $('#posters'); if (postersEl) postersEl.classList.add('show'); const counterEl = $('#counter'); if (counterEl) counterEl.textContent = '3 movies ready'; btn.classList.remove('running'); btn.querySelector('span').textContent = 'Scan complete ✓'; scanning = false }, 2400) };
+    }
+    const modal = $('#modal'), slides = [...$$('.slide')], bars = [...$$('.progress i')]; let step = 0;
+    function render() { slides.forEach((s, i) => s.classList.toggle('on', i === step)); bars.forEach((b, i) => b.classList.toggle('on', i <= step)); const back = $('#back'); if (back) back.style.display = step ? 'block' : 'none'; const nxt = $('#next'); if (nxt) nxt.textContent = step === 2 ? 'Start scanning' : 'Continue' }
+    $$('.open-demo').forEach(b => b.onclick = () => { step = 0; render(); if (modal) modal.classList.add('open'); document.body.style.overflow = 'hidden' });
+    function close() { if (modal) modal.classList.remove('open'); document.body.style.overflow = '' } 
+    const cls = $('#close'); if (cls) cls.onclick = close; 
+    if (modal) modal.onclick = e => { if (e.target === modal) close() }; 
+    addEventListener('keydown', e => { if (e.key === 'Escape') close() });
+    const nxtBtn = $('#next'); if (nxtBtn) nxtBtn.onclick = () => { if (step < 2) { step++; render() } else { close(); setTimeout(() => { if ($('#scan')) $('#scan').click() }, 450); const stage = $('#stage'); if (stage) stage.scrollIntoView({ behavior: 'smooth', block: 'center' }) } }; 
+    const bckBtn = $('#back'); if (bckBtn) bckBtn.onclick = () => { step--; render() };
+    const fldrBtn = $('#folder'); if (fldrBtn) fldrBtn.onclick = () => { const t = $('#folderText'); if (t) t.textContent = 'C:\\Movies'; fldrBtn.style.borderColor = 'rgba(97,211,138,.35)' };
+  </script>
+    <script>
+      // Use live repository metadata when GitHub permits unauthenticated requests.
+      async function loadGitHubMeta() {
+        const repo = 'Manish6523/local-media-server';
+
+        try {
+          const repoResponse = await fetch(`https://api.github.com/repos/${repo}`, {
+            headers: { Accept: 'application/vnd.github+json' }
+          });
+          if (repoResponse.ok) {
+            const data = await repoResponse.json();
+            const stars = Number(data.stargazers_count || 0).toLocaleString();
+            document.querySelectorAll('.star-count').forEach((starEl) => {
+              starEl.textContent = stars;
+            });
+          }
+        } catch (_) {}
+
+        try {
+          const releaseResponse = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+            headers: { Accept: 'application/vnd.github+json' }
+          });
+          if (releaseResponse.ok) {
+            const data = await releaseResponse.json();
+            const version = data.tag_name || data.name;
+            if (version) {
+              const releaseLabel = document.querySelector('#release-label');
+              const ctaRelease = document.querySelector('#cta-release');
+              
+              let osName = 'Windows';
+              const ua = navigator.userAgent.toLowerCase();
+              if (ua.includes('mac')) osName = 'Mac';
+              else if (ua.includes('linux')) osName = 'Linux';
+              
+              if (releaseLabel) releaseLabel.textContent = `Latest: ${version}`;
+              if (ctaRelease) ctaRelease.innerHTML = `${version} &nbsp;&middot;&nbsp; Download for ${osName}`;
+              
+              document.querySelectorAll('.download-text').forEach(el => {
+                el.textContent = `Download for ${osName}`;
+              });
+            }
+          }
+        } catch (_) {}
+      }
+
+      loadGitHubMeta();
+
+      // Loop mix images (crossfade)
+      const frames = document.querySelectorAll('.mix-frame');
+      if (frames.length > 0) {
+        let mixIndex = 0;
+        setInterval(() => {
+          frames[mixIndex].style.opacity = '0';
+          mixIndex = (mixIndex + 1) % frames.length;
+          frames[mixIndex].style.opacity = '1';
+        }, 5000);
+      }
+    </script>
+    <style>
+      .lightbox {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      .lightbox.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .lightbox-content {
+        position: relative;
+        max-width: 90%;
+        max-height: 90%;
+      }
+      .lightbox-content img {
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      }
+      #lightbox-close {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 32px;
+        cursor: pointer;
+        line-height: 1;
+      }
+    </style>
+    <div id="image-lightbox" class="lightbox">
+      <div class="lightbox-content">
+        <img id="lightbox-img" src="" alt="Preview">
+        <button id="lightbox-close" aria-label="Close Preview">&times;</button>
+      </div>
+    </div>
+    <script>
+      const lb = document.getElementById('image-lightbox');
+      const lbImg = document.getElementById('lightbox-img');
+      const lbClose = document.getElementById('lightbox-close');
+      
+      document.querySelectorAll('a.shot').forEach(a => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          lbImg.src = a.href;
+          lb.classList.add('open');
+        };
+      });
+      
+      lbClose.onclick = () => lb.classList.remove('open');
+      lb.onclick = (e) => { if (e.target === lb) lb.classList.remove('open'); };
+    </script>
+  
+  <script>
+    // Demo Flow Animation Logic
+    let currentDemoState = 1;
+    let demoInterval;
+    
+    function setDemoState(state) {
+      currentDemoState = state;
+      
+      // Update dots
+      document.querySelectorAll('.demo-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index === state - 1);
+      });
+      
+      // Update states
+      document.querySelectorAll('.demo-state').forEach((el, index) => {
+        if (index === 0) {
+          el.classList.toggle('active', state === 1 || state === 2 || state === 3);
+        } else {
+          el.classList.toggle('active', index === state - 1);
+        }
+      });
+      
+      // Handle special state logic
+      if (state === 3) {
+        // Animate progress bar
+        const bar = document.getElementById('mock-scan-bar');
+        const text = document.getElementById('mock-scan-text');
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        
+        setTimeout(() => {
+          bar.style.transition = 'width 2.5s linear';
+          bar.style.width = '100%';
+          
+          let msgs = [
+            "Parsing bb_s01e01_hdtv_xvid.avi...",
+            "Downloading poster for The Matrix...",
+            "Matching Interstellar (2014)...",
+            "Finishing up..."
+          ];
+          let i = 0;
+          let msgInterval = setInterval(() => {
+            i++;
+            if (i < msgs.length) { 
+              if(text) text.innerText = msgs[i];
+            } else { 
+              clearInterval(msgInterval);
+            }
+          }, 600);
+        }, 50);
+      }
+      
+      // Reset timer
+      resetDemoTimer();
+    }
+    
+    function nextDemoState() {
+      let nextState = currentDemoState + 1;
+      if (nextState > 4) nextState = 1;
+      setDemoState(nextState);
+    }
+    
+    function resetDemoTimer() {
+      clearInterval(demoInterval);
+      let time = currentDemoState === 3 ? 3000 : 2500;
+      demoInterval = setInterval(nextDemoState, time);
+    }
+    
+    // Start animation only when in view
+    const demoFlow = document.getElementById('demo-flow');
+    if (demoFlow) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            resetDemoTimer(); // Start/resume
+          } else {
+            clearInterval(demoInterval); // Pause when out of view
+          }
+        });
+      }, { threshold: 0.2 });
+      observer.observe(demoFlow);
+    } else {
+      resetDemoTimer(); // Fallback
+    }
+  </script>
+
+  <script>
+    (() => {
+      const theater = document.getElementById('windows-demo');
+      if (!theater) return;
+      const scenes = [...theater.querySelectorAll('[data-win-state]')];
+      const dots = [...document.querySelectorAll('.win-dot')];
+      const caption = document.getElementById('win-caption');
+      const explorer = document.getElementById('explorer-task');
+      const vidlock = document.getElementById('vidlock-task');
+      const scanMessage = document.getElementById('win-scan-message');
+      const labels = ['Your Windows desktop','Opening the Movies folder','Launching VidLock · selecting folder','Adding metadata credentials','Starting the library scan','Matching files and downloading artwork','Your beautiful library is ready'];
+      const scanMessages = ['Parsing release filenames…','Matching This Is the End (2013)…','Downloading posters and backdrops…','Reading audio and subtitle tracks…','Finishing your library…'];
+      let currentWindowsDemoState = 1;
+      let windowsDemoTimer = null;
+      let scanTextTimer = null;
+      let visible = false;
+
+      function setWindowsDemoState(next) {
+        currentWindowsDemoState = Number(next);
+        scenes.forEach(scene => scene.classList.toggle('active', Number(scene.dataset.winState) === currentWindowsDemoState));
+        dots.forEach(dot => dot.classList.toggle('active', Number(dot.dataset.go) === currentWindowsDemoState));
+        caption.textContent = labels[currentWindowsDemoState - 1];
+        explorer.classList.toggle('on', currentWindowsDemoState === 2);
+        vidlock.classList.toggle('on', currentWindowsDemoState >= 3);
+        clearInterval(scanTextTimer);
+        if (currentWindowsDemoState === 6) {
+          let index = 0;
+          scanMessage.textContent = scanMessages[0];
+          scanTextTimer = setInterval(() => {
+            index = (index + 1) % scanMessages.length;
+            scanMessage.textContent = scanMessages[index];
+          }, 620);
+        }
+      }
+
+      function scheduleWindowsDemo() {
+        clearInterval(windowsDemoTimer);
+        if (!visible) return;
+        windowsDemoTimer = setInterval(() => setWindowsDemoState(currentWindowsDemoState === 7 ? 1 : currentWindowsDemoState + 1), 3200);
+      }
+
+      dots.forEach(dot => dot.addEventListener('click', () => {
+        setWindowsDemoState(dot.dataset.go);
+        scheduleWindowsDemo();
+      }));
+
+      new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        if (visible) scheduleWindowsDemo();
+        else {
+          clearInterval(windowsDemoTimer);
+          clearInterval(scanTextTimer);
+        }
+      }, { threshold: .25 }).observe(theater);
+
+      setWindowsDemoState(1);
+    })();
+  </script>
+  <script>
+    (() => {
+      const pc = document.getElementById('workflow-pc');
+      if (!pc) return;
+      const cursor = document.getElementById('wf-cursor');
+      const ring = document.getElementById('wf-click-ring');
+      const status = document.getElementById('wf-status');
+      const explorer = document.getElementById('wf-explorer');
+      const app = document.getElementById('wf-vidlock');
+      const explorerTask = document.getElementById('wf-explorer-task');
+      const appTask = document.getElementById('wf-vidlock-task');
+      const timeline = [...document.querySelectorAll('#wf-timeline i')];
+      let workflowRun = 0;
+      let workflowVisible = false;
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const alive = token => token === workflowRun && workflowVisible;
+
+      function setPhase(index, text) {
+        status.textContent = text;
+        timeline.forEach((bar, i) => bar.className = i < index ? 'done' : i === index ? 'live' : '');
+      }
+      function centerOf(el) {
+        const host = pc.getBoundingClientRect(), box = el.getBoundingClientRect();
+        return { x: box.left - host.left + box.width / 2, y: box.top - host.top + box.height / 2 };
+      }
+      async function moveTo(el, token, duration = 900, offset = {}) {
+        if (!alive(token)) throw 0;
+        const from = { x: parseFloat(cursor.style.left) || pc.clientWidth * .74, y: parseFloat(cursor.style.top) || pc.clientHeight * .3 };
+        const to = centerOf(el); to.x += offset.x || 0; to.y += offset.y || 0;
+        const motion = cursor.animate([{left:from.x+'px',top:from.y+'px'},{left:to.x+'px',top:to.y+'px'}],{duration,easing:'cubic-bezier(.2,.75,.2,1)',fill:'forwards'});
+        await motion.finished; cursor.style.left=to.x+'px';cursor.style.top=to.y+'px';
+        if (!alive(token)) throw 0;
+      }
+      async function clickAt(el, token) {
+        await moveTo(el, token, 850);
+        cursor.classList.add('clicking');
+        const p=centerOf(el);ring.style.left=p.x+'px';ring.style.top=p.y+'px';ring.classList.remove('pop');void ring.offsetWidth;ring.classList.add('pop');
+        await wait(150);cursor.classList.remove('clicking');await wait(260);
+        if (!alive(token)) throw 0;
+      }
+      async function typeInto(field, output, value, token, masked = false) {
+        await clickAt(field, token);field.classList.add('focused');output.classList.remove('wf-placeholder');output.textContent='';
+        for (let i=0;i<value.length;i++) { if(!alive(token)) throw 0; output.textContent += masked ? '•' : value[i]; await wait(70 + Math.random()*55); }
+        await wait(240);field.classList.remove('focused');
+      }
+      function showStep(name) { document.querySelectorAll('.wf-step').forEach(s=>s.classList.toggle('active',s.dataset.wfStep===name)); }
+      function resetWorkflow() {
+        explorer.classList.remove('open');app.classList.remove('open');explorerTask.classList.remove('running');appTask.classList.remove('running');
+        document.querySelectorAll('.wf-file').forEach(x=>x.classList.remove('selected'));showStep('path');document.getElementById('wf-library').classList.remove('active');
+        document.querySelector('[data-wf-step="scan"]').classList.remove('wf-scanning');
+        const path=document.getElementById('wf-path-text');path.textContent='Choose a folder…';path.className='wf-placeholder';document.getElementById('wf-path-check').textContent='';
+        [['wf-omdb-text','OMDb API key'],['wf-fanart-text','Fanart.tv API key']].forEach(([id,text])=>{const el=document.getElementById(id);el.textContent=text;el.className='wf-placeholder'});document.getElementById('wf-omdb-check').textContent='';document.getElementById('wf-fanart-check').textContent='';
+        cursor.style.left=pc.clientWidth*.76+'px';cursor.style.top=pc.clientHeight*.28+'px';timeline.forEach(x=>x.className='');
+      }
+      async function runWorkflow(token) {
+        try {
+          resetWorkflow();setPhase(0,'A normal Windows desktop');await wait(1100);
+          setPhase(1,'Opening File Explorer');await clickAt(explorerTask,token);explorer.classList.add('open');explorerTask.classList.add('running');await wait(900);
+          const files=[...document.querySelectorAll('.wf-file')];setPhase(2,'Looking through the messy Movies folder');await moveTo(files[0],token,700);files[0].classList.add('selected');await wait(450);await moveTo(files[3],token,650);files[0].classList.remove('selected');files[3].classList.add('selected');await wait(700);
+          setPhase(3,'Closing File Explorer');await clickAt(document.getElementById('wf-explorer-close'),token);explorer.classList.remove('open');explorerTask.classList.remove('running');await wait(550);
+          setPhase(4,'Opening VidLock');await clickAt(appTask,token);app.classList.add('open');appTask.classList.add('running');await wait(900);
+          setPhase(5,'Entering the Movies folder');await typeInto(document.getElementById('wf-path'),document.getElementById('wf-path-text'),'D:\\Media\\Movies',token);document.getElementById('wf-path-check').textContent='Selected ✓';await clickAt(document.getElementById('wf-path-next'),token);showStep('keys');await wait(600);
+          setPhase(6,'Adding metadata credentials');await typeInto(document.getElementById('wf-omdb'),document.getElementById('wf-omdb-text'),'omdb-8f24c7a1',token,true);document.getElementById('wf-omdb-check').textContent='Connected ✓';await typeInto(document.getElementById('wf-fanart'),document.getElementById('wf-fanart-text'),'fanart-92dfe46b',token,true);document.getElementById('wf-fanart-check').textContent='Connected ✓';await clickAt(document.getElementById('wf-keys-next'),token);showStep('ready');await wait(700);
+          setPhase(7,'Starting the library scan');await clickAt(document.getElementById('wf-scan'),token);showStep('scan');document.querySelector('[data-wf-step="scan"]').classList.add('wf-scanning');
+          const messages=['Parsing release filenames…','Matching This Is the End (2013)…','Downloading posters and backdrops…','Reading audio and subtitle tracks…','Saving everything locally…'];for(const message of messages){if(!alive(token))throw 0;document.getElementById('wf-scan-text').textContent=message;await wait(780)}
+          setPhase(8,'Your VidLock library is ready');document.getElementById('wf-library').classList.add('active');await moveTo(document.querySelector('.wf-poster:nth-child(2)'),token,900);await wait(2600);
+          status.textContent='Closing VidLock';await clickAt(document.getElementById('wf-app-close'),token);app.classList.remove('open');appTask.classList.remove('running');await wait(1100);
+          if(alive(token)) runWorkflow(token);
+        } catch (_) {}
+      }
+      new IntersectionObserver(([entry])=>{workflowVisible=entry.isIntersecting;workflowRun++;if(workflowVisible)runWorkflow(workflowRun)},{threshold:.3}).observe(pc);
+    })();
+  </script>
+</body>
+</html>

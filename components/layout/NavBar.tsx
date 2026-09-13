@@ -218,7 +218,7 @@ export default function NavBar() {
                 className={`relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                   isActive
                     ? "bg-white/10 text-white shadow-sm"
-                    : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/[0.10]"
                 }`}
               >
                 <link.icon className="w-4 h-4" />
@@ -233,17 +233,6 @@ export default function NavBar() {
 
         {/* Right Actions */}
         <div className={`${isDetailPage ? "hidden" : "hidden md:flex"} items-center gap-2 shrink-0`}>
-          <Link
-            href="/search"
-            className="flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-white/40 hover:text-white/70 hover:border-white/10 transition-all group"
-          >
-            <Search className="w-4 h-4" />
-            <span className="hidden lg:inline">Search</span>
-            <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white/[0.06] text-[10px] font-mono text-white/30 ml-2">
-              ⌘K
-            </kbd>
-          </Link>
-
           {/* Update Progress Indicator */}
           {updateProgress !== null && updateProgress < 100 && (
             <div
@@ -281,75 +270,88 @@ export default function NavBar() {
             </Link>
           )}
 
-          {/* Shuffle Button */}
-          <div className="relative" ref={shuffleRef}>
-            <button
-              onClick={() => setShowShuffleMenu(v => !v)}
-              className={`p-2.5 rounded-full glass transition-all cursor-pointer ${
-                shuffleLoading
-                  ? "text-violet-400 border-violet-500/20"
-                  : "text-white/50 hover:text-white hover:border-emerald-500/20"
-              }`}
-              title="Shuffle (R)"
+          {/* Grouped Icons Pill */}
+          <div className="flex items-center gap-1 glass-md px-1.5 py-1 rounded-full">
+            <Link
+              href="/search"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-white/50 glass hover:text-white/80 hover:bg-white/[0.08] transition-all group"
             >
-              <Shuffle className={`w-4 h-4 ${shuffleLoading ? "animate-spin" : ""}`} />
-            </button>
+              <Search className="w-4 h-4" />
+              <span className="hidden lg:inline">Search</span>
+              <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white/[0.06] text-[10px] font-mono text-white/30 ml-2">
+                ⌘K
+              </kbd>
+            </Link>
+            {/* Shuffle Button */}
+            <div className="relative" ref={shuffleRef}>
+              <button
+                onClick={() => setShowShuffleMenu(v => !v)}
+                className={`p-2 rounded-full transition-all cursor-pointer ${
+                  shuffleLoading
+                    ? "text-violet-400 bg-white/[0.04]"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/[0.10]"
+                }`}
+                title="Shuffle (R)"
+              >
+                <Shuffle className={`w-4 h-4 ${shuffleLoading ? "animate-spin" : ""}`} />
+              </button>
 
-            {/* Shuffle Dropdown */}
-            {showShuffleMenu && (
-              <div className="absolute right-0 top-full mt-2 w-[180px] rounded-xl bg-black/60 backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/40 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => triggerShuffle("movie")}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
-                  >
-                    <span className="text-base">🎬</span> Movies
-                  </button>
-                  <button
-                    onClick={() => triggerShuffle("show")}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
-                  >
-                    <span className="text-base">📺</span> Shows
-                  </button>
-                  <button
-                    onClick={() => triggerShuffle("both")}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
-                  >
-                    <span className="text-base">🎲</span> Both
-                  </button>
+              {/* Shuffle Dropdown */}
+              {showShuffleMenu && (
+                <div className="absolute right-0 top-full mt-2 w-[180px] rounded-xl bg-black/60 backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/40 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => triggerShuffle("movie")}
+                      className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                    >
+                      <span className="text-base">🎬</span> Movies
+                    </button>
+                    <button
+                      onClick={() => triggerShuffle("show")}
+                      className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                    >
+                      <span className="text-base">📺</span> Shows
+                    </button>
+                    <button
+                      onClick={() => triggerShuffle("both")}
+                      className="flex items-center gap-2.5 w-full px-3 py-2.5 cursor-pointer rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.08] transition-all"
+                    >
+                      <span className="text-base">🍿</span> Both
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <button
-            onClick={() => setShowPartyModal(true)}
-            className="p-2.5 rounded-full glass text-white/50 hover:text-white cursor-pointer hover:border-violet-500/20 transition-all"
-            title="Watch Party"
-          >
-            <Users className="w-4 h-4" />
-          </button>
-
-          {isLocalNetwork && (
             <button
-              onClick={() => setShowQRModal(true)}
-              className="p-2.5 rounded-full glass text-white/50 hover:text-white cursor-pointer hover:border-cyan-500/20 transition-all"
-              title="Scan QR Code"
+              onClick={() => setShowPartyModal(true)}
+              className="p-2 rounded-full text-white/50 hover:text-white/80 cursor-pointer hover:bg-white/[0.10] transition-all"
+              title="Watch Party"
             >
-              <QrCode className="w-4 h-4" />
+              <Users className="w-4 h-4" />
             </button>
-          )}
 
-          <Link
-            href="/settings"
-            className={`p-2.5 rounded-full glass transition-all ${
-              pathname === "/settings"
-                ? "text-violet-400 border-violet-500/20"
-                : "text-white/50 hover:text-white hover:border-white/10"
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
+            {isLocalNetwork && (
+              <button
+                onClick={() => setShowQRModal(true)}
+                className="p-2 rounded-full text-white/50 hover:text-white/80 cursor-pointer hover:bg-white/[0.10] transition-all"
+                title="Scan QR Code"
+              >
+                <QrCode className="w-4 h-4" />
+              </button>
+            )}
+
+            <Link
+              href="/settings"
+              className={`p-2 rounded-full transition-all ${
+                pathname === "/settings"
+                  ? "text-white bg-white/10 shadow-sm"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/[0.10]"
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </header>
 
