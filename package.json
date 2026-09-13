@@ -5,7 +5,7 @@
   "author": {
     "name": "Manish",
     "email": "ms5392363@gmail.com"
-  },
+  }, 
   "main": "electron/main.js",
   "scripts": {
     "dev": "node server.js",
