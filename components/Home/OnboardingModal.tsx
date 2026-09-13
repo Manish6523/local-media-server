@@ -95,13 +95,13 @@ export default function OnboardingModal({ open, onOpenChange }: OnboardingModalP
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-xl" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
-      <div className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b0f] shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xl" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <div className="glass-heavy relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
         <div className="border-b border-white/10 px-6 py-5 md:px-8">
           <button onClick={close} className="absolute right-5 top-5 rounded-full p-2 text-white/40 transition hover:bg-white/10 hover:text-white" aria-label="Close onboarding">
             <X className="h-5 w-5" />
           </button>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-400">Set up VidLock</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-red-500">Set up VidLock</p>
           <h2 id="onboarding-title" className="pr-12 text-2xl font-black text-white md:text-3xl">
             {step === 1 && "Choose your media folders"}
             {step === 2 && "Connect your metadata services"}
@@ -112,7 +112,7 @@ export default function OnboardingModal({ open, onOpenChange }: OnboardingModalP
               const number = index + 1;
               return (
                 <div key={label} className="space-y-2">
-                  <div className={`h-1 rounded-full ${number <= step ? "bg-violet-500" : "bg-white/10"}`} />
+                  <div className={`h-1 rounded-full ${number <= step ? "bg-red-500" : "bg-white/10"}`} />
                   <span className={`text-xs font-medium ${number === step ? "text-white" : "text-white/30"}`}>{number}. {label}</span>
                 </div>
               );
@@ -123,8 +123,8 @@ export default function OnboardingModal({ open, onOpenChange }: OnboardingModalP
         <div className="overflow-y-auto px-6 py-6 md:px-8 md:py-8">
           {step === 1 && (
             <div className="space-y-6">
-              <div className="flex items-start gap-4 rounded-2xl border border-violet-500/15 bg-violet-500/[0.06] p-4">
-                <FolderPlus className="mt-0.5 h-5 w-5 shrink-0 text-violet-400" />
+              <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                <FolderPlus className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
                 <p className="text-sm leading-relaxed text-white/60">Select the folders that contain your movies and shows. You can add internal drives, external drives, or both.</p>
               </div>
               <div className="space-y-5">
@@ -137,7 +137,7 @@ export default function OnboardingModal({ open, onOpenChange }: OnboardingModalP
                   </div>
                 ))}
               </div>
-              <button onClick={() => setMediaPaths(paths => [...paths, ""])} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-semibold text-white/50 transition hover:border-violet-400/40 hover:text-white">
+              <button onClick={() => setMediaPaths(paths => [...paths, ""])} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3 text-sm font-semibold text-white/50 transition hover:border-red-500/40 hover:text-white">
                 <FolderPlus className="h-4 w-4" /> Add another folder
               </button>
             </div>

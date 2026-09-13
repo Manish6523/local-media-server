@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Play, ChevronLeft, ChevronRight, Star, Clock, FolderPlus, Scan, Film } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Star, Clock, FolderPlus, Scan, Film, KeyRound, ShieldCheck } from "lucide-react";
 import { useBackground } from "@/components/BackgroundContext";
 import OnboardingModal, { shouldShowOnboarding } from "./OnboardingModal";
 import type { MediaEntry } from "@/lib/db";
@@ -44,73 +44,55 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
 
   if (!items || items.length === 0) {
     return (
-      <div className="relative z-20 w-full min-h-[85vh] flex items-center justify-center p-6 pb-12 overflow-hidden">
-        {/* Background ambient glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="relative z-20 flex min-h-[85vh] w-full items-center overflow-hidden bg-[#050506] px-5 pb-12 pt-28 md:px-10 lg:px-14">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_42%,rgba(229,9,20,0.08),transparent_30%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/[0.06]" />
 
-        <div className="relative z-10 text-center max-w-5xl w-full mt-10">
-          <div className="inline-flex items-center justify-center p-5 rounded-3xl bg-white/5 border border-white/10 shadow-2xl mb-8 backdrop-blur-xl animate-in fade-in zoom-in duration-700">
-            <Film className="w-12 h-12 text-violet-400 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" />
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
-            Welcome to{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 drop-shadow-sm">
-              VidLock
-            </span>
-          </h1>
-          
-          <p className="text-white/50 mb-16 text-xl md:text-2xl max-w-2xl mx-auto font-medium animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-            Your media universe is waiting. Let&apos;s bring it to life.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-            {/* Step 1 */}
-            <div className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-violet-500/30 rounded-3xl p-6 transition-all duration-500 overflow-hidden text-left shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <FolderPlus className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">1. Add Folders</h3>
-              <p className="text-white/40 leading-relaxed text-sm">Tell VidLock where your movies and TV shows are stored on your computer or external drives.</p>
+        <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="glass mb-7 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/50 shadow-lg shadow-black/20">
+              <ShieldCheck className="h-3.5 w-3.5 text-red-500" /> Private by design
             </div>
-
-            {/* Step 2 */}
-            <div className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-cyan-500/30 rounded-3xl p-6 transition-all duration-500 overflow-hidden text-left shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <Scan className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">2. Scan Library</h3>
-              <p className="text-white/40 leading-relaxed text-sm">Our scanner will magically pull in beautiful posters, backdrops, and metadata for your files.</p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-[#46d369]/30 rounded-3xl p-6 transition-all duration-500 overflow-hidden text-left shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#46d369]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-12 h-12 rounded-xl bg-[#46d369]/10 text-[#46d369] flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <Play className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">3. Enjoy</h3>
-              <p className="text-white/40 leading-relaxed text-sm">Sit back and experience your personal streaming service, completely offline and private.</p>
-            </div>
-          </div>
-
-          {enableOnboarding && (
-            <div className="relative z-30 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-              <button
-                type="button"
-                onClick={() => setShowOnboarding(true)}
-                className="group relative inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-black font-bold text-lg hover:scale-105 transition-all duration-300 cursor-pointer shadow-xl shadow-black/20"
-              >
-                <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500" />
-                <span className="pointer-events-none relative z-10 flex items-center gap-2">
-                  Get Started <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
+            <h1 className="max-w-xl text-4xl font-black leading-[1.05] tracking-[-0.04em] text-white sm:text-5xl md:text-6xl">
+              Your collection.<br />Your screen.
+            </h1>
+            <p className="mt-6 max-w-lg text-base leading-relaxed text-white/45 md:text-lg">
+              Turn the movies and shows you already own into a personal streaming library—stored and played from your computer.
+            </p>
+            {enableOnboarding && (
+              <button type="button" onClick={() => setShowOnboarding(true)} className="glass-md group mt-9 inline-flex items-center gap-3 rounded-full px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-black/30 transition hover:border-red-500/30 hover:bg-red-500/15">
+                <span className="pointer-events-none">Set up my library</span>
+                <ChevronRight className="pointer-events-none h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
+            )}
+            <p className="mt-4 text-xs text-white/25">No account required · Your files stay local</p>
+          </div>
+
+          <div className="glass-md overflow-hidden rounded-[1.75rem] shadow-2xl shadow-black/40 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-6 py-5">
+              <div>
+                <p className="text-sm font-bold text-white">Three steps to movie night</p>
+                <p className="mt-1 text-xs text-white/35">Usually takes only a few minutes</p>
+              </div>
+              <Film className="h-5 w-5 text-white/25" />
             </div>
-          )}
+            {[
+              { number: "01", title: "Choose your folders", copy: "Point VidLock to the folders containing your video files.", icon: FolderPlus },
+              { number: "02", title: "Add metadata keys", copy: "Connect OMDB and Fanart.tv for accurate details and artwork.", icon: KeyRound },
+              { number: "03", title: "Scan your library", copy: "VidLock identifies your files and organizes everything for you.", icon: Scan },
+            ].map((step, index) => (
+              <div key={step.number} className={`group flex gap-5 px-6 py-5 transition-colors hover:bg-white/[0.025] ${index !== 2 ? "border-b border-white/[0.06]" : ""}`}>
+                <span className="pt-1 font-mono text-xs font-bold text-red-500/80">{step.number}</span>
+                <div className="glass flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/55 shadow-inner transition group-hover:text-white">
+                  <step.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white/90">{step.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-white/35">{step.copy}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         {enableOnboarding && <OnboardingModal open={showOnboarding} onOpenChange={setShowOnboarding} />}
       </div>
@@ -146,7 +128,7 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
         <div className="max-w-2xl">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 mb-5 text-xs font-medium text-white/60">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             Featured
           </div>
 
@@ -164,7 +146,7 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
             {currentItem.rating && (
               <>
                 <span className="w-1 h-1 rounded-full bg-white/20" />
-                <span className="flex items-center gap-1 text-violet-300">
+                <span className="flex items-center gap-1 text-amber-300">
                   <Star className="w-3.5 h-3.5 fill-current" />
                   {currentItem.rating.split("/")[0]}
                 </span>
@@ -206,7 +188,7 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
             {currentItem.available === 1 && (
               <Link
                 href={`/player/${currentItem.id}`}
-                className="inline-flex items-center gap-2.5 sm:px-7 px-4 py-3 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 text-white font-semibold text-sm hover:from-violet-400 hover:to-violet-500 transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center gap-2.5 sm:px-7 px-4 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-black/25 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span className="block sm:hidden">Watch</span>

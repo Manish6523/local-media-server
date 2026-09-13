@@ -85,7 +85,7 @@ export default function HomeContent() {
     return (
       <div className="w-full min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
+          <div className="w-10 h-10 border-2 border-white/10 border-t-red-500 rounded-full animate-spin" />
           <span className="text-sm text-white/30 font-medium">Loading your library...</span>
         </div>
       </div>
