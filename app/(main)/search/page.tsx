@@ -142,28 +142,30 @@ function SearchContent() {
 
         {/* Source Toggle */}
         {showDiscoverTab && (
-          <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-white/10">
+          <div className="grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-white/10 bg-white/5 p-1.5 sm:flex sm:w-auto sm:items-center sm:rounded-full">
           <button
             onClick={() => setSearchMode("local")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
+            className={`flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all sm:rounded-full sm:px-6 ${
               searchMode === "local" 
                 ? "bg-violet-500 text-white shadow-md shadow-violet-500/20" 
                 : "text-white/40 hover:text-white/80"
             }`}
           >
-            <HardDrive className="w-4 h-4" />
-            Local Library
+            <HardDrive className="h-4 w-4 shrink-0" />
+            <span className="truncate sm:hidden">Local</span>
+            <span className="hidden sm:inline">Local Library</span>
           </button>
           <button
             onClick={() => setSearchMode("online")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
+            className={`flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all sm:rounded-full sm:px-6 ${
               searchMode === "online" 
                 ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20" 
                 : "text-white/40 hover:text-white/80"
             }`}
           >
-            <Globe className="w-4 h-4" />
-            Online (2embed)
+            <Globe className="h-4 w-4 shrink-0" />
+            <span className="truncate sm:hidden">Online</span>
+            <span className="hidden sm:inline">Online (2embed)</span>
           </button>
         </div>
         )}

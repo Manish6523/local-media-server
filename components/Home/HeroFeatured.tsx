@@ -7,6 +7,11 @@ import { useBackground } from "@/components/BackgroundContext";
 import OnboardingModal, { shouldShowOnboarding } from "./OnboardingModal";
 import type { MediaEntry } from "@/lib/db";
 
+const HERO_GLASS_STYLE = {
+  backdropFilter: "saturate(160%) blur(24px)",
+  WebkitBackdropFilter: "saturate(160%) blur(24px)",
+};
+
 export default function HeroFeatured({ items, enableOnboarding = false }: { items: MediaEntry[]; enableOnboarding?: boolean }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -100,6 +105,15 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
   }
 
   const currentItem = items[currentIndex];
+  const slug = encodeURIComponent(currentItem.title.toLowerCase().replace(/\s+/g, "-"));
+  const detailsHref = `/${currentItem.type === "show" ? "shows" : "movies"}/${slug}${
+    currentItem.source === "online" && currentItem.omdb_id
+      ? `?imdb=${encodeURIComponent(currentItem.omdb_id)}`
+      : ""
+  }`;
+  const watchHref = currentItem.source === "online" && currentItem.omdb_id
+    ? `/player/online?imdb=${encodeURIComponent(currentItem.omdb_id)}&type=${currentItem.type}`
+    : `/player/${currentItem.id}`;
 
   return (
     <div className="relative w-full min-h-[75vh] md:min-h-[85vh] overflow-hidden">
@@ -187,7 +201,7 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
           <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-300">
             {currentItem.available === 1 && (
               <Link
-                href={`/player/${currentItem.id}`}
+                href={watchHref}
                 className="inline-flex items-center gap-2.5 sm:px-7 px-4 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-black/25 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Play className="w-4 h-4 fill-current" />
@@ -196,7 +210,8 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
               </Link>
             )}
             <Link
-              href={`/${currentItem.type === "show" ? "shows" : "movies"}/${encodeURIComponent(currentItem.title.toLowerCase().replace(/\s+/g, "-"))}`}
+              href={detailsHref}
+              style={HERO_GLASS_STYLE}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-full glass text-white/70 text-sm font-medium hover:text-white hover:bg-white/[0.08] transition-all"
             >
               Details
@@ -220,13 +235,17 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
 
             <button
               onClick={handlePrev}
+              style={HERO_GLASS_STYLE}
               className="w-10 h-10 rounded-full cursor-pointer glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+              aria-label="Previous featured title"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={handleNext}
+              style={HERO_GLASS_STYLE}
               className="w-10 h-10 rounded-full cursor-pointer glass flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all"
+              aria-label="Next featured title"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

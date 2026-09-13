@@ -16,7 +16,6 @@ export default function MoviesPage() {
   const [loading, setLoading] = useState(true);
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
 
   // Selection mode
   const [selectionMode, setSelectionMode] = useState(false);
@@ -172,18 +171,6 @@ export default function MoviesPage() {
             <>
               <SortDropdown pageKey="movies" onSortChange={setSortParam} />
 
-              {/* Mobile Filter Toggle */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`md:hidden flex items-center justify-center w-[42px] h-[42px] rounded-lg transition-all shadow-lg backdrop-blur-md border ${
-                  showFilters
-                    ? "bg-violet-500/20 border-violet-500/30 text-violet-300"
-                    : "bg-white/[0.03] border-white/[0.05] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-              </button>
-
               {/* Select Toggle */}
               <button
                 onClick={toggleSelectionMode}
@@ -202,7 +189,7 @@ export default function MoviesPage() {
       </div>
 
       {!loading && movies.length > 0 && (
-        <div className={`mb-8 relative z-10 ${showFilters ? "block" : "hidden md:block"}`}>
+        <div className="mb-8 relative z-10">
           <GenreFilter onFilterChange={setSelectedGenres} storageKey="genre_filter_movies" />
         </div>
       )}

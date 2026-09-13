@@ -18,6 +18,12 @@ const NAV_GLASS_STYLE = {
   WebkitBackdropFilter: "saturate(160%) blur(32px)",
 };
 
+const MOBILE_MENU_GLASS_STYLE = {
+  backdropFilter: "saturate(140%) blur(18px)",
+  WebkitBackdropFilter: "saturate(140%) blur(18px)",
+  willChange: "transform, opacity",
+};
+
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -54,7 +60,7 @@ export default function NavBar() {
   // Primary mobile links (always visible)
   const primaryMobileLinks = [
     { href: "/", label: "Home", icon: Home },
-    ...(showDiscoverTab ? [{ href: "/discover", label: "Discover", icon: Compass }] : []),
+    ...(showDiscoverTab ? [{ href: "/discover", label: "Online", icon: Compass }] : []),
     { href: "/movies", label: "Movies", icon: Film },
     { href: "/shows", label: "Shows", icon: Tv },
   ];
@@ -243,7 +249,8 @@ export default function NavBar() {
           {/* Update Progress Indicator */}
           {updateProgress !== null && updateProgress < 100 && (
             <div
-              className="relative p-2.5 rounded-full glass text-violet-400 transition-all"
+              style={NAV_GLASS_STYLE}
+              className="relative p-2.5 rounded-full glass-md text-violet-300 transition-all"
               title={`Downloading update... ${Math.round(updateProgress)}%`}
             >
               <span
@@ -262,7 +269,8 @@ export default function NavBar() {
           {scanning && (
             <Link
               href="/settings"
-              className="relative p-2.5 rounded-full glass text-emerald-400 hover:text-emerald-300 transition-all"
+              style={NAV_GLASS_STYLE}
+              className="relative p-2.5 rounded-full glass-md text-emerald-400 hover:text-emerald-300 transition-all"
               title={`${scanProgress.message} — ${Math.round(scanProgress.percent)}%`}
             >
               <span
@@ -366,49 +374,50 @@ export default function NavBar() {
       {/* Expanded Menu Overlay */}
       {mobileExpanded && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+          className="md:hidden fixed inset-0 z-40 bg-black/55 animate-in fade-in duration-200 motion-reduce:animate-none"
           onClick={() => setMobileExpanded(false)}
         >
           <div
-            className="absolute bottom-28 left-4 right-4 bg-gradient-to-b from-[#1a1a1a]/95 to-[#0a0a0a]/95 backdrop-blur-3xl border border-white/[0.08] rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom-8 duration-300"
+            style={MOBILE_MENU_GLASS_STYLE}
+            className="glass-md absolute bottom-28 left-4 right-4 rounded-[2rem] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 duration-200 motion-reduce:animate-none"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <span className="text-white/80 font-bold tracking-wide">More Options</span>
-              <button onClick={() => setMobileExpanded(false)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
+              <button onClick={() => setMobileExpanded(false)} className="glass flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
             
             <div className="grid grid-cols-3 gap-4">
-              <button onClick={() => { setMobileExpanded(false); router.push("/favorites"); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+              <button onClick={() => { setMobileExpanded(false); router.push("/favorites"); }} className="glass flex cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 hover:bg-white/[0.08] hover:scale-105 active:scale-95 transition-all">
                 <Heart className="w-6 h-6 text-rose-400" />
                 <span className="text-[11px] font-medium text-white/70">Watchlist</span>
               </button>
               
-              <button onClick={() => { setMobileExpanded(false); triggerShuffle("both"); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+              <button onClick={() => { setMobileExpanded(false); triggerShuffle("both"); }} className="glass flex cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 hover:bg-white/[0.08] hover:scale-105 active:scale-95 transition-all">
                 <Shuffle className={`w-6 h-6 text-violet-400 ${shuffleLoading ? "animate-spin" : ""}`} />
                 <span className="text-[11px] font-medium text-white/70">Shuffle</span>
               </button>
 
-              <button onClick={() => { setMobileExpanded(false); setShowPartyModal(true); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+              <button onClick={() => { setMobileExpanded(false); setShowPartyModal(true); }} className="glass flex cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 hover:bg-white/[0.08] hover:scale-105 active:scale-95 transition-all">
                 <Users className="w-6 h-6 text-blue-400" />
                 <span className="text-[11px] font-medium text-white/70">Party</span>
               </button>
 
               {isLocalNetwork && (
-                <button onClick={() => { setMobileExpanded(false); setShowQRModal(true); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                <button onClick={() => { setMobileExpanded(false); setShowQRModal(true); }} className="glass flex cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 hover:bg-white/[0.08] hover:scale-105 active:scale-95 transition-all">
                   <QrCode className="w-6 h-6 text-emerald-400" />
                   <span className="text-[11px] font-medium text-white/70">Scan QR</span>
                 </button>
               )}
 
-              <button onClick={() => { setMobileExpanded(false); toggleFullscreen(); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+              <button onClick={() => { setMobileExpanded(false); toggleFullscreen(); }} className="glass flex cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 hover:bg-white/[0.08] hover:scale-105 active:scale-95 transition-all">
                 <Maximize className="w-6 h-6 text-amber-400" />
                 <span className="text-[11px] font-medium text-white/70">Fullscreen</span>
               </button>
               
-              <button onClick={() => { setMobileExpanded(false); router.push("/settings"); }} className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.02] hover:bg-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+              <button onClick={() => { setMobileExpanded(false); router.push("/settings"); }} className="glass flex cursor-pointer flex-col items-center gap-3 rounded-2xl p-4 hover:bg-white/[0.08] hover:scale-105 active:scale-95 transition-all">
                 <Settings className="w-6 h-6 text-gray-400" />
                 <span className="text-[11px] font-medium text-white/70">Settings</span>
               </button>
@@ -419,7 +428,7 @@ export default function NavBar() {
 
       {/* Floating Pill Nav */}
       <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-3">
-        <div className="bg-[#0a0a0a]/85 backdrop-blur-3xl border border-white/[0.08] rounded-full p-1.5 flex items-center shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+        <div style={NAV_GLASS_STYLE} className="glass-md rounded-full p-1.5 flex items-center shadow-[0_12px_40px_rgba(0,0,0,0.38)]">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             {primaryMobileLinks.map((link) => {
               const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
@@ -429,8 +438,8 @@ export default function NavBar() {
                   href={link.href}
                   className={`relative flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-all duration-300 ${
                     isActive
-                      ? "bg-white text-black shadow-md"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                      ? "bg-white/[0.14] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_4px_16px_rgba(0,0,0,0.2)] ring-1 ring-white/[0.08]"
+                      : "text-white/45 hover:text-white/80 hover:bg-white/[0.08]"
                   }`}
                 >
                   <link.icon className={`w-5 h-5 ${isActive ? "stroke-[2.5px]" : ""}`} />
@@ -444,7 +453,7 @@ export default function NavBar() {
 
           <div className="flex items-center gap-1 pl-1 shrink-0">
             {scanning && (
-              <Link href="/settings" className="relative p-3 rounded-full text-emerald-400 transition-all" title={`${scanProgress.message} — ${Math.round(scanProgress.percent)}%`}>
+              <Link href="/settings" style={NAV_GLASS_STYLE} className="relative p-3 rounded-full glass-md text-emerald-400 transition-all" title={`${scanProgress.message} — ${Math.round(scanProgress.percent)}%`}>
                 <span
                   className="absolute inset-0 rounded-full"
                   style={{
@@ -459,7 +468,8 @@ export default function NavBar() {
 
             {updateProgress !== null && updateProgress < 100 && (
               <div
-                className="relative p-3 rounded-full text-violet-400 transition-all"
+                style={NAV_GLASS_STYLE}
+                className="relative p-3 rounded-full glass-md text-violet-300 transition-all"
                 title={`Downloading update... ${Math.round(updateProgress)}%`}
               >
                 <span
@@ -477,7 +487,7 @@ export default function NavBar() {
 
             <Link
               href="/search"
-              className="p-3 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
+              className="p-1 rounded-full text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
             >
               <Search className="w-5 h-5" />
             </Link>
