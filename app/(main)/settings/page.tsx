@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings as SettingsIcon, RefreshCw, Check, AlertCircle, Film, Tv, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Eye, EyeOff, Lock, Unlock, MonitorPlay, ExternalLink, Compass } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Settings as SettingsIcon, RefreshCw, LogOut, Check, AlertCircle, Image as ImageIcon, Video, Monitor, Tv, Laptop, Smartphone, Speaker, Eye, EyeOff, Compass, Film, FileVideo, HardDrive, AlertTriangle, Cpu, Zap, Lock, Unlock, MonitorPlay, ExternalLink, Pencil } from "lucide-react";
 import AdminPinGate from "@/components/AdminPinGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ export interface CustomVideoPlayer {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [mediaPaths, setMediaPaths] = useState<string[]>([]);
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalMovies: 0, totalShows: 0, totalFiles: 0 });
@@ -34,6 +36,7 @@ export default function SettingsPage() {
   const [showPlayOnPc, setShowPlayOnPc] = useState(true);
   const [enableAutoTrailerBg, setEnableAutoTrailerBg] = useState(true);
   const [showDiscoverTab, setShowDiscoverTab] = useState(true);
+  const [enableEditMode, setEnableEditMode] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [customVideoPlayers, setCustomVideoPlayers] = useState<CustomVideoPlayer[]>([]);
@@ -70,6 +73,7 @@ export default function SettingsPage() {
         if (data.showPlayOnPc !== undefined) setShowPlayOnPc(data.showPlayOnPc);
         if (data.enableAutoTrailerBg !== undefined) setEnableAutoTrailerBg(data.enableAutoTrailerBg);
         if (data.showDiscoverTab !== undefined) setShowDiscoverTab(data.showDiscoverTab);
+        if (data.enableEditMode !== undefined) setEnableEditMode(data.enableEditMode);
         if (data.customVideoPlayers) setCustomVideoPlayers(data.customVideoPlayers);
         if (data.omdbApiKey !== undefined) setOmdbApiKey(data.omdbApiKey);
         if (data.fanartTvApiKey !== undefined) setFanartTvApiKey(data.fanartTvApiKey);
@@ -188,8 +192,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ showPlayOnPc: newValue }),
       });
-      // Refresh context or force a reload so components can pick it up
-      // window.location.reload();
+      router.refresh();
     } catch (err) {
       console.error(err);
       setShowPlayOnPc(!newValue); // revert on failure
@@ -208,6 +211,21 @@ export default function SettingsPage() {
     } catch (err) {
       console.error(err);
       setShowDiscoverTab(!newValue);
+    }
+  };
+
+  const handleEditModeToggle = async (newValue: boolean) => {
+    setEnableEditMode(newValue);
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enableEditMode: newValue }),
+      });
+      router.refresh(); // Soft refresh to apply changes everywhere (PosterCards)
+    } catch (err) {
+      console.error(err);
+      setEnableEditMode(!newValue);
     }
   };
 
@@ -259,7 +277,7 @@ export default function SettingsPage() {
   return (
     <AdminPinGate>
       <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-16">
-        
+
         {/* System Update Progress */}
         {updateProgress && (
           <section className="space-y-6 mb-8">
@@ -273,7 +291,7 @@ export default function SettingsPage() {
                   <span>{(updateProgress.transferred / 1024 / 1024).toFixed(1)} / {(updateProgress.total / 1024 / 1024).toFixed(1)} MB ({(updateProgress.bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s)</span>
                 </div>
                 <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-blue-500 transition-all duration-300"
                     style={{ width: `${updateProgress.percent}%` }}
                   />
@@ -284,7 +302,7 @@ export default function SettingsPage() {
         )}
 
       <div className="max-w-4xl mx-auto space-y-12">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -348,17 +366,16 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Section 1 - Media Sources */}
         <Link href="/admin/unmatched" className="glass-card flex items-center justify-between gap-4 p-6 transition hover:bg-white/5">
           <div><h2 className="font-bold text-white">Review unmatched files</h2><p className="mt-1 text-sm text-white/45">Find the right movie or match a batch of episodes to a show.</p></div>
           <span className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm text-white">Needs review →</span>
         </Link>
-        <section className="space-y-6">
+        <section className="space-y-6 mt-6">
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
             <SettingsIcon className="w-5 h-5 text-violet-400" />
             Media Sources
           </h2>
-          
+
           <div className="glass-card overflow-hidden">
             <div className="p-6 md:p-8">
               <div className="mb-4">
@@ -366,7 +383,7 @@ export default function SettingsPage() {
                 <div className="space-y-6">
                   {mediaPaths.map((path, idx) => (
                     <div key={idx} className="relative group">
-                      <FolderPicker 
+                      <FolderPicker
                         label={`Media Folder ${idx + 1}`}
                         value={path}
                         onChange={(val) => handleUpdatePath(idx, val)}
@@ -382,71 +399,14 @@ export default function SettingsPage() {
                     </div>
                   ))}
                 </div>
-                
+
                 <Button onClick={handleAddPath} className="mt-6 bg-white/10 hover:bg-white/20 text-white border border-white/10 w-full rounded-xl py-6">
                   + Add Another Folder
                 </Button>
               </div>
-              <div className="mt-6 pt-6 border-t border-white/5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {showOfflineMedia ? (
-                      <Eye className="w-4 h-4 text-white/50" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 text-white/50" />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-white">Show offline HDD media</p>
-                      <p className="text-xs text-white/40 mt-0.5">Display movies/shows from disconnected drives as unavailable</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleOfflineToggle(!showOfflineMedia)}
-                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      showOfflineMedia ? "bg-emerald-500" : "bg-zinc-700"
-                    }`}
-                    role="switch"
-                    aria-checked={showOfflineMedia}
-                    id="show-offline-toggle"
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
-                        showOfflineMedia ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Compass className="w-4 h-4 text-white/50" />
-                    <div>
-                      <h3 className="text-white font-medium text-sm">Discover Tab</h3>
-                      <p className="text-white/50 text-xs mt-0.5 max-w-sm">
-                        Show or hide the Discover tab in the navigation menu.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDiscoverTabToggle(!showDiscoverTab)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                      showDiscoverTab ? "bg-emerald-500" : "bg-zinc-700"
-                    }`}
-                    role="switch"
-                    aria-checked={showDiscoverTab}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showDiscoverTab ? "translate-x-5" : "translate-x-0"
-                      } ml-1`}
-                    />
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Scan Stats & Button — inside Media Sources */}
           <div className="glass-card overflow-hidden">
             <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10 border-b border-white/10 bg-black/20">
               <div className="p-4 flex flex-col items-center justify-center">
@@ -476,18 +436,18 @@ export default function SettingsPage() {
                 <span className="text-sm font-medium text-white/50">Last scanned: {lastScan ? new Date(lastScan).toLocaleString() : "Never"}</span>
               </div>
 
-              <Button 
-                onClick={startScan} 
-                disabled={scanning} 
+              <Button
+                onClick={startScan}
+                disabled={scanning}
                 className="w-full h-14 text-base font-bold bg-white text-black hover:bg-white/90 rounded-full transition-all relative overflow-hidden"
               >
                 {scanning ? (
                   <>
-                    <div 
+                    <div
                       className="absolute left-0 top-0 bottom-0 bg-emerald-500/20 transition-all duration-300"
                       style={{ width: `${scanProgress.percent}%` }}
                     />
-                    <RefreshCw className="w-5 h-5 mr-3 animate-spin relative z-10" /> 
+                    <RefreshCw className="w-5 h-5 mr-3 animate-spin relative z-10" />
                     <span className="relative z-10">{scanProgress.message} ({scanProgress.percent}%)</span>
                   </>
                 ) : "Scan for New Files"}
@@ -523,13 +483,13 @@ export default function SettingsPage() {
             <Lock className="w-5 h-5 text-indigo-400" />
             Metadata & API Keys
           </h2>
-          
+
           <div className="glass-card overflow-hidden">
             <div className="p-6 md:p-8 space-y-6">
               <p className="text-white/60 text-sm">
                 Configure your API keys to automatically fetch movie details, posters, and high-quality landscape backdrops.
               </p>
-              
+
               <div className="space-y-4">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -589,16 +549,16 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Section 1.5 - Custom Video Players */}
+        {/* Section 1.5 - UI & Display Preferences */}
         <section className="space-y-6">
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
-            <MonitorPlay className="w-5 h-5 text-blue-400" />
-            Custom Video Players
+            <Monitor className="w-5 h-5 text-emerald-400" />
+            Display Preferences
           </h2>
-          
+
           <div className="glass-card overflow-hidden">
             <div className="p-6 md:p-8 space-y-6">
-              
+
               <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -652,6 +612,105 @@ export default function SettingsPage() {
                 </button>
               </div>
 
+              {/* Toggle Discover Tab */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Compass className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Discover Tab</p>
+                    <p className="text-xs text-white/40 mt-0.5">Show or hide the Discover tab in the navigation menu</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDiscoverTabToggle(!showDiscoverTab)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none shrink-0 ${
+                    showDiscoverTab ? "bg-emerald-500" : "bg-zinc-700"
+                  }`}
+                  role="switch"
+                  aria-checked={showDiscoverTab}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
+                      showDiscoverTab ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle Offline Media */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+                    {showOfflineMedia ? (
+                      <Eye className="w-5 h-5 text-indigo-400" />
+                    ) : (
+                      <EyeOff className="w-5 h-5 text-indigo-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Show Offline HDD Media</p>
+                    <p className="text-xs text-white/40 mt-0.5">Display movies/shows from disconnected drives as unavailable</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleOfflineToggle(!showOfflineMedia)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none shrink-0 ${
+                    showOfflineMedia ? "bg-emerald-500" : "bg-zinc-700"
+                  }`}
+                  role="switch"
+                  aria-checked={showOfflineMedia}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
+                      showOfflineMedia ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle Edit Mode */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <Pencil className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Enable Edit Mode</p>
+                    <p className="text-xs text-white/40 mt-0.5">Show edit buttons on posters to fix metadata and posters</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleEditModeToggle(!enableEditMode)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none shrink-0 ${
+                    enableEditMode ? "bg-emerald-500" : "bg-zinc-700"
+                  }`}
+                  role="switch"
+                  aria-checked={enableEditMode}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ease-in-out ${
+                      enableEditMode ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* Section 1.6 - Custom Video Players */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2 border-b border-white/10 pb-4">
+            <MonitorPlay className="w-5 h-5 text-blue-400" />
+            Custom Video Players
+          </h2>
+
+          <div className="glass-card overflow-hidden">
+            <div className="p-6 md:p-8 space-y-6">
+
               <div>
                 <h3 className="text-white font-bold mb-2">Added Players</h3>
                 {customVideoPlayers.length === 0 ? (
@@ -664,9 +723,9 @@ export default function SettingsPage() {
                           <p className="text-white font-medium text-sm">{player.name}</p>
                           <p className="text-white/50 text-xs font-mono truncate max-w-sm">{player.path}</p>
                         </div>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
+                        <Button
+                          variant="destructive"
+                          size="sm"
                           onClick={() => {
                             setCustomVideoPlayers(prev => prev.filter(p => p.id !== player.id));
                           }}
@@ -682,7 +741,7 @@ export default function SettingsPage() {
 
               <div className="pt-4 border-t border-white/5">
                 <h3 className="text-white font-bold mb-2">Add New Player</h3>
-                <form 
+                <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     const fd = new FormData(e.currentTarget);
@@ -696,17 +755,17 @@ export default function SettingsPage() {
                   className="flex flex-col gap-3"
                 >
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <input 
-                      type="text" 
-                      name="playerName" 
-                      placeholder="Player Name (e.g., Haruna)" 
+                    <input
+                      type="text"
+                      name="playerName"
+                      placeholder="Player Name (e.g., Haruna)"
                       required
                       className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 flex-1"
                     />
-                    <input 
-                      type="text" 
-                      name="playerPath" 
-                      placeholder="Executable Path" 
+                    <input
+                      type="text"
+                      name="playerPath"
+                      placeholder="Executable Path"
                       required
                       className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 flex-[2]"
                     />

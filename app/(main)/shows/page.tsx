@@ -17,13 +17,14 @@ export default function ShowsPage() {
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showPartyModal, setShowPartyModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetch("/api/media?type=show")
       .then((r) => r.json())
       .then((data) => {
         if (!Array.isArray(data)) return;
-        
+
         // Group by title to show series covers rather than individual episodes
         const groupedMap = new Map<string, MediaEntry>();
         for (const item of data) {
@@ -88,22 +89,28 @@ export default function ShowsPage() {
 
         <div className="flex items-center gap-3">
           {!loading && shows.length > 0 && (
-            <div className="flex items-center bg-white/[0.03] border border-white/[0.05] rounded-lg shadow-lg backdrop-blur-md">
-              <SortDropdown pageKey="shows" onSortChange={setSortParam} />
-            </div>
+            <>
+              <div className="flex items-center bg-white/[0.03] border border-white/[0.05] rounded-lg shadow-lg backdrop-blur-md">
+                <SortDropdown pageKey="shows" onSortChange={setSortParam} />
+              </div>
+
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`md:hidden flex items-center justify-center w-[42px] h-[42px] rounded-lg transition-all shadow-lg backdrop-blur-md border ${
+                  showFilters
+                    ? "bg-violet-500/20 border-violet-500/30 text-violet-300"
+                    : "bg-white/[0.03] border-white/[0.05] text-white/60 hover:bg-white/[0.06] hover:text-white/80"
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+              </button>
+            </>
           )}
-          <button
-            onClick={() => setShowPartyModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold rounded-full transition-colors shadow-[0_0_20px_rgba(139,92,246,0.3)]"
-          >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Watch Party</span>
-          </button>
         </div>
       </div>
 
       {!loading && shows.length > 0 && (
-        <div className="mb-8 relative z-10">
+        <div className={`mb-8 relative z-10 ${showFilters ? "block" : "hidden md:block"}`}>
           <GenreFilter onFilterChange={setSelectedGenres} storageKey="genre_filter_shows" />
         </div>
       )}

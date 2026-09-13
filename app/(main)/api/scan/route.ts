@@ -38,7 +38,7 @@ export async function GET() {
           });
           if (parent && !connectedPaths.includes(parent)) {
             db.update(schema.mediaAssets).set({ available: 0 }).where(eq(schema.mediaAssets.id, media.id)).run();
-          } else if (!fs.existsSync(media.filepath)) {
+          } else if (!parent || !fs.existsSync(media.filepath)) {
             db.delete(schema.episodes).where(eq(schema.episodes.mediaAssetId, media.id)).run();
             db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, media.id)).run();
             db.delete(schema.playbackProgress).where(eq(schema.playbackProgress.mediaAssetId, media.id)).run();

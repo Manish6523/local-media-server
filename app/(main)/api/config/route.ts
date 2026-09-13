@@ -16,6 +16,8 @@ export async function GET() {
     const enableAutoTrailerBg = enableAutoTrailerBgRaw === null ? true : enableAutoTrailerBgRaw === "true";
     const showDiscoverTabRaw = getConfig("show_discover_tab");
     const showDiscoverTab = showDiscoverTabRaw === null ? false : showDiscoverTabRaw === "true";
+    const enableEditModeRaw = getConfig("enable_edit_mode");
+    const enableEditMode = enableEditModeRaw === null ? false : enableEditModeRaw === "true";
     
     // API Keys
     const omdbApiKey = getConfig("omdb_api_key") || "";
@@ -31,6 +33,7 @@ export async function GET() {
       showPlayOnPc,
       enableAutoTrailerBg,
       showDiscoverTab,
+      enableEditMode,
       omdbApiKey,
       fanartTvApiKey,
       opensubtitlesApiKey
@@ -51,6 +54,7 @@ export async function POST(request: NextRequest) {
       showPlayOnPc, 
       enableAutoTrailerBg, 
       showDiscoverTab,
+      enableEditMode,
       omdbApiKey,
       fanartTvApiKey,
       opensubtitlesApiKey
@@ -75,6 +79,9 @@ export async function POST(request: NextRequest) {
     }
     if (showDiscoverTab !== undefined) {
       setConfig("show_discover_tab", showDiscoverTab ? "true" : "false");
+    }
+    if (enableEditMode !== undefined) {
+      setConfig("enable_edit_mode", enableEditMode ? "true" : "false");
     }
     if (omdbApiKey !== undefined) {
       setConfig("omdb_api_key", omdbApiKey);

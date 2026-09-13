@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 
+import { Filter } from "lucide-react";
+
 interface GenreFilterProps {
   onFilterChange: (genres: string[]) => void;
   storageKey: string; // e.g., 'genre_filter_movies'
@@ -68,12 +70,13 @@ export default function GenreFilter({ onFilterChange, storageKey }: GenreFilterP
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
       <button
         onClick={clearAll}
-        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border transition-all duration-300 ${
+        className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border transition-all duration-300 ${
           active.length === 0
             ? "bg-violet-500/20 text-violet-300 border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.15)]"
             : "glass text-white/40 hover:text-white/60 hover:border-white/10"
         }`}
       >
+        <Filter className="w-3 h-3" />
         All
       </button>
       {genres.map((genre) => (

@@ -42,10 +42,10 @@ function useAdminUnlocked() {
   return isUnlocked;
 }
 
-let configPromise: Promise<{ customVideoPlayers: any[], showPlayOnPc: boolean }> | null = null;
+let configPromise: Promise<{ customVideoPlayers: any[], showPlayOnPc: boolean, enableEditMode: boolean }> | null = null;
 
 function useConfig() {
-  const [config, setConfig] = useState<{ customVideoPlayers: any[], showPlayOnPc: boolean }>({ customVideoPlayers: [], showPlayOnPc: true });
+  const [config, setConfig] = useState<{ customVideoPlayers: any[], showPlayOnPc: boolean, enableEditMode: boolean }>({ customVideoPlayers: [], showPlayOnPc: true, enableEditMode: false });
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -54,9 +54,10 @@ function useConfig() {
           .then(r => r.json())
           .then(data => ({
             customVideoPlayers: data.customVideoPlayers || [],
-            showPlayOnPc: data.showPlayOnPc !== false
+            showPlayOnPc: data.showPlayOnPc !== false,
+            enableEditMode: data.enableEditMode === true
           }))
-          .catch(() => ({ customVideoPlayers: [], showPlayOnPc: true }));
+          .catch(() => ({ customVideoPlayers: [], showPlayOnPc: true, enableEditMode: false }));
       }
       const loaded = await configPromise;
       setConfig(loaded);
@@ -84,8 +85,8 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
   const [showWatchParty, setShowWatchParty] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const router = useRouter();
-  const isUnlocked = useAdminUnlocked();
-  const { customVideoPlayers, showPlayOnPc } = useConfig();
+  // We can still keep isUnlocked for AdminPinGate protection if we want, but the pencil is controlled by enableEditMode
+  const { customVideoPlayers, showPlayOnPc, enableEditMode } = useConfig();
 
   const posterSrc = media.poster || "/placeholder.jpg";
   const isUnavailable = !media.available;
@@ -370,7 +371,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
               </div>
             </div>
           )}
-          {isUnlocked && (
+          {enableEditMode && (
             <button
               onClick={(e) => { e.preventDefault(); setIsEditing(true); }}
               className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10 shadow-lg cursor-pointer"
