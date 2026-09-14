@@ -230,7 +230,7 @@ function completeReadyCheck(io: SocketIOServer, roomCode: string) {
 
 app.prepare().then(async () => {
   // Detect best GPU encoder (NVENC → VAAPI → QSV → CPU)
-  await detectBestEncoder();
+  detectBestEncoder().catch(err => console.error('[GPU] Detection error:', err));
 
   const CACHE_BASE = path.join(os.tmpdir(), "vidlock-cache");
 
