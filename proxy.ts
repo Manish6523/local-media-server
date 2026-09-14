@@ -1,7 +1,30 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
+  // --- CORS Logic for API routes ---
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    const origin = request.headers.get("origin") || "*";
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Range",
+      "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
+      "Access-Control-Allow-Credentials": "true",
+    };
+
+    if (request.method === "OPTIONS") {
+      return new NextResponse(null, { headers: corsHeaders, status: 200 });
+    }
+
+    const response = NextResponse.next();
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    return response;
+  }
+
+  // --- Redirect Logic for Root ---
   // Only redirect the root path — don't redirect API routes, /tv, or other pages
   if (request.nextUrl.pathname !== "/") {
     return NextResponse.next();
@@ -18,5 +41,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: ["/", "/api/:path*"],
 };

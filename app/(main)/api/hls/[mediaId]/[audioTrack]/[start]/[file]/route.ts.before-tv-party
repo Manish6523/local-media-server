@@ -219,8 +219,17 @@ export async function GET(
         fs.mkdirSync(outDir, { recursive: true });
       }
 
-      // Retain other start positions for concurrent party members.
-      // The existing lastAccessed idle cleanup retires unused encoders.
+      // Kill stale transcode for the same media/track at a different start position
+      if (!active) {
+        const stalePrefix = `${mediaId}_${audioTrack}_`;
+        for (const [key, transcode] of activeTranscodes.entries()) {
+          if (key.startsWith(stalePrefix) && key !== streamKey) {
+            console.log(`[HLS] Killing stale transcode: ${key} (new seek to ${startSec})`);
+            try { transcode.ffmpeg.kill("SIGTERM"); } catch { }
+            activeTranscodes.delete(key);
+          }
+        }
+      }
 
       if (!active && !fs.existsSync(requestedFilePath)) {
         const is10bit = detect10bit(media.filepath);

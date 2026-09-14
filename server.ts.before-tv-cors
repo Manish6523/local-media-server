@@ -256,7 +256,6 @@ app.prepare().then(async () => {
   process.on("SIGTERM", cleanupAndExit);
 
   const httpServer = createServer((req, res) => {
-    if (require("./tv-cors.cjs")(req, res)) return;
     const parsedUrl = parse(req.url!, true);
 
     // Handle Socket.io path specifically
