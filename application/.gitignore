@@ -1,0 +1,4 @@
+*.ipk
+tests/home-preview.png
+tests/player-preview.png
+tests/player-popup-preview.png
