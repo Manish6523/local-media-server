@@ -57,6 +57,16 @@ export default function RootLayout({
                   } catch (e) { console.error("Cast SDK Init Error:", e); }
                 }
               };
+
+              window.addEventListener('message', function(event) {
+                var data = event.data;
+                if (!data || data.type !== 'local-iframe-key' || typeof data.keyCode !== 'number') return;
+                var keyEvent = document.createEvent('Event');
+                keyEvent.initEvent('keydown', true, true);
+                Object.defineProperty(keyEvent, 'keyCode', { value: data.keyCode });
+                Object.defineProperty(keyEvent, 'which', { value: data.keyCode });
+                document.dispatchEvent(keyEvent);
+              });
             `,
           }}
         />
