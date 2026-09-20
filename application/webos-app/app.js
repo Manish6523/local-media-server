@@ -205,7 +205,21 @@
     node.setAttribute('aria-label', API.title(item));
     var visual = el('span', 'card-visual', '', node);
     el('span', 'poster-fallback', API.title(item), visual);
-    image(landscape ? API.backdrop(item) || API.poster(item) : API.poster(item), visual, 'poster', API.poster(item));
+    
+    var imgNode = image(landscape ? API.backdrop(item) || API.poster(item) : API.poster(item), visual, 'poster', API.poster(item));
+    if (continuing && item.type === 'show') {
+      if (item.episode_thumbnail) {
+        imgNode.src = url(item.episode_thumbnail);
+      } else {
+        request('/api/episode-thumbnail?id=' + item.id, 'GET', null, function(err, data) {
+          if (!err && data && data.thumbnail) {
+            item.episode_thumbnail = data.thumbnail;
+            imgNode.src = url(data.thumbnail);
+          }
+        });
+      }
+    }
+
     var affordance = el('span', 'card-play', '', visual); icon(continuing ? 'play' : 'info', affordance);
     if (item.rating) { el('span', 'card-rating', '★ ' + String(item.rating).split('/')[0], visual); }
     el('span', 'card-title', API.title(item), node);
