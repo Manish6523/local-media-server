@@ -726,6 +726,11 @@
     if (kind !== 'audio') {
       var off = button('Off', box, function () { p.subtitleUrl = ''; p.captions = []; p.caption.textContent = ''; p.subtitleVersion = (p.subtitleVersion || 0) + 1; hideModal(); });
       if (!p.subtitleUrl) { off.classList.add('selected'); off.setAttribute('aria-pressed', 'true'); }
+      
+      button('Search Online (OpenSubtitles)', box, function () {
+        hideModal();
+        searchOpenSubtitles();
+      });
     }
     if (!tracks.length) { el('p', 'muted', 'No tracks available yet. Close and retry after loading.', box); }
     tracks.forEach(function (track) {
@@ -747,6 +752,70 @@
     });
     button('Close', box, hideModal); Focus.scope(modal);
   }
+  
+  function searchOpenSubtitles() {
+    var p = state.player;
+    var box = dialog('Searching OpenSubtitles...');
+    el('p', 'muted', 'Searching for subtitles...', box);
+    button('Cancel', box, hideModal);
+    Focus.scope(modal);
+
+    request('/api/subtitles/search?id=' + p.media.id, 'GET', null, function (err, data) {
+      if (err || data.error) {
+        hideModal();
+        toast('OpenSubtitles error: ' + (data && data.error ? data.error : 'Unknown error'));
+        return;
+      }
+      
+      hideModal();
+      var resultBox = dialog('OpenSubtitles Results');
+      
+      if (!data.results || !data.results.length) {
+        el('p', 'muted', 'No subtitles found.', resultBox);
+        button('Close', resultBox, hideModal);
+        Focus.scope(modal);
+        return;
+      }
+
+      data.results.forEach(function(sub) {
+        var lang = sub.language || 'Unknown';
+        var name = sub.name || 'Subtitle';
+        var fileId = sub.file_id;
+        
+        if (fileId) {
+          button('[' + lang + '] ' + name, resultBox, function() {
+            hideModal();
+            toast('Downloading subtitle to server...');
+            
+            var body = {
+              mediaId: p.media.id,
+              file_id: fileId,
+              language: lang,
+              subName: name
+            };
+            
+            request('/api/subtitles/download', 'POST', body, function (error, resData) {
+              if (error || (resData && resData.error)) { 
+                toast('Failed to download subtitle: ' + (resData && resData.error ? resData.error : 'Unknown error'));
+                return;
+              }
+              
+              toast('Subtitle downloaded! Refreshing tracks...');
+              request('/api/subtitles?id=' + p.media.id, 'GET', null, function (err, tracksData) {
+                if (!err && tracksData) {
+                  p.subtitles = Array.isArray(tracksData) ? tracksData : [];
+                  toast('Subtitle ready! You can now select it from the Subtitles menu.');
+                }
+              });
+            });
+          });
+        }
+      });
+      button('Close', resultBox, hideModal);
+      Focus.scope(modal);
+    });
+  }
+  
   /* Render WebVTT against absolute file time: native <track> timing is wrong
      after an HLS restart at /start/. Cue markup is removed, never injected. */
   function parseVTT(text) {
