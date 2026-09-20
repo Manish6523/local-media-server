@@ -140,6 +140,7 @@
     var bottom = el('div', 'nav-bottom', null, bar);
     entry('refresh', 'Refresh', function () { loadHome(state.activeSection); }, bottom);
     entry('settings', 'Settings', config, bottom);
+    entry('close', 'Exit', function () { window.close(); }, bottom);
   }
   function masthead(parent, title) {
     var top = el('div', 'masthead', null, parent);
@@ -600,6 +601,9 @@
     p.playBtn = action('Play / Pause', buttons, function () { playerAction(p.wantPlay ? 'pause' : 'play'); }, 'controls', 'circle-btn', p.wantPlay ? 'pause' : 'play');
     action('+10 seconds', buttons, function () { playerAction('seek', Math.min(duration() || 86400, position() + 10)); }, 'controls', 'circle-btn', 'forward');
     action('Playback mode', buttons, modeMenu, 'controls', 'circle-btn', 'settings');
+    action('Restart HLS', buttons, function () {
+      var pos = position(); p.mode = 'hls'; toast('Restarting HLS stream...'); source(pos, p.wantPlay);
+    }, 'controls', 'circle-btn', 'refresh');
     if (state.detail && state.detail.type === 'show') { action('Episodes', buttons, episodeMenu, 'controls', 'circle-btn', 'movies'); }
     action('Close controls', buttons, hideControls, 'controls', 'circle-btn', 'close');
     p.wakeControls = function () {
