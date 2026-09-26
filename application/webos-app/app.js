@@ -507,8 +507,16 @@
     p.target = Math.max(0, Math.floor(start)); p.loading = true; p.wantPlay = play;
     p.video.pause();
     p.offset = p.mode === 'hls' && API.hlsRelativeTimeline ? p.target : 0;
-    p.video.src = url(p.mode === 'hls' ? API.paths.hls(p.media.id, p.audio, p.target) : API.paths.direct(p.media.id));
-    p.video.load();
+    var streamUrl = url(p.mode === 'hls' ? API.paths.hls(p.media.id, p.audio, p.target) : API.paths.direct(p.media.id));
+    if (p.mode === 'hls' && typeof Hls !== 'undefined' && Hls.isSupported()) {
+      if (p.hls) { p.hls.destroy(); }
+      p.hls = new Hls();
+      p.hls.loadSource(streamUrl);
+      p.hls.attachMedia(p.video);
+    } else {
+      p.video.src = streamUrl;
+      p.video.load();
+    }
     p.status.textContent = 'Loading ' + (p.mode === 'hls' ? 'native HLS' : 'direct stream') + '…';
     p.loadTimer = setTimeout(function () {
       if (state.player !== p || !p.loading) { return; }
@@ -701,6 +709,7 @@
     }
     clearTimeout(p.loadTimer); clearTimeout(syncTimer);
     state.player = null; p.video.pause(); p.video.removeAttribute('src'); p.video.load();
+    if (p.hls) { p.hls.destroy(); p.hls = null; }
     if (state.party) { leaveParty(); }
     if (state.detail) { renderDetail(); } else { showHome(); }
   }
