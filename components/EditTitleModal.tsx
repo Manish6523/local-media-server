@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Sparkles } from "lucide-react";
+import { X, Loader2, Sparkles, UploadCloud } from "lucide-react";
 
 interface MediaEntry {
   id: number;
@@ -14,6 +14,95 @@ interface MediaEntry {
 interface EditTitleModalProps {
   media: MediaEntry;
   onClose: () => void;
+}
+
+interface ImageInputProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+}
+
+function ImageInput({ label, value, onChange, placeholder }: ImageInputProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const isBase64 = value.startsWith('data:image/');
+
+  return (
+    <div className="space-y-2 pt-2">
+      <label className="text-xs font-medium text-white/50 block">{label}</label>
+      <div 
+        className={`relative w-full glass rounded-xl overflow-hidden transition-all border ${isDragging ? 'border-violet-500 bg-violet-500/10' : 'border-transparent focus-within:border-violet-500/30'}`}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file && file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target?.result) {
+                onChange(event.target.result as string);
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        }}
+      >
+        <div className="flex items-center">
+          <input 
+            type="text" 
+            onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (items) {
+                for (let i = 0; i < items.length; i++) {
+                  if (items[i].type.indexOf("image") !== -1) {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        if (event.target?.result) {
+                          onChange(event.target.result as string);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                    return;
+                  }
+                }
+              }
+            }}
+            value={isBase64 ? 'Local image selected' : value}
+            onChange={(e) => {
+              if (e.target.value === '') {
+                onChange("");
+              } else if (!isBase64) {
+                onChange(e.target.value);
+              }
+            }}
+            className={`w-full bg-transparent px-4 py-3 text-white text-sm focus:outline-none transition-colors ${isBase64 ? 'text-violet-400 font-medium cursor-default' : ''}`}
+            placeholder={placeholder}
+            readOnly={isBase64}
+          />
+          {isBase64 ? (
+            <button
+              onClick={(e) => { e.preventDefault(); onChange(""); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              title="Remove image"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none flex items-center gap-1.5">
+              <UploadCloud className="w-4 h-4" />
+              <span className="text-[10px] uppercase font-bold tracking-wider">Drop</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function EditTitleModal({ media, onClose }: EditTitleModalProps) {
@@ -129,31 +218,19 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
             />
           </div>
 
-          <div className="space-y-2 pt-2">
-            <label className="text-xs font-medium text-white/50 block">
-              Custom Poster URL (Optional)
-            </label>
-            <input 
-              type="text" 
-              value={customPoster}
-              onChange={(e) => setCustomPoster(e.target.value)}
-              className="w-full glass rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/30 transition-colors"
-              placeholder="https://example.com/poster.jpg"
-            />
-          </div>
+          <ImageInput
+            label="Custom Poster URL or Drop Image"
+            value={customPoster}
+            onChange={setCustomPoster}
+            placeholder="URL or drag & drop image here"
+          />
 
-          <div className="space-y-2 pt-2">
-            <label className="text-xs font-medium text-white/50 block">
-              Custom Backdrop URL (Optional)
-            </label>
-            <input 
-              type="text" 
-              value={customBackdrop}
-              onChange={(e) => setCustomBackdrop(e.target.value)}
-              className="w-full glass rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/30 transition-colors"
-              placeholder="https://example.com/backdrop.jpg"
-            />
-          </div>
+          <ImageInput
+            label="Custom Backdrop URL or Drop Image"
+            value={customBackdrop}
+            onChange={setCustomBackdrop}
+            placeholder="URL or drag & drop image here"
+          />
         </div>
 
         <div className="p-5 border-t border-white/[0.06] flex justify-end gap-3 shrink-0">

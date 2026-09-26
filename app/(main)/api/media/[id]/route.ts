@@ -12,6 +12,32 @@ async function downloadCustomImage(url: string, type: "posters" | "backdrops", i
 
     // Use a timestamp suffix so each edit gets a unique filename
     const timestamp = Date.now();
+
+    if (url.startsWith('data:image/')) {
+      const matches = url.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        const filename = `custom_${id}_${timestamp}.${ext}`;
+        const filepath = path.join(dir, filename);
+        fs.writeFileSync(filepath, buffer);
+        
+        console.log(`[Custom Image] Saved base64 ${type} for ID ${id}: ${filename}`);
+        
+        // Clean up old custom images for this ID
+        const allFiles = fs.readdirSync(dir);
+        const oldFiles = allFiles.filter(f => 
+          (f.startsWith(`custom_${id}_`) || f === `custom_${id}.jpg`) && f !== filename
+        );
+        for (const oldFile of oldFiles) {
+          try { fs.unlinkSync(path.join(dir, oldFile)); } catch (e) {}
+        }
+        
+        return `/${type}/${filename}`;
+      }
+    }
+
     const filename = `custom_${id}_${timestamp}.jpg`;
     const filepath = path.join(dir, filename);
 
