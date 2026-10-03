@@ -7,6 +7,9 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+if (!process.env.NODE_ENV) {
+  (process.env as any).NODE_ENV = process.env.npm_lifecycle_event === 'dev' ? 'development' : 'production';
+}
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = parseInt(process.env.PORT || '2886', 10);
