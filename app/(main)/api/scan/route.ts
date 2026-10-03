@@ -57,21 +57,36 @@ export async function GET() {
           send({ message: `Processing: ${file.filename}`, progress: 10 + Math.floor(index / files.length * 80) });
           await new Promise(resolve => setTimeout(resolve, 10));
           try {
-            const guess = identifyFile(file.filename);
             const existing = getMediaByFilepath(file.filepath);
+
+            // If entry was manually edited or confirmed by user (omdb_confirmed === 1),
+            // preserve user's manual title, poster, and metadata during rescans.
+            if (existing && existing.omdb_confirmed === 1) {
+              upsertMedia({
+                ...existing,
+                available: 1,
+              });
+              if (existing.type === "show" && existing.title) {
+                shows.add(existing.title);
+              }
+              skippedCount++;
+              continue;
+            }
+
+            const guess = identifyFile(file.filename);
             const result = await processLibraryFile(file.filepath);
             const type = (result.type ?? guess.type) === "episode" ? "show" : "movie";
             const details = result.omdb;
-            const title = result.title || guess.title || file.filename;
+            const title = result.title || (existing ? existing.title : null) || guess.title || file.filename;
             if (type === "show") shows.add(title);
             // A cached match already has its metadata in the existing library tables.
             const reuse = existing && existing.omdb_id === result.imdbId && result.status === "matched";
-            let poster = reuse ? existing.poster : null;
+            let poster = reuse ? existing.poster : (existing?.poster || null);
             if (!poster && details?.Poster && details.Poster !== "N/A" && result.imdbId) {
               poster = await downloadPoster(result.imdbId, details.Poster);
             }
-            let backdrop = reuse ? existing.backdrop : null;
-            let backdropUrl = reuse ? existing.backdrop_url : null;
+            let backdrop = reuse ? existing.backdrop : (existing?.backdrop || null);
+            let backdropUrl = reuse ? existing.backdrop_url : (existing?.backdrop_url || null);
             if (!backdrop && result.imdbId) {
               const artwork = type === "show"
                 ? await getBackdropForShow(result.imdbId)
@@ -86,21 +101,21 @@ export async function GET() {
               source: file.source,
               type,
               title,
-              year: Number.parseInt(details?.Year ?? "", 10) || (reuse ? existing.year : guess.year ?? null),
-              season: type === "show" ? result.season ?? firstNumber(guess.season) : null,
-              episode_start: type === "show" ? result.episode ?? (episodes.length ? Math.min(...episodes) : null) : null,
-              episode_end: type === "show" ? result.episodeEnd ?? (episodes.length ? Math.max(...episodes) : null) : null,
-              omdb_id: result.imdbId,
+              year: Number.parseInt(details?.Year ?? "", 10) || (existing ? existing.year : guess.year ?? null),
+              season: type === "show" ? result.season ?? (existing ? existing.season : firstNumber(guess.season)) : null,
+              episode_start: type === "show" ? result.episode ?? (existing ? existing.episode_start : (episodes.length ? Math.min(...episodes) : null)) : null,
+              episode_end: type === "show" ? result.episodeEnd ?? (existing ? existing.episode_end : (episodes.length ? Math.max(...episodes) : null)) : null,
+              omdb_id: result.imdbId || (existing ? existing.omdb_id : null),
               poster,
               backdrop,
               backdrop_url: backdropUrl,
-              overview: text(details?.Plot) ?? (reuse ? existing.overview : null),
-              rating: text(details?.imdbRating) ? `${details?.imdbRating}/10` : reuse ? existing.rating : null,
-              genres: text(details?.Genre) ?? (reuse ? existing.genres : null),
-              runtime: Number.parseInt(details?.Runtime ?? "", 10) || (reuse ? existing.runtime : null),
+              overview: text(details?.Plot) ?? (existing ? existing.overview : null),
+              rating: text(details?.imdbRating) ? `${details?.imdbRating}/10` : (existing ? existing.rating : null),
+              genres: text(details?.Genre) ?? (existing ? existing.genres : null),
+              runtime: Number.parseInt(details?.Runtime ?? "", 10) || (existing ? existing.runtime : null),
               available: 1,
-              fetched_at: result.status === "matched" ? result.updatedAt : null,
-              omdb_confirmed: result.status === "matched" ? 1 : 0,
+              fetched_at: result.status === "matched" ? result.updatedAt : (existing ? existing.fetched_at : null),
+              omdb_confirmed: result.status === "matched" ? 1 : (existing ? existing.omdb_confirmed : 0),
             });
             if (!existing) newCount++;
             else if (reuse && !details) skippedCount++;
