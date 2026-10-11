@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   experimental: {
     scrollRestoration: true,
   },
-  allowedDevOrigins: ["*", "10.191.99.203", "10.251.238.203", "10.177.185.203", "localhost"],
+  allowedDevOrigins: ["*", "vidlock.manish.casa", "10.251.238.203", "10.177.185.203", "localhost"],
   serverExternalPackages: ["better-sqlite3", "ffmpeg-static", "ffprobe-static"],
   images: {
     unoptimized: true,

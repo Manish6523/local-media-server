@@ -5,19 +5,27 @@ import { getBackdropForMovie, getBackdropForShow } from "@/lib/fanart";
 import fs from "fs";
 import path from "path";
 
+import { PATHS } from "@/lib/paths";
+
 async function downloadCustomImage(url: string, type: "posters" | "backdrops", id: number): Promise<string | null> {
   try {
-    const dir = path.join(process.cwd(), "public", type);
+    const dir = type === "posters" ? PATHS.posters : PATHS.backdrops;
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     // Use a timestamp suffix so each edit gets a unique filename
     const timestamp = Date.now();
 
     if (url.startsWith('data:image/')) {
-      const matches = url.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-        const base64Data = matches[2];
+      const commaIdx = url.indexOf(',');
+      if (commaIdx !== -1) {
+        const header = url.slice(0, commaIdx);
+        const base64Data = url.slice(commaIdx + 1);
+        
+        let ext = 'jpg';
+        if (header.includes('image/png')) ext = 'png';
+        else if (header.includes('image/webp')) ext = 'webp';
+        else if (header.includes('image/jpeg')) ext = 'jpg';
+
         const buffer = Buffer.from(base64Data, 'base64');
         const filename = `custom_${id}_${timestamp}.${ext}`;
         const filepath = path.join(dir, filename);
@@ -34,8 +42,13 @@ async function downloadCustomImage(url: string, type: "posters" | "backdrops", i
           try { fs.unlinkSync(path.join(dir, oldFile)); } catch (e) {}
         }
         
-        return `/${type}/${filename}`;
+        return type === "posters" ? PATHS.posterUrl(filename) : PATHS.backdropUrl(filename);
       }
+    }
+
+    // If the image is already a local path (e.g. /api/static/posters/... or /posters/...), just reuse it
+    if (url.startsWith('/')) {
+      return url;
     }
 
     const filename = `custom_${id}_${timestamp}.jpg`;
@@ -74,9 +87,10 @@ async function downloadCustomImage(url: string, type: "posters" | "backdrops", i
       }
     }
 
-    return `/${type}/${filename}`;
+    return type === "posters" ? PATHS.posterUrl(filename) : PATHS.backdropUrl(filename);
   } catch (error) {
-    console.error(`[Custom Image] Download failed for ${url}:`, error);
+    const displayUrl = url.length > 80 ? url.slice(0, 80) + '...' : url;
+    console.error(`[Custom Image] Download failed for ${displayUrl}:`, error);
     return null;
   }
 }
@@ -123,14 +137,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
     }
 
-    // Update the media entry
+    // Update the media entry (always respect user-entered title)
     upsertMedia({
       ...existing,
-      title: omdbData?.confirmed_title || title,
+      title: title,
       omdb_id: omdbData?.omdb_id || existing.omdb_id || null,
       poster: localCustomPoster || omdbData?.poster || existing.poster || null,
       backdrop: localCustomBackdrop || backdropResult?.backdropPath || existing.backdrop || null,
-      backdrop_url: customBackdrop || backdropResult?.backdropUrl || existing.backdrop_url || null,
+      backdrop_url: localCustomBackdrop || backdropResult?.backdropUrl || existing.backdrop_url || null,
       overview: omdbData?.overview || existing.overview || null,
       rating: omdbData?.rating || existing.rating || null,
       genres: omdbData?.genres || existing.genres || null,

@@ -307,8 +307,21 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_
     }
   } else if (entry.type === "show") {
     db.delete(schema.movies).where(eq(schema.movies.mediaAssetId, assetId)).run();
+    // Check if this episode already belongs to a tvShow
+    const existingEpisode = db.select().from(schema.episodes).where(eq(schema.episodes.mediaAssetId, assetId)).get();
+    
     // Upsert tvShow
-    let tvShow = db.select().from(schema.tvShows).where(entry.omdb_id ? eq(schema.tvShows.omdbId, entry.omdb_id) : eq(schema.tvShows.title, entry.title)).get();
+    let tvShow: any = null;
+    if (existingEpisode?.showId) {
+      tvShow = db.select().from(schema.tvShows).where(eq(schema.tvShows.id, existingEpisode.showId)).get();
+    }
+    if (!tvShow && entry.omdb_id) {
+      tvShow = db.select().from(schema.tvShows).where(eq(schema.tvShows.omdbId, entry.omdb_id)).get();
+    }
+    if (!tvShow) {
+      tvShow = db.select().from(schema.tvShows).where(eq(schema.tvShows.title, entry.title)).get();
+    }
+
     if (!tvShow) {
       tvShow = db.insert(schema.tvShows).values({
         title: entry.title,
@@ -321,17 +334,18 @@ export function upsertMedia(entry: Omit<MediaEntry, "id" | "created_at" | "last_
         genres: entry.genres,
       }).returning().get();
     } else {
-      // Update show data if provided
+      // Update show data if provided, including renaming title
       db.update(schema.tvShows).set({
+        title: entry.title || tvShow.title,
         overview: entry.overview || tvShow.overview,
         poster: entry.poster || tvShow.poster,
         backdrop: entry.backdrop || tvShow.backdrop,
         backdropUrl: entry.backdrop_url || tvShow.backdropUrl,
+        omdbId: entry.omdb_id || tvShow.omdbId,
       }).where(eq(schema.tvShows.id, tvShow.id)).run();
     }
 
     // Upsert episode
-    const existingEpisode = db.select().from(schema.episodes).where(eq(schema.episodes.mediaAssetId, assetId)).get();
     if (existingEpisode) {
       db.update(schema.episodes).set({
         showId: tvShow.id,
