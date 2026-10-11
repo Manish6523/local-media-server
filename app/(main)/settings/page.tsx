@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FolderPicker from "@/components/FolderPicker";
 import { useScan } from "@/components/ScanProvider";
+import { useBackground, BgMode } from "@/components/BackgroundContext";
+import { Palette, Upload, Loader2, Trash2 } from "lucide-react";
 
 interface ScanResult {
   success: boolean;
@@ -43,7 +45,20 @@ export default function SettingsPage() {
   const [omdbApiKey, setOmdbApiKey] = useState("");
   const [fanartTvApiKey, setFanartTvApiKey] = useState("");
   const [opensubtitlesApiKey, setOpensubtitlesApiKey] = useState("");
+  const [showOmdbKey, setShowOmdbKey] = useState(false);
+  const [showFanartKey, setShowFanartKey] = useState(false);
+  const [showOpensubtitlesKey, setShowOpensubtitlesKey] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<{ percent: number, bytesPerSecond: number, total: number, transferred: number } | null>(null);
+
+  const { bgMode, setBgMode, customWallpaper, setCustomWallpaper, bgDim, setBgDim, bgBlur, setBgBlur, saveBgConfig } = useBackground();
+  const [wallpaperInput, setWallpaperInput] = useState(customWallpaper);
+  const [isUploadingWallpaper, setIsUploadingWallpaper] = useState(false);
+  const [isSavingWallpaper, setIsSavingWallpaper] = useState(false);
+  const wallpaperFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setWallpaperInput(customWallpaper);
+  }, [customWallpaper]);
 
   const { scanning, scanProgress, scanResult, startScan } = useScan();
 
@@ -276,7 +291,7 @@ export default function SettingsPage() {
 
   return (
     <AdminPinGate>
-      <div className="min-h-screen pt-28 px-4 md:px-8 lg:px-14 pb-16">
+      <div className="min-h-screen pt-20 md:pt-28 px-4 md:px-8 lg:px-14 pb-28 md:pb-16">
 
         {/* System Update Progress */}
         {updateProgress && (
@@ -304,18 +319,18 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto space-y-12">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
               Settings
             </h1>
             {appVersion && (
-              <Badge variant="outline" className="border-white/10 text-white/50 px-3 py-1 text-xs rounded-full font-bold">
+              <Badge variant="outline" className="border-white/10 text-white/50 px-2.5 py-0.5 text-xs rounded-full font-bold">
                 v{appVersion}
               </Badge>
             )}
           </div>
-          <div aria-live="polite" className={`flex items-center gap-2 text-sm font-medium ${
+          <div aria-live="polite" className={`flex items-center gap-2 text-xs sm:text-sm font-medium ${
             saveStatus === "error" ? "text-red-400" : "text-white/40"
           }`}>
             {saveStatus === "saving" && <><RefreshCw className="w-4 h-4 animate-spin" /> Saving…</>}
@@ -366,7 +381,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <Link href="/admin/unmatched" className="glass-card flex items-center justify-between gap-4 p-6 transition hover:bg-white/5">
+        <Link href="/admin/unmatched" className="glass-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 sm:p-6 transition hover:bg-white/5">
           <div><h2 className="font-bold text-white">Review unmatched files</h2><p className="mt-1 text-sm text-white/45">Find the right movie or match a batch of episodes to a show.</p></div>
           <span className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm text-white">Needs review →</span>
         </Link>
@@ -376,27 +391,20 @@ export default function SettingsPage() {
             Media Sources
           </h2>
 
-          <div className="glass-card overflow-hidden">
-            <div className="p-6 md:p-8">
+          <div className="md:glass-card md:bg-white/[0.03] md:backdrop-blur-xl md:border md:border-white/[0.06] md:rounded-2xl md:overflow-hidden">
+            <div className="p-0 md:p-8">
               <div className="mb-4">
                 <p className="text-white/60 text-sm mb-6">Add any number of folders containing your movies and TV shows. VidLock will scan all of them.</p>
                 <div className="space-y-6">
                   {mediaPaths.map((path, idx) => (
-                    <div key={idx} className="relative group">
-                      <FolderPicker
-                        label={`Media Folder ${idx + 1}`}
-                        value={path}
-                        onChange={(val) => handleUpdatePath(idx, val)}
-                        osPlatform={osPlatform}
-                      />
-                      <button
-                        onClick={() => handleRemovePath(idx)}
-                        className="absolute -top-1 -right-1 p-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full"
-                        title="Remove Folder"
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <FolderPicker
+                      key={idx}
+                      label={`Media Folder ${idx + 1}`}
+                      value={path}
+                      onChange={(val) => handleUpdatePath(idx, val)}
+                      onRemove={() => handleRemovePath(idx)}
+                      osPlatform={osPlatform}
+                    />
                   ))}
                 </div>
 
@@ -491,6 +499,7 @@ export default function SettingsPage() {
               </p>
 
               <div className="space-y-4">
+                {/* OMDB API Key */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-bold text-white/80">OMDB API Key</label>
@@ -498,17 +507,28 @@ export default function SettingsPage() {
                       Get OMDB Key <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
-                  <input
-                    type="text"
-                    value={omdbApiKey}
-                    onChange={(e) => {
-                      setOmdbApiKey(e.target.value);
-                    }}
-                    placeholder="Enter your 8-digit OMDB key"
-                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      type={showOmdbKey ? "text" : "password"}
+                      value={omdbApiKey}
+                      onChange={(e) => {
+                        setOmdbApiKey(e.target.value);
+                      }}
+                      placeholder="Enter your 8-digit OMDB key"
+                      className="bg-white/5 border border-white/10 rounded-lg pl-4 pr-11 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOmdbKey(!showOmdbKey)}
+                      className="absolute right-3 text-white/40 hover:text-white transition-colors p-1"
+                      title={showOmdbKey ? "Hide key" : "Show key"}
+                    >
+                      {showOmdbKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
+                {/* Fanart.tv API Key */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-bold text-white/80">Fanart.tv API Key</label>
@@ -516,17 +536,28 @@ export default function SettingsPage() {
                       Get Fanart Key <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
-                  <input
-                    type="text"
-                    value={fanartTvApiKey}
-                    onChange={(e) => {
-                      setFanartTvApiKey(e.target.value);
-                    }}
-                    placeholder="Enter your 32-character Fanart.tv personal API key"
-                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      type={showFanartKey ? "text" : "password"}
+                      value={fanartTvApiKey}
+                      onChange={(e) => {
+                        setFanartTvApiKey(e.target.value);
+                      }}
+                      placeholder="Enter your 32-character Fanart.tv personal API key"
+                      className="bg-white/5 border border-white/10 rounded-lg pl-4 pr-11 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowFanartKey(!showFanartKey)}
+                      className="absolute right-3 text-white/40 hover:text-white transition-colors p-1"
+                      title={showFanartKey ? "Hide key" : "Show key"}
+                    >
+                      {showFanartKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
+                {/* OpenSubtitles API Key */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-bold text-white/80">OpenSubtitles API Key</label>
@@ -534,15 +565,25 @@ export default function SettingsPage() {
                       Get OpenSubtitles Key <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
-                  <input
-                    type="text"
-                    value={opensubtitlesApiKey}
-                    onChange={(e) => {
-                      setOpensubtitlesApiKey(e.target.value);
-                    }}
-                    placeholder="Enter your OpenSubtitles consumer API key"
-                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      type={showOpensubtitlesKey ? "text" : "password"}
+                      value={opensubtitlesApiKey}
+                      onChange={(e) => {
+                        setOpensubtitlesApiKey(e.target.value);
+                      }}
+                      placeholder="Enter your OpenSubtitles consumer API key"
+                      className="bg-white/5 border border-white/10 rounded-lg pl-4 pr-11 py-2.5 text-white focus:outline-none focus:border-indigo-500 w-full font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpensubtitlesKey(!showOpensubtitlesKey)}
+                      className="absolute right-3 text-white/40 hover:text-white transition-colors p-1"
+                      title={showOpensubtitlesKey ? "Hide key" : "Show key"}
+                    >
+                      {showOpensubtitlesKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -556,8 +597,8 @@ export default function SettingsPage() {
             Display Preferences
           </h2>
 
-          <div className="glass-card overflow-hidden">
-            <div className="p-6 md:p-8 space-y-6">
+          <div className="md:glass-card md:bg-white/[0.03] md:backdrop-blur-xl md:border md:border-white/[0.06] md:rounded-2xl md:overflow-hidden">
+            <div className="p-0 md:p-8 space-y-6">
 
               <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
                 <div className="flex items-center gap-4">
@@ -695,6 +736,237 @@ export default function SettingsPage() {
                     }`}
                   />
                 </button>
+              </div>
+
+              {/* Background Wallpaper System */}
+              <div className="p-5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
+                    <Palette className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Home Screen Background Wallpaper</p>
+                    <p className="text-xs text-white/40 mt-0.5">Customize ambient backdrop styling and wallpaper across your media library</p>
+                  </div>
+                </div>
+
+                {/* Mode Selector */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => saveBgConfig({ bgMode: "dynamic" })}
+                    className={`p-3.5 rounded-xl text-left border transition-all ${
+                      bgMode === "dynamic"
+                        ? "bg-white/10 border-white text-white shadow-lg"
+                        : "bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/[0.05] hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider">Dynamic Media</span>
+                      {bgMode === "dynamic" && <Check className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <p className="text-[11px] text-white/40 leading-relaxed">
+                      Smoothly crossfades backdrops from your movies and shows.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => saveBgConfig({ bgMode: "custom" })}
+                    className={`p-3.5 rounded-xl text-left border transition-all ${
+                      bgMode === "custom"
+                        ? "bg-white/10 border-white text-white shadow-lg"
+                        : "bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/[0.05] hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider">Custom Wallpaper</span>
+                      {bgMode === "custom" && <Check className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <p className="text-[11px] text-white/40 leading-relaxed">
+                      Use your own uploaded wallpaper or custom image URL.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => saveBgConfig({ bgMode: "dark" })}
+                    className={`p-3.5 rounded-xl text-left border transition-all ${
+                      bgMode === "dark"
+                        ? "bg-white/10 border-white text-white shadow-lg"
+                        : "bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/[0.05] hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider">Pure Dark</span>
+                      {bgMode === "dark" && <Check className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <p className="text-[11px] text-white/40 leading-relaxed">
+                      Deep cinematic minimalist black without background imagery.
+                    </p>
+                  </button>
+                </div>
+
+                {/* Custom Wallpaper Upload / Input & Preview */}
+                {bgMode === "custom" && (
+                  <div className="space-y-4 pt-2 border-t border-white/[0.06] animate-in fade-in duration-200">
+                    <label className="text-xs font-medium text-white/70 block">
+                      Custom Wallpaper Image
+                    </label>
+
+                    {/* Preview thumbnail if wallpaper is present */}
+                    {customWallpaper && (
+                      <div className="relative w-full max-w-md aspect-video rounded-2xl overflow-hidden border border-white/10 group shadow-lg bg-black/40">
+                        <img
+                          src={customWallpaper}
+                          alt="Custom Wallpaper Preview"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          style={{
+                            filter: `blur(${Math.round(bgBlur / 3)}px)`,
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-3">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setIsSavingWallpaper(true);
+                              setWallpaperInput("");
+                              await saveBgConfig({ customWallpaper: "" });
+                              setIsSavingWallpaper(false);
+                            }}
+                            className="px-3.5 py-1.5 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-red-200 text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg border border-red-500/20"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Remove Wallpaper
+                          </button>
+                        </div>
+                        <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-[10px] text-white/80 font-medium flex items-center gap-1.5 border border-white/10 shadow-md">
+                          <Check className="w-3 h-3 text-emerald-400 stroke-[3]" /> Active Preview
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <input
+                        type="text"
+                        value={wallpaperInput}
+                        onChange={(e) => setWallpaperInput(e.target.value)}
+                        placeholder="Paste image URL (or upload from computer)..."
+                        className="flex-1 glass rounded-xl px-4 py-2 text-white text-xs border border-white/10 focus:outline-none focus:border-white/30"
+                      />
+                      <button
+                        type="button"
+                        disabled={isSavingWallpaper || isUploadingWallpaper || !wallpaperInput.trim()}
+                        onClick={async () => {
+                          setIsSavingWallpaper(true);
+                          try {
+                            await saveBgConfig({ customWallpaper: wallpaperInput.trim() });
+                          } finally {
+                            setIsSavingWallpaper(false);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-xl bg-white text-black hover:bg-white/90 disabled:opacity-40 text-xs font-semibold transition-all flex items-center justify-center gap-2 shrink-0 shadow-sm"
+                      >
+                        {isSavingWallpaper ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
+                            Applying...
+                          </>
+                        ) : (
+                          "Apply URL"
+                        )}
+                      </button>
+                      <input
+                        type="file"
+                        ref={wallpaperFileRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploadingWallpaper(true);
+                          const reader = new FileReader();
+                          reader.onload = async (ev) => {
+                            const b64 = ev.target?.result as string;
+                            if (b64) {
+                              setWallpaperInput(b64);
+                              await saveBgConfig({ customWallpaper: b64 });
+                            }
+                            setIsUploadingWallpaper(false);
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => wallpaperFileRef.current?.click()}
+                        disabled={isUploadingWallpaper || isSavingWallpaper}
+                        className="px-4 py-2 rounded-xl glass hover:bg-white/10 disabled:opacity-40 text-white text-xs font-medium transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0"
+                      >
+                        {isUploadingWallpaper ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-white/70" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" />
+                            Upload File
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sliders: Blur & Dim Intensity */}
+                {bgMode !== "dark" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-3 border-t border-white/[0.06]">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-white/70">Background Blur</span>
+                        <span className="text-white/40 font-mono">{bgBlur}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="50"
+                        step="2"
+                        value={bgBlur}
+                        onChange={(e) => setBgBlur(parseInt(e.target.value, 10))}
+                        onMouseUp={() => saveBgConfig({ bgBlur })}
+                        onTouchEnd={() => saveBgConfig({ bgBlur })}
+                        className="w-full accent-white h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-white/30">
+                        <span>Sharp (0px)</span>
+                        <span>Frosted (50px)</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-white/70">Darkness Overlay (Dim)</span>
+                        <span className="text-white/40 font-mono">{bgDim}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="20"
+                        max="95"
+                        step="5"
+                        value={bgDim}
+                        onChange={(e) => setBgDim(parseInt(e.target.value, 10))}
+                        onMouseUp={() => saveBgConfig({ bgDim })}
+                        onTouchEnd={() => saveBgConfig({ bgDim })}
+                        className="w-full accent-white h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-white/30">
+                        <span>Bright (20%)</span>
+                        <span>Subtle Ambient (95%)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>

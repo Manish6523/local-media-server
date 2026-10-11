@@ -116,7 +116,7 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
     : `/player/${currentItem.id}`;
 
   return (
-    <div className="relative w-full min-h-[75vh] md:min-h-[85vh] overflow-hidden">
+    <div className="relative w-full h-[78vh] md:h-[82vh] lg:h-[88vh] min-h-[560px] overflow-hidden">
       {/* Background image with crossfade */}
       {items.map((item, idx) => (
         <div
@@ -132,13 +132,25 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
         </div>
       ))}
 
-      {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-background/20 z-[1]" />
-      {/* <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/30 to-transparent z-[1]" /> */}
-      {/* <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent z-[1]" /> */}
+      {/* Primary dark gradient overlays for contrast */}
+      {/* <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/30 to-transparent z-[1]" /> */}
+
+      {/* Progressive bottom blur transition — melts bottom of hero into the rows */}
+      <div
+        className="absolute bottom-0 inset-x-0 h-44 z-[2] pointer-events-none"
+        style={{
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          maskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
+        }}
+      />
+      {/* Deep smooth black fade overlay over the blur */}
+      <div className="absolute bottom-0 inset-x-0 h-36 bg-gradient-to-t from-black via-black/60 to-transparent z-[3] pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 flex items-end min-h-[75vh] md:min-h-[85vh] px-4 md:px-8 lg:px-12 pb-20 md:pb-28">
+      <div className="relative z-10 flex items-end h-full px-4 md:px-8 lg:px-12 pb-16 md:pb-20 lg:pb-24">
         <div className="max-w-2xl">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 mb-5 text-xs font-medium text-white/60">
@@ -221,7 +233,7 @@ export default function HeroFeatured({ items, enableOnboarding = false }: { item
 
         {/* Carousel controls */}
         {items.length > 1 && (
-          <div className="absolute bottom-20 md:bottom-28 right-4 md:right-8 lg:right-12 flex items-center gap-3 z-20">
+          <div className="absolute bottom-16 md:bottom-20 lg:bottom-24 right-4 md:right-8 lg:right-12 flex items-center gap-3 z-20">
             {/* Dots */}
             <div className="hidden sm:flex items-center gap-1.5 mr-2">
               {items.map((_, idx) => (

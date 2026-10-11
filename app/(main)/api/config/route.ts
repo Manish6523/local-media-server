@@ -19,6 +19,12 @@ export async function GET() {
     const enableEditModeRaw = getConfig("enable_edit_mode");
     const enableEditMode = enableEditModeRaw === null ? false : enableEditModeRaw === "true";
     
+    // Background wallpaper settings
+    const bgMode = getConfig("bg_mode") || "dynamic"; // 'dynamic' | 'custom' | 'dark'
+    const customWallpaper = getConfig("custom_wallpaper") || "";
+    const bgDim = getConfig("bg_dim") || "65"; // percentage darkness overlay
+    const bgBlur = getConfig("bg_blur") || "24"; // blur px
+    
     // API Keys
     const omdbApiKey = getConfig("omdb_api_key") || "";
     const fanartTvApiKey = getConfig("fanart_api_key") || "";
@@ -34,6 +40,10 @@ export async function GET() {
       enableAutoTrailerBg,
       showDiscoverTab,
       enableEditMode,
+      bgMode,
+      customWallpaper,
+      bgDim: parseInt(bgDim, 10),
+      bgBlur: parseInt(bgBlur, 10),
       omdbApiKey,
       fanartTvApiKey,
       opensubtitlesApiKey
@@ -55,6 +65,10 @@ export async function POST(request: NextRequest) {
       enableAutoTrailerBg, 
       showDiscoverTab,
       enableEditMode,
+      bgMode,
+      customWallpaper,
+      bgDim,
+      bgBlur,
       omdbApiKey,
       fanartTvApiKey,
       opensubtitlesApiKey
@@ -82,6 +96,18 @@ export async function POST(request: NextRequest) {
     }
     if (enableEditMode !== undefined) {
       setConfig("enable_edit_mode", enableEditMode ? "true" : "false");
+    }
+    if (bgMode !== undefined) {
+      setConfig("bg_mode", bgMode);
+    }
+    if (customWallpaper !== undefined) {
+      setConfig("custom_wallpaper", customWallpaper);
+    }
+    if (bgDim !== undefined) {
+      setConfig("bg_dim", String(bgDim));
+    }
+    if (bgBlur !== undefined) {
+      setConfig("bg_blur", String(bgBlur));
     }
     if (omdbApiKey !== undefined) {
       setConfig("omdb_api_key", omdbApiKey);

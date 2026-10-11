@@ -146,15 +146,15 @@ function ImageUploader({ label, value, onChange, aspectRatioText, isBackdrop }: 
           }}
           className={`relative border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all outline-none ${
             isDragging 
-              ? 'border-violet-500 bg-violet-500/10 scale-[0.99]' 
-              : 'border-white/10 hover:border-violet-500/40 bg-white/[0.02] hover:bg-white/[0.04]'
+              ? 'border-white/50 bg-white/10 scale-[0.99]' 
+              : 'border-white/10 hover:border-white/30 bg-white/[0.02] hover:bg-white/[0.05]'
           } ${
             isBackdrop 
               ? 'w-full aspect-video max-h-52' 
               : 'w-44 h-64 aspect-[2/3]'
           } flex flex-col items-center justify-center gap-2.5`}
         >
-          <div className="w-10 h-10 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center border border-violet-500/20 shadow-inner">
+          <div className="w-10 h-10 rounded-full bg-white/10 text-white/70 flex items-center justify-center border border-white/10 shadow-inner">
             <UploadCloud className="w-5 h-5" />
           </div>
           <div className="space-y-1">
@@ -257,20 +257,23 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 cursor-default animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 cursor-default animate-in fade-in duration-200">
       <div 
-        className="glass-heavy w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl relative border border-white/10 animate-in zoom-in-95 duration-200"
+        style={{
+          backdropFilter: "saturate(140%) blur(24px)",
+          WebkitBackdropFilter: "saturate(140%) blur(24px)",
+        }}
+        className="glass-md w-full max-w-2xl max-h-[92vh] flex flex-col rounded-[2rem] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.6)] relative border border-white/[0.08] animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] shrink-0 bg-white/[0.02]">
-          <h2 className="text-base font-semibold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-violet-400" />
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06] shrink-0">
+          <h2 className="text-base font-bold text-white/80 tracking-wide">
             Edit Media Info & Artwork
           </h2>
           <button 
             onClick={(e) => { e.preventDefault(); onClose(); }}
-            className="text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/[0.06]"
+            className="glass flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white"
           >
             <X className="w-4 h-4" />
           </button>
@@ -279,29 +282,29 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
         {/* Scrollable Body */}
         <div className="p-6 space-y-5 overflow-y-auto">
           {/* Filename info */}
-          <div className="space-y-1">
-            <p className="text-[11px] text-white/40 font-medium">Filename</p>
-            <p className="text-xs text-white/70 font-mono break-all glass rounded-lg px-3 py-2 bg-black/20 border border-white/5">
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-white/40 font-medium tracking-wide uppercase">Filename</p>
+            <p className="text-xs text-white/60 font-mono break-all glass rounded-2xl px-3.5 py-2.5 border border-white/[0.05]">
               {media.filename}
             </p>
           </div>
 
           {/* Title Suggestions */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-medium text-white/50 block">
+            <label className="text-[11px] font-medium text-white/40 tracking-wide uppercase block">
               Title Suggestions
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <button 
                 type="button"
                 onClick={() => {
                   setCustomTitle(parsedSuggestion);
                   setSearchQuery(parsedSuggestion);
                 }}
-                className="text-left px-3.5 py-2.5 rounded-xl glass hover:border-violet-500/30 text-white text-xs transition-all border border-white/5"
+                className="text-left px-4 py-3 rounded-2xl glass hover:bg-white/[0.08] hover:border-white/20 text-white text-xs transition-all border border-white/[0.06]"
               >
-                <span className="text-violet-400 text-[10px] font-semibold uppercase block mb-0.5">Parsed from Filename</span>
-                <span className="text-white/80 truncate block">{parsedSuggestion || "N/A"}</span>
+                <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider block mb-1">Parsed from Filename</span>
+                <span className="text-white/80 font-medium truncate block">{parsedSuggestion || "N/A"}</span>
               </button>
               
               <button 
@@ -310,40 +313,40 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                   setCustomTitle(media.title);
                   setSearchQuery(media.title);
                 }}
-                className="text-left px-3.5 py-2.5 rounded-xl glass hover:border-violet-500/30 text-white text-xs transition-all border border-white/5"
+                className="text-left px-4 py-3 rounded-2xl glass hover:bg-white/[0.08] hover:border-white/20 text-white text-xs transition-all border border-white/[0.06]"
               >
-                <span className="text-white/40 text-[10px] font-semibold uppercase block mb-0.5">Original Title</span>
-                <span className="text-white/80 truncate block">{media.title}</span>
+                <span className="text-white/40 text-[10px] font-semibold uppercase tracking-wider block mb-1">Original Title</span>
+                <span className="text-white/80 font-medium truncate block">{media.title}</span>
               </button>
             </div>
           </div>
 
           {/* Custom Title Input */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-white/70 block">
+            <label className="text-xs font-semibold text-white/70 block">
               Title
             </label>
             <input 
               type="text" 
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
-              className="w-full glass rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/40 border border-white/10 transition-colors bg-black/20"
+              className="w-full glass rounded-2xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-white/30 border border-white/[0.08] transition-colors placeholder:text-white/30"
               placeholder="Type media title..."
             />
           </div>
 
           {/* Artwork Section with Tabs */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
               <span className="text-sm font-semibold text-white/90">Artwork</span>
-              <div className="flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10">
+              <div className="flex gap-1.5 glass p-1 rounded-2xl border border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setActiveTab("upload")}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
                     activeTab === "upload" 
-                      ? "bg-violet-600 text-white shadow-sm" 
-                      : "text-white/60 hover:text-white"
+                      ? "bg-white/20 text-white shadow-sm border border-white/10" 
+                      : "text-white/50 hover:text-white hover:bg-white/[0.05]"
                   }`}
                 >
                   Upload & Paste
@@ -354,13 +357,13 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                     setActiveTab("search");
                     if (!searched) handleSearchArtwork();
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
                     activeTab === "search" 
-                      ? "bg-violet-600 text-white shadow-sm" 
-                      : "text-white/60 hover:text-white"
+                      ? "bg-white/20 text-white shadow-sm border border-white/10" 
+                      : "text-white/50 hover:text-white hover:bg-white/[0.05]"
                   }`}
                 >
-                  <Search className="w-3 h-3" />
+                  <Search className="w-3.5 h-3.5" />
                   Search Online
                 </button>
               </div>
@@ -389,7 +392,7 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
             {activeTab === "search" && (
               <div className="space-y-5 animate-in fade-in duration-200">
                 {/* Search Bar */}
-                <form onSubmit={handleSearchArtwork} className="flex gap-2">
+                <form onSubmit={handleSearchArtwork} className="flex gap-2.5">
                   <div className="relative flex-1">
                     <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input 
@@ -397,22 +400,22 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search keyword (e.g. Inception, Breaking Bad)..."
-                      className="w-full glass rounded-xl pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/40 border border-white/10 bg-black/20"
+                      className="w-full glass rounded-2xl pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-white/30 border border-white/[0.08] placeholder:text-white/30"
                     />
                   </div>
                   <button 
                     type="submit" 
                     disabled={isSearchingArtwork || !searchQuery.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-xl transition-all disabled:opacity-50 shrink-0"
+                    className="flex items-center gap-1.5 px-4 py-2.5 glass hover:bg-white/[0.12] text-white text-xs font-semibold rounded-2xl transition-all border border-white/[0.08] disabled:opacity-40 shrink-0"
                   >
-                    {isSearchingArtwork ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                    {isSearchingArtwork ? <Loader2 className="w-3.5 h-3.5 animate-spin text-white/70" /> : <Search className="w-3.5 h-3.5" />}
                     Search
                   </button>
                 </form>
 
                 {isSearchingArtwork && (
-                  <div className="py-12 flex flex-col items-center justify-center gap-2 text-white/50">
-                    <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+                  <div className="py-12 flex flex-col items-center justify-center gap-2 text-white/40">
+                    <Loader2 className="w-6 h-6 animate-spin text-white/60" />
                     <span className="text-xs">Fetching artwork from Fanart.tv & OMDb...</span>
                   </div>
                 )}
@@ -422,18 +425,18 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                     {/* Poster Results */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">
                           Posters ({artworkPosters.length})
                         </span>
                         <span className="text-[11px] text-white/40">Click any image to select as Poster</span>
                       </div>
 
                       {artworkPosters.length === 0 ? (
-                        <p className="text-xs text-white/40 italic p-4 glass rounded-xl text-center">
+                        <p className="text-xs text-white/30 italic p-4 glass rounded-2xl text-center border border-white/[0.05]">
                           No posters found for this query.
                         </p>
                       ) : (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-56 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-56 overflow-y-auto pr-1 scrollbar-hide">
                           {artworkPosters.map((img, idx) => {
                             const isSelected = customPoster === img.url;
                             return (
@@ -441,10 +444,10 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                                 key={`poster-${idx}-${img.url}`}
                                 type="button"
                                 onClick={() => setCustomPoster(img.url)}
-                                className={`group relative rounded-xl overflow-hidden aspect-[2/3] border-2 transition-all cursor-pointer text-left ${
+                                className={`group relative rounded-2xl overflow-hidden aspect-[2/3] border-2 transition-all cursor-pointer text-left ${
                                   isSelected 
-                                    ? "border-violet-500 ring-2 ring-violet-500/50 shadow-lg scale-[0.98]" 
-                                    : "border-white/10 hover:border-violet-500/40 opacity-80 hover:opacity-100"
+                                    ? "border-white ring-2 ring-white/20 shadow-lg scale-[0.98]" 
+                                    : "border-white/10 hover:border-white/30 opacity-75 hover:opacity-100"
                                 }`}
                               >
                                 <img 
@@ -454,8 +457,8 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                                   loading="lazy"
                                 />
                                 {isSelected && (
-                                  <div className="absolute top-1.5 right-1.5 bg-violet-600 text-white p-1 rounded-full shadow-md">
-                                    <Check className="w-3 h-3" />
+                                  <div className="absolute top-1.5 right-1.5 bg-white text-black p-1 rounded-full shadow-md">
+                                    <Check className="w-3 h-3 stroke-[3]" />
                                   </div>
                                 )}
                                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-1.5 flex items-center justify-between text-[10px] text-white/90">
@@ -479,18 +482,18 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                     {/* Backdrop Results */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">
                           Backdrops ({artworkBackdrops.length})
                         </span>
                         <span className="text-[11px] text-white/40">Click any image to select as Backdrop</span>
                       </div>
 
                       {artworkBackdrops.length === 0 ? (
-                        <p className="text-xs text-white/40 italic p-4 glass rounded-xl text-center">
+                        <p className="text-xs text-white/30 italic p-4 glass rounded-2xl text-center border border-white/[0.05]">
                           No backdrops found for this query on Fanart.tv.
                         </p>
                       ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-y-auto pr-1 scrollbar-hide">
                           {artworkBackdrops.map((img, idx) => {
                             const isSelected = customBackdrop === img.url;
                             return (
@@ -498,10 +501,10 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                                 key={`backdrop-${idx}-${img.url}`}
                                 type="button"
                                 onClick={() => setCustomBackdrop(img.url)}
-                                className={`group relative rounded-xl overflow-hidden aspect-video border-2 transition-all cursor-pointer text-left ${
+                                className={`group relative rounded-2xl overflow-hidden aspect-video border-2 transition-all cursor-pointer text-left ${
                                   isSelected 
-                                    ? "border-violet-500 ring-2 ring-violet-500/50 shadow-lg scale-[0.98]" 
-                                    : "border-white/10 hover:border-violet-500/40 opacity-80 hover:opacity-100"
+                                    ? "border-white ring-2 ring-white/20 shadow-lg scale-[0.98]" 
+                                    : "border-white/10 hover:border-white/30 opacity-75 hover:opacity-100"
                                 }`}
                               >
                                 <img 
@@ -511,8 +514,8 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
                                   loading="lazy"
                                 />
                                 {isSelected && (
-                                  <div className="absolute top-1.5 right-1.5 bg-violet-600 text-white p-1 rounded-full shadow-md">
-                                    <Check className="w-3 h-3" />
+                                  <div className="absolute top-1.5 right-1.5 bg-white text-black p-1 rounded-full shadow-md">
+                                    <Check className="w-3 h-3 stroke-[3]" />
                                   </div>
                                 )}
                                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-1.5 flex items-center justify-between text-[10px] text-white/90">
@@ -538,25 +541,25 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/[0.08] flex items-center justify-between shrink-0 bg-white/[0.02]">
+        <div className="px-6 py-4 border-t border-white/[0.06] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             {customPoster && (
-              <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" /> Poster ready
+              <span className="text-[11px] text-white/70 font-medium flex items-center gap-1">
+                <Check className="w-3.5 h-3.5 text-white" /> Poster ready
               </span>
             )}
             {customBackdrop && (
-              <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" /> Backdrop ready
+              <span className="text-[11px] text-white/70 font-medium flex items-center gap-1">
+                <Check className="w-3.5 h-3.5 text-white" /> Backdrop ready
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button 
               type="button"
               onClick={(e) => { e.preventDefault(); onClose(); }}
-              className="px-4 py-2 text-xs font-medium text-white/60 hover:text-white transition-colors rounded-xl hover:bg-white/[0.06]"
+              className="px-4 py-2 text-xs font-medium text-white/50 hover:text-white transition-colors rounded-xl hover:bg-white/[0.08]"
               disabled={isSaving}
             >
               Cancel
@@ -565,9 +568,9 @@ export default function EditTitleModal({ media, onClose }: EditTitleModalProps) 
               type="button"
               onClick={(e) => { e.preventDefault(); handleSave(); }}
               disabled={isSaving || !customTitle.trim()}
-              className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white px-5 py-2 rounded-xl font-medium text-xs transition-all disabled:opacity-50 shadow-lg shadow-violet-500/20"
+              className="flex items-center gap-2 bg-white text-black hover:bg-white/90 active:scale-95 px-5 py-2.5 rounded-2xl font-semibold text-xs transition-all disabled:opacity-40 shadow-lg shadow-black/40"
             >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin text-black" /> : null}
               Save Changes
             </button>
           </div>

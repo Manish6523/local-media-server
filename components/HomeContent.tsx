@@ -125,7 +125,7 @@ export default function HomeContent() {
 
       {/* Content sections */}
       {media.length > 0 && (
-        <div className="relative z-10 w-full px-5 md:px-10 lg:px-14 pb-32 pt-16 -mt-20 bg-gradient-to-b from-transparent via-[#050505]/95 to-[#050505] space-y-16">
+        <div className="relative z-10 w-full px-5 md:px-10 lg:px-14 pb-32 pt-8 -mt-10 bg-gradient-to-b from-transparent via-black/25 to-black/50 space-y-16">
           {/* Continue Watching */}
           <ContinueWatchingList items={continueWatching.length > 0 ? continueWatching : movies} />
 

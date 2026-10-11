@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import NavBar from "@/components/layout/NavBar";
+import AmbientBackground from "@/components/AmbientBackground";
 import { BackgroundProvider } from "@/components/BackgroundContext";
 import { ToastProvider } from "@/components/Toast";
 import { ScanProvider } from "@/components/ScanProvider";
@@ -80,6 +81,7 @@ export default function RootLayout({
         <ToastProvider>
         <ScanProvider>
         <BackgroundProvider>
+          <AmbientBackground />
           <NavBar />
           <main className="relative z-10 min-h-[100dvh] pb-24 lg:pb-0 flex flex-col">
             {children}

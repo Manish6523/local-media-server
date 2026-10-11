@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FolderSearch, CheckCircle, XCircle, Loader2, X } from "lucide-react";
+import { FolderSearch, CheckCircle, XCircle, Loader2, X, Trash2 } from "lucide-react";
 import FolderBrowserModal from "./FolderBrowserModal";
 
 interface FolderPickerProps {
@@ -9,10 +9,11 @@ interface FolderPickerProps {
   value: string;
   optional?: boolean;
   onChange: (path: string) => void;
+  onRemove?: () => void;
   osPlatform?: string;
 }
 
-export default function FolderPicker({ label, value, optional = false, onChange, osPlatform }: FolderPickerProps) {
+export default function FolderPicker({ label, value, optional = false, onChange, onRemove, osPlatform }: FolderPickerProps) {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; count: number; error?: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,6 +80,17 @@ export default function FolderPicker({ label, value, optional = false, onChange,
           {label}
           {optional && <span className="bg-white/10 text-white/50 text-[10px] uppercase px-1.5 py-0.5 rounded tracking-wide font-bold">Optional</span>}
         </label>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-red-400 hover:text-red-300 text-xs font-medium flex items-center gap-1.5 transition-colors px-2 py-1 rounded-md hover:bg-red-500/10 cursor-pointer"
+            title="Remove folder"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Remove</span>
+          </button>
+        )}
       </div>
       
       <div className="flex items-center gap-2">
