@@ -144,18 +144,46 @@
   }
   function masthead(parent, title) {
     var top = el('div', 'masthead', null, parent);
-    el('span', 'wordmark', 'VIDLOCK', top); el('span', 'masthead-divider', '/', top);
-    el('span', 'page-label', title, top);
-    var right = el('span', 'masthead-right', '', top);
-    el('span', 'connection-dot', '', right); el('span', '', 'YOUR PERSONAL CINEMA', right);
+    var left = el('div', 'masthead-left', null, top);
+    el('span', 'wordmark', 'VIDLOCK', left); el('span', 'masthead-divider', '/', left);
+    el('span', 'page-label', title, left);
+    var right = el('div', 'masthead-right', '', top);
+    el('span', 'connection-dot', '', right); el('span', '', 'LOCAL SERVER ONLINE', right);
   }
   function metadata(item, parent) {
     var node = el('div', 'metadata', null, parent);
-    if (item.rating) { el('span', 'rating', '★ ' + String(item.rating).split('/')[0], node); }
-    if (item.year) { el('span', '', item.year, node); }
+    if (item.rating) {
+      var imdb = el('span', 'imdb-chip', null, node);
+      el('span', 'imdb-text', 'IMDb', imdb);
+      el('b', '', String(item.rating).split('/')[0], imdb);
+    }
+    el('span', 'quality-badge', '4K UHD', node);
+    el('span', 'quality-badge', 'HDR', node);
+    if (item.year) { el('span', 'chip-meta', item.year, node); }
     el('span', 'type-badge', item.type === 'show' ? 'SERIES' : 'FILM', node);
-    if (item.runtime) { el('span', '', item.runtime + ' min', node); }
-    el('span', 'meta-genres', API.genres(item).slice(0, 3).join(' · '), node);
+    if (item.runtime) { el('span', 'chip-meta', item.runtime + ' min', node); }
+    var genres = API.genres(item);
+    if (genres && genres.length) { el('span', 'meta-genres', genres.slice(0, 3).join(' · '), node); }
+  }
+  function getSavedServers() {
+    try {
+      var raw = localStorage.getItem('vidlock_saved_servers');
+      var list = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(list)) { list = []; }
+      var cur = localStorage.getItem('vidlock_server_url');
+      if (cur && list.indexOf(cur) === -1) { list.unshift(cur); }
+      return list;
+    } catch (e) { return []; }
+  }
+  function saveServerUrl(value) {
+    if (!value) { return; }
+    try {
+      var list = getSavedServers().filter(function (s) { return s !== value; });
+      list.unshift(value);
+      if (list.length > 6) { list = list.slice(0, 6); }
+      localStorage.setItem('vidlock_saved_servers', JSON.stringify(list));
+      localStorage.setItem('vidlock_server_url', value);
+    } catch (e) {}
   }
   function config() {
     state.activeSection = 'settings'; switchScreen('config');
@@ -168,6 +196,20 @@
     el('p', 'muted', 'Enter your media server address. Use the computer\'s LAN IP, including its port.', box);
     var field = input('Server address', state.server || 'http://192.168.1.100:2886', box);
     var error = el('p', 'error', '', box);
+    var saved = getSavedServers();
+    var connectBtn;
+    if (saved.length) {
+      var savedWrap = el('div', 'saved-servers-box', '', box);
+      el('p', 'saved-servers-title', 'PREVIOUS SERVERS (CLICK TO PICK):', savedWrap);
+      var chipContainer = el('div', 'saved-servers-chips', '', savedWrap);
+      saved.forEach(function (srv) {
+        var chip = button(srv, chipContainer, function () {
+          field.value = srv;
+          if (connectBtn) { Focus.set(connectBtn); }
+        }, 'saved-ips', 'saved-server-chip' + (field.value === srv ? ' active' : ''));
+        chip.setAttribute('aria-label', 'Use server ' + srv);
+      });
+    }
     button('Auto-fill Subnet', box, function () {
       try {
         var pc = new window.RTCPeerConnection({ iceServers: [] });
@@ -186,13 +228,13 @@
         setTimeout(function() { pc.close(); }, 3000);
       } catch (e) { toast('Could not fetch IP automatically.'); }
     });
-    button('Connect to library', box, function () {
+    connectBtn = button('Connect to library', box, function () {
       var value = field.value.trim().replace(/\/+$/, ''), parsed = document.createElement('a');
       parsed.href = value;
       if (!/^https?:\/\/[^\s]+$/i.test(value) || !parsed.hostname || parsed.search || parsed.hash || parsed.username || parsed.password) {
         error.textContent = 'Enter an HTTP or HTTPS base URL without query, fragment, or credentials.'; return;
       }
-      try { localStorage.setItem('vidlock_server_url', value); }
+      try { saveServerUrl(value); }
       catch (e) { error.textContent = 'The TV could not save this address. Check available storage.'; return; }
       leaveParty(); state.server = value; state.home = null; state.library = []; state.catalogReady = false; state.browse = null; loadHome();
     }, null, 'primary');
@@ -220,8 +262,12 @@
       }
     }
 
-    var affordance = el('span', 'card-play', '', visual); icon(continuing ? 'play' : 'info', affordance);
-    if (item.rating) { el('span', 'card-rating', '★ ' + String(item.rating).split('/')[0], visual); }
+    var affordance = el('span', 'card-play', '', visual); icon('play', affordance);
+    if (item.rating) {
+      var rNode = el('span', 'card-rating', '', visual);
+      el('span', 'card-rating-star', '★ ', rNode);
+      el('span', '', String(item.rating).split('/')[0], rNode);
+    }
     el('span', 'card-title', API.title(item), node);
     el('span', 'card-meta', (item.type === 'show' ? 'Series' : 'Film') + (item.year ? ' · ' + item.year : '') + (continuing && item.episode_start ? ' · S' + (item.season || 1) + ' E' + item.episode_start : ''), node);
     if (continuing) {
@@ -235,7 +281,15 @@
     var section = el('section', 'media-row' + (landscape ? ' wide-row' : ''), null, parent);
     var heading = el('div', 'row-heading', '', section);
     el('h2', '', title, heading); el('span', 'row-count', items.length + (items.length === 1 ? ' TITLE' : ' TITLES'), heading);
-    if (!items.length) { el('p', 'muted empty', continuing ? 'Your next movie night starts here. Pick something to watch.' : 'Your collection is waiting to grow.', section); return; }
+    if (!items.length) {
+      if (continuing) {
+        var emptyWrap = el('div', 'empty-continue-banner', null, section);
+        el('p', 'muted empty-text', 'Your next movie night starts here. Pick something to watch below.', emptyWrap);
+      } else {
+        el('p', 'muted empty', 'Your collection is waiting to grow.', section);
+      }
+      return;
+    }
     var rail = el('div', 'rail', null, section), loaded = 0;
     function batch() {
       var end = Math.min(items.length, loaded + 30), more = rail.querySelector('.more');
@@ -253,11 +307,11 @@
     var item = state.hero[state.heroIndex % state.hero.length];
     node.innerHTML = ''; image(API.backdrop(item) || API.poster(item), node, 'hero-art', API.poster(item));
     var copy = el('div', 'hero-copy', null, node);
-    el('p', 'eyebrow', 'THE SPOTLIGHT', copy); el('h1', '', API.title(item), copy);
+    el('p', 'eyebrow', '✦ FEATURED SPOTLIGHT', copy); el('h1', '', API.title(item), copy);
     metadata(item, copy);
     el('p', 'hero-plot', API.plot(item), copy);
     var actions = el('div', 'hero-actions', '', copy);
-    action('Explore title', actions, function () { showDetail(item.id); }, 'hero', 'primary', 'play');
+    action('Play Now', actions, function () { showDetail(item.id); }, 'hero', 'primary', 'play');
     action('Watch Party', actions, function () { partyMenu(item); }, 'hero', 'secondary', 'party');
     var pagination = el('div', 'hero-pagination', '', node);
     state.hero.forEach(function (unused, index) { el('span', index === state.heroIndex ? 'current' : '', '', pagination); });
@@ -339,11 +393,14 @@
     var filters = el('div', 'collection-filters', '', scroll);
     var genreButton = button('All genres', filters, function () {
       var box = dialog('Choose a genre');
-      ['All genres'].concat(state.collections.genres || []).forEach(function (name) {
+      var grid = el('div', 'dialog-grid', '', box);
+      ['All genres'].concat(state.collections.genres || []).forEach(function (name, idx) {
         if (typeof name !== 'string') { name = name.name; }
-        button(name, box, function () { genre = name; genreButton.textContent = name; hideModal(); render(); });
+        button(name, grid, function () { genre = name; genreButton.textContent = name; hideModal(); render(); }, 'genre-row-' + Math.floor(idx / 3), 'dialog-chip' + (genre === name ? ' active' : ''));
       });
-      button('Cancel', box, hideModal); Focus.scope(modal);
+      var footer = el('div', 'dialog-footer', '', box);
+      button('Cancel', footer, hideModal, 'genre-footer', 'dialog-cancel');
+      Focus.scope(modal);
     }, 'filters', 'filter-button');
     var sort = 'title';
     var sortButton = button('Title: A–Z', filters, function () {
@@ -401,14 +458,14 @@
     action('Back to library', detailNav, returnToBrowse, 'detail-back', 'back-button', 'back');
     image(API.poster(item), top, 'detail-poster');
     var copy = el('div', 'detail-copy', null, top);
-    el('p', 'eyebrow', item.type === 'show' ? 'VIDLOCK SERIES' : 'VIDLOCK CINEMA', copy);
+    el('p', 'eyebrow', item.type === 'show' ? '✦ VIDLOCK SERIES' : '✦ VIDLOCK CINEMA', copy);
     el('h1', '', API.title(item), copy);
     metadata(item, copy);
     el('p', 'plot', API.plot(item) || 'No description available.', copy);
     var actions = el('div', 'actions', null, copy);
     if (item.available === 0) { el('p', 'warning', 'This file is offline. Connect its drive to your server.', copy); }
     else {
-      action(item.watch_progress > 5 ? 'Resume ' + clock(item.watch_progress) : 'Play', actions, function () { startPlayer(item.id); }, 'detail-actions', 'primary', 'play');
+      action(item.watch_progress > 5 ? 'Resume ' + clock(item.watch_progress) : (item.type === 'show' ? 'Play Series' : 'Play Movie'), actions, function () { startPlayer(item.id); }, 'detail-actions', 'primary', 'play');
       action('Play from start', actions, function () { startPlayer(item.id, 0); }, 'detail-actions', 'secondary', 'refresh');
       action('Watch Party', actions, function () { partyMenu(item); }, 'detail-actions', 'secondary', 'party');
     }
@@ -437,9 +494,16 @@
             });
           }
           var play = el('span', 'episode-play', '', shot); icon('play', play);
+          if (episode.watch_progress) {
+            var prog = el('span', 'progress', '', shot);
+            var fill = el('span', '', '', prog);
+            var dur = episode.duration || 2400;
+            fill.style.width = Math.min(100, (episode.watch_progress / dur) * 100) + '%';
+          }
           el('span', 'eyebrow', 'EPISODE ' + (episode.episode_start || index + 1) + (episode.episode_end && episode.episode_end !== episode.episode_start ? '–' + episode.episode_end : ''), tile);
           el('span', 'episode-name', episode.episode_title || 'Episode ' + (episode.episode_start || index + 1), tile);
           if (episode.watch_progress) { el('small', 'muted', clock(episode.watch_progress) + ' watched', tile); }
+          else if (episode.runtime) { el('small', 'muted', episode.runtime + ' min', tile); }
         });
       });
     }
