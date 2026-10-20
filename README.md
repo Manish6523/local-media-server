@@ -3,9 +3,9 @@
 </p>
 
 <h1 align="center">VidLock</h1>
- 
+
 <p align="center">
-  <em>No cloud. No accounts. No subscriptions. Just your media, beautifully presented.</em>
+  <em>Watch parties for your own library. No cloud. No accounts. No subscriptions.</em>
 </p>
 
 <p align="center">
@@ -19,11 +19,10 @@
 </p>
 
 <p align="center">
-  <strong>Local-first &middot; Premium UI &middot; Hardware transcoding &middot; LAN watch parties</strong><br>
+  <strong>Synced watch parties &middot; Voice chat &middot; Hardware transcoding &middot; Smart TV app</strong><br>
   <sub>
-    A self-hosted, Netflix-style media server for your local movie and TV library.
-    VidLock runs from a single Node.js process with no external database, Redis server,
-    authentication provider, or cloud storage.
+    A self-hosted, cinematic media server for the movies and shows you already own.
+    One Node.js process. No external database, Redis, auth provider, or cloud storage.
   </sub>
 </p>
 
@@ -32,6 +31,7 @@
   <a href="#-features">Features</a> &middot;
   <a href="#-quick-start">Quick Start</a> &middot;
   <a href="#-watch-party">Watch Party</a> &middot;
+  <a href="#-limitations">Limitations</a> &middot;
   <a href="#-tech-stack">Tech Stack</a>
 </p>
 
@@ -45,26 +45,20 @@ https://github.com/user-attachments/assets/c1466194-9340-40f9-a5b9-6f6949c12d7d
 
 ## ✨ Why VidLock?
 
-VidLock is built for people who want a polished streaming experience for video files they already own — without uploading their library to the cloud or maintaining a complicated media-server stack.
+Most self-hosted media servers are built around managing a library. VidLock is built around **watching it together**: create a room, share a code or QR link, and everyone's player stays in sync, with built-in voice chat, no extra apps needed.
 
-Point VidLock at your movie and TV folders, run a library scan, and it will:
+It also does the basics well. Point it at your folders, scan, and it will:
 
-* Recursively discover supported video files
-* Parse movie, show, season, and episode information from filenames
-* Fetch metadata from OMDB
-* Fetch optional backdrops through Fanart.tv
-* Cache metadata locally
-* Download posters and backdrops locally
-* Track watch progress and favorites
-* Direct-play browser-compatible files
-* Transcode unsupported formats with FFmpeg
-* Synchronize playback across LAN devices with Watch Party
+* Recursively discover video files, including on external drives
+* Parse movie, show, season, and episode info from messy filenames
+* Fetch metadata from OMDb, with optional backdrops from Fanart.tv
+* Download posters and backdrops locally, so the library works offline
+* Direct-play browser-friendly files, and transcode everything else with FFmpeg
+* Remember watch progress and favorites
 
-Everything lives on your machine.
+Your media files stay where they are. Metadata lives in a local SQLite database.
 
-Your media files stay where they already are, metadata is stored in SQLite, and downloaded artwork is cached locally.
-
-> Internet access is only needed when VidLock needs to fetch external metadata or artwork.
+> Internet access is only needed when VidLock fetches metadata or artwork. Everything else runs locally.
 
 ---
 
@@ -73,17 +67,19 @@ Your media files stay where they already are, metadata is stored in SQLite, and 
 <table>
   <tr>
     <td width="50%">
-      <h3>📚 Smart Local Library</h3>
+      <h3>🎉 Watch Parties</h3>
       <p>
-        VidLock recursively scans your configured local folders and optional external HDD,
-        parses real-world media filenames, and converts them into structured movie and TV metadata.
+        Create a room, share a 6-character code or QR link, and watch in sync.
+        Play, pause, and seek are scheduled against a shared server clock, with drift
+        correction and a ready-check after every seek.
       </p>
       <p>
-        Known files are reused on later scans, helping reduce unnecessary metadata requests.
+        Late guests knock to join and the host approves them. Built-in chat and
+        WebRTC voice chat are included.
       </p>
     </td>
     <td width="50%">
-      <img src="./assets/library.png" alt="VidLock Library" width="100%" />
+      <img src="./assets/watch-party.png" alt="VidLock Watch Party" width="100%" />
     </td>
   </tr>
 
@@ -94,144 +90,101 @@ Your media files stay where they already are, metadata is stored in SQLite, and 
     <td width="50%">
       <h3>▶️ Cinematic Player</h3>
       <p>
-        A custom HTML5 and HLS.js playback experience with direct streaming,
-        on-the-fly transcoding, accurate seeking, subtitle support,
-        audio-track switching, watch-progress tracking, and fullscreen playback.
+        A custom HTML5 and HLS.js player with direct streaming, on-the-fly transcoding,
+        hover frame previews on the scrub bar, subtitle and audio-track menus,
+        keyboard shortcuts, and automatic resume.
       </p>
     </td>
   </tr>
 
   <tr>
     <td width="50%">
-      <h3>🎉 LAN Watch Parties</h3>
+      <h3>📚 Smart Local Library</h3>
       <p>
-        Create a room, share its 6-character code or QR link, and watch together
-        with other devices on the same network.
+        VidLock scans your folders, parses real-world filenames, and builds structured
+        movie and TV metadata. Known files are reused on later scans to avoid
+        unnecessary lookups.
       </p>
       <p>
-        VidLock synchronizes play, pause, and seek events using Socket.IO,
-        server timestamps, network clock-offset estimation, drift correction,
-        and a ready-check system after seeking.
+        Anything it can't match confidently lands in an admin queue where you can fix it manually.
       </p>
     </td>
     <td width="50%">
-      <img src="./assets/watch-party.png" alt="VidLock Watch Party" width="100%" />
+      <img src="./assets/library.png" alt="VidLock Library" width="100%" />
     </td>
   </tr>
 </table>
 
 ### 💎 More Highlights
 
-* **Hardware Acceleration**
-  VidLock detects available FFmpeg encoders at startup and attempts:
+* **Hardware transcoding.** FFmpeg encoders are probed at startup and the first working one is used:
+  `NVENC → AMD AMF → VAAPI → Intel QSV → CPU (libx264)`
+* **Smart direct play.** Browser-friendly files stream over HTTP Range requests with no transcoding.
+* **HLS on demand.** MKV, AVI, WMV, and alternate audio tracks are transcoded into 3-second HLS segments.
+* **10-bit HEVC support.** 10-bit sources are detected and converted to 8-bit for playback, on the GPU when the pipeline supports it.
+* **Surround audio downmix.** AC3, E-AC3, DTS, and TrueHD are converted to stereo AAC.
+* **Multiple audio tracks and subtitles.** External `.srt` / `.vtt`, embedded streams, and optional in-player search through OpenSubtitles (needs your own API key).
+* **Continue Watching and favorites.** Progress is saved every few seconds, and titles are marked watched at 90%.
+* **Group as Series.** Drag and drop loose files into seasons and episodes of a custom show.
+* **Offline drive handling.** Unplug an external drive and its titles are marked offline instead of deleted.
+* **Smart TV mode.** A D-pad-friendly `/tv` interface, plus a packaged LG webOS app (see [TV / webOS](#-tv--webos)).
+* **Desktop app.** An Electron build with a system tray and auto-update is available from the Releases page.
+* **Admin PIN.** Optionally protect the settings page and editing actions.
+* **QR sharing.** Open VidLock from a phone by scanning a code that points to your LAN address.
 
-  `NVENC → VAAPI → QSV → CPU`
+---
 
-* **Smart Direct Play**
-  Browser-friendly media can be streamed directly using HTTP Range requests instead of being unnecessarily transcoded.
+## ⌨️ Player Shortcuts
 
-* **HLS Transcoding**
-  Unsupported formats can be transcoded into HLS streams on demand.
+| Key | Action |
+| --- | --- |
+| `Space` / `K` | Play / pause |
+| `←` / `→` | Back / forward 10 seconds |
+| `↑` / `↓` | Volume up / down |
+| `M` | Mute |
+| `F` | Fullscreen |
+| `C` | Toggle subtitles |
+| `V` | Mute / unmute voice chat (watch party) |
+| `Ctrl/Cmd + K` | Search the library |
 
-* **10-bit HEVC Handling**
-  The transcoding pipeline can detect 10-bit HEVC and handle the conversion required by supported GPU pipelines.
-
-* **Multiple Audio Tracks**
-  FFprobe discovers available audio streams and allows the player to switch tracks.
-
-* **Subtitle Support**
-  Supports external `.srt` / `.vtt` files as well as embedded subtitle streams extracted through FFmpeg.
-
-* **Continue Watching**
-  Playback progress is stored per media file and updated while watching.
-
-* **Automatic Watched State**
-  Media is automatically marked watched after reaching at least 90% playback progress.
-
-* **Favorites**
-  Favorite movies and episodes and access them through a dedicated Favorites page.
-
-* **Offline HDD Handling**
-  If an external drive is disconnected, VidLock can mark its media unavailable instead of immediately removing the library entries.
-
-* **TV / webOS Mode**
-  LG webOS and NetCast browsers can automatically enter the lightweight `/tv` interface.
-
-* **Admin PIN**
-  Protect settings and selected editing actions using an optional PIN.
-
-* **QR Sharing**
-  Generate a QR code pointing to VidLock's LAN address for easier access from phones and other devices.
+Double-click the left or right half of the video to skip 10 seconds.
 
 ---
 
 ## 🎉 Watch Party
 
-VidLock includes real-time LAN co-watching powered by Socket.IO.
-
-### How it works
-
 ```text
-Host creates room
+Host creates a room
         │
         ▼
-6-character room code
+6-character code + QR link
         │
         ▼
-Guests join from /join/<roomCode>
+Guests open /join/<roomCode>
         │
         ▼
-Host starts the party
+Host starts the party → everyone opens /watch/<roomCode>
         │
         ▼
-All clients open /watch/<roomCode>
-        │
-        ▼
-Play / Pause / Seek synchronized
+Play / pause / seek stay synchronized
 ```
 
-### Synchronization
+### How sync works
 
-When a client connects, VidLock performs multiple ping/pong measurements to estimate the difference between the client's clock and the server's clock.
+* On connect, each client runs several ping/pong rounds to estimate its clock offset from the server.
+* Play and pause commands carry a server timestamp scheduled about 300 ms ahead, so every client acts at the same moment.
+* The server sends a sync heartbeat every 10 seconds. Drift under 2 s is ignored, 2 to 15 s is corrected with a hard snap, and more than 15 s triggers a full re-seek.
+* **Seek ready-check:** after the host seeks, playback pauses, guests buffer the new position and report ready, and playback resumes when everyone is ready (or after a 15 s timeout, so one slow client can't block the room).
 
-Playback events can then include a server timestamp so clients schedule playback against a common time reference.
+### Joining and voice
 
-During playback, the server also sends synchronization heartbeats.
+* If the party has already started, new guests **knock** and the host approves or declines. Requests expire after 30 seconds.
+* Voice chat uses peer-to-peer WebRTC with speaking indicators. It is a mesh, so it works best for small groups (around 4 to 6 people).
+* Voice uses STUN/TURN relay servers to connect, so parties are not limited to one Wi-Fi network if the host is reachable.
 
-### Seek Ready Check
+### Party features
 
-Seeking introduces an additional synchronization step:
-
-```text
-Host seeks
-   ↓
-Playback pauses
-   ↓
-Guests buffer new position
-   ↓
-Each guest reports READY
-   ↓
-Server waits for everyone
-   ↓
-Playback resumes
-```
-
-A timeout prevents a slow or disconnected client from blocking the room indefinitely.
-
-### Party Features
-
-* 6-character room codes
-* QR-code joining
-* Host-controlled playback
-* Play / pause synchronization
-* Seek synchronization
-* Network clock-offset estimation
-* Playback heartbeat
-* Buffer ready-check
-* Host transfer after disconnect
-* Member list
-* In-room chat
-* Reconnection support
+6-character room codes · QR joining · host-controlled playback · clock-offset estimation · heartbeat · seek ready-check · knock-to-join · host transfer on disconnect · member list · chat · voice chat · reconnection
 
 ---
 
@@ -239,45 +192,34 @@ A timeout prevents a slow or disconnected client from blocking the room indefini
 
 ### Requirements
 
-Before installing VidLock, make sure you have:
-
 * **Node.js 20+**
-* **FFmpeg**
-* **ffprobe**
-* Platform build tools if required by `better-sqlite3`
-* An **OMDB API key**
-* Optionally, a **Fanart.tv API key**
+* **FFmpeg** and **ffprobe**
+* Platform build tools if `better-sqlite3` needs to compile
+* An **OMDb API key** (free)
+* Optional: a **Fanart.tv API key**
 
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/Manish6523/local-media-server.git
 cd local-media-server
 ```
 
-### 2. Install dependencies
+### 2. Install
 
 ```bash
 npm install
 ```
 
-`better-sqlite3` uses native bindings and may require platform build tools during installation.
-
-For Debian / Ubuntu:
+On Debian / Ubuntu, if the native module fails to build:
 
 ```bash
 sudo apt install build-essential python3
 ```
 
-### 3. Configure environment variables
+### 3. Configure
 
-Create:
-
-```text
-.env.local
-```
-
-Example:
+Create `.env.local`:
 
 ```dotenv
 OMDB_API_KEY=your_omdb_key_here
@@ -287,52 +229,37 @@ LOCAL_MEDIA_PATH=/path/to/your/media/
 HDD_PATH=/path/to/optional/external/drive/
 ```
 
-`FANART_TV_API_KEY` and `HDD_PATH` are optional depending on the features you want to use.
+`FANART_TV_API_KEY` and `HDD_PATH` are optional. Folders and API keys can also be set later in **Settings**.
 
-### 4. Start VidLock
-
-Development:
+### 4. Run
 
 ```bash
+# development
 npm run dev
-```
 
-Production:
-
-```bash
+# production
 npm run build
 npm start
 ```
 
-Then open:
+Open **http://localhost:2886**.
 
-```text
-http://localhost:3000
-```
+> Always use `npm start` in production. It launches VidLock's custom server (needed for Watch Party and artwork serving). Bare `next start` won't work.
 
 ---
 
 ## ⚙️ First Run
 
-After starting VidLock:
-
-1. Open `http://localhost:3000`
-2. Go to **Settings**
-3. Configure your local media folder
-4. Optionally configure an external HDD folder
-5. Save the settings
-6. Click **Scan now**
-7. Return to the home page
-
-VidLock will scan your folders, parse your filenames, fetch available metadata, cache artwork locally, and populate your Movies and Shows libraries.
+1. Open VidLock and go to **Settings**.
+2. Add your media folder, and optionally an external drive.
+3. Click **Scan now**.
+4. Return to the home page to see your library.
 
 ---
 
 ## 📝 Filename Support
 
-VidLock includes a filename parser designed around real-world media libraries.
-
-Examples:
+VidLock's parser is built for real-world libraries:
 
 ```text
 Breaking.Bad.S01E01.mkv
@@ -341,292 +268,99 @@ Attack.on.Titan.S04E10.mp4
 Show.S02E03-05.mkv
 Show.S03.E04.mkv
 Show.S01-E05.mkv
-02E01.mkv
 E01.mkv
 ```
 
-Common release tags such as resolution, codec, source, and release-group noise are stripped during parsing.
-
-Files that don't match an episode pattern are treated as movies.
+Resolution, codec, source, and release-group tags are stripped. Files without an episode pattern are treated as movies.
 
 ---
 
 ## 🎬 Streaming Architecture
 
-VidLock chooses a playback strategy depending on the media format.
-
 ```text
-Media File
+Media file
     │
-    ├── Browser compatible
-    │       │
-    │       └── HTTP Range Stream
+    ├── Browser-compatible ──▶ HTTP Range stream (direct play)
     │
-    └── Requires conversion
-            │
-            ├── HLS Transcode
-            │
-            └── Fragmented MP4 Transcode
-                     │
-                     ▼
-                   FFmpeg
+    └── Needs conversion ────▶ FFmpeg ──▶ HLS (3 s segments)
 ```
 
-VidLock also uses FFprobe to inspect:
-
-* Duration
-* Video codec
-* Audio streams
-* Subtitle streams
-* Container information
-* 10-bit HEVC streams
+FFprobe inspects duration, codecs, audio and subtitle streams, and 10-bit HEVC. Transcodes are keyed by media, audio track, and start position, and idle transcodes are cleaned up automatically.
 
 ---
 
-## ⚡ Hardware Acceleration
+## 📺 TV / webOS
 
-At application startup, VidLock probes available FFmpeg encoders.
-
-Detection order:
-
-```text
-NVIDIA NVENC
-     ↓
-Linux VAAPI
-     ↓
-Intel QSV
-     ↓
-CPU libx264
-```
-
-The first working encoder is cached and reused by the transcoding routes.
-
-If no compatible hardware encoder is detected, VidLock falls back to CPU transcoding using `libx264`.
+* **Browser mode:** LG webOS and NetCast browsers visiting `/` are redirected to `/tv`, a lightweight grid designed for remote-control navigation (arrows, Enter, Back).
+* **Packaged app:** a webOS app (`com.manish6523.vidlock`) lives in `application/webos-app/`.
+* The TV player is intentionally simple. It does not have the full subtitle and audio menus of the desktop player yet.
 
 ---
 
 ## 💾 Local-First Storage
 
-VidLock does not require PostgreSQL, MongoDB, Redis, Firebase, Supabase, or an external database server.
-
-Persistence uses:
-
-```text
-db/media.db
-```
-
-with:
-
-* SQLite
-* `better-sqlite3`
-* Drizzle ORM
-* WAL mode
-
-The database stores:
-
-* Media assets
-* Movies
-* TV shows
-* Episodes
-* Watch progress
-* Watched status
-* Favorites
-* Configuration
-
-Artwork is cached locally under:
-
-```text
-public/posters/
-public/backdrops/
-```
-
----
-
-## 📺 TV / webOS Mode
-
-VidLock includes a lightweight interface intended for television browsers.
-
-Supported user-agent detection currently includes:
-
-```text
-Web0S
-NetCast
-```
-
-When one of these browsers opens `/`, VidLock redirects it to:
-
-```text
-/tv
-```
-
-The TV interface uses a simplified layout better suited to constrained smart-TV browsers and remote-control navigation.
-
----
-
-## 🔐 Admin PIN
-
-VidLock can optionally protect administrative UI actions with a PIN.
-
-The PIN is hashed using SHA-256 before being stored in the local configuration database.
-
-After successful verification, the browser remains unlocked for the current session through `sessionStorage`.
-
-> VidLock is designed for trusted local networks. The Admin PIN should not currently be treated as full authentication for safely exposing the server to the public internet.
+No PostgreSQL, MongoDB, Redis, or Firebase. Persistence is SQLite via `better-sqlite3` and Drizzle ORM in WAL mode, storing media, shows, episodes, progress, favorites, and config. Artwork is cached on disk, and temporary HLS files live in your OS temp directory.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-
-* Next.js 16
-* React 19
-* TypeScript
-* Tailwind CSS 4
-* Framer Motion
-* shadcn/ui
-* HLS.js
-
-### Backend
-
-* Custom Node.js HTTP server
-* Next.js App Router
-* Socket.IO
-* FFmpeg
-* ffprobe
-
-### Database
-
-* SQLite
-* better-sqlite3
-* Drizzle ORM
-* WAL mode
-
-### Metadata
-
-* OMDB
-* Fanart.tv
-* TVMaze lookup for TVDB mapping
-
----
-
-## 🏗️ Architecture
-
-```text
-                    ┌───────────────────────────────┐
-                    │        VidLock Server         │
-                    │       Single Node Process     │
-                    └───────────────┬───────────────┘
-                                    │
-              ┌─────────────────────┼─────────────────────┐
-              │                     │                     │
-              ▼                     ▼                     ▼
-
-      Next.js App Router      Socket.IO Server       FFmpeg / ffprobe
-              │                     │                     │
-              │                     │                     │
-              ▼                     ▼                     ▼
-
-        Web Interface         Watch Parties        Media Processing
-              │
-              ▼
-       SQLite + Drizzle
-              │
-              ▼
-          media.db
-```
-
-There is no separate:
-
-* Database server
-* Redis instance
-* Authentication provider
-* Media worker service
-* Cloud media storage
-
----
-
-## 📁 Local Data
-
-VidLock creates and uses several local directories:
-
-```text
-db/media.db
-public/posters/
-public/backdrops/
-```
-
-Temporary HLS transcoding files are stored under:
-
-```text
-/tmp/filmaro-cache/
-```
-
-Temporary transcoding data is cleaned automatically during startup/shutdown and after idle periods.
+**Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS 4, Framer Motion, shadcn/ui, HLS.js
+**Backend:** Custom Node.js server, Next.js App Router, Socket.IO, FFmpeg, ffprobe
+**Database:** SQLite, better-sqlite3, Drizzle ORM
+**Metadata:** OMDb, Fanart.tv, TVMaze
+**Desktop:** Electron, electron-builder, electron-updater
 
 ---
 
 ## 🐛 Troubleshooting
 
-| Issue                                     | Solution                                                                                                  |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **`better-sqlite3` fails during install** | Install your platform's native build tools. On Debian/Ubuntu: `sudo apt install build-essential python3`. |
-| **Scan finds 0 files**                    | Verify the configured media path and make sure your files use supported video extensions.                 |
-| **Posters don't appear in production**    | Run `npm start`, which starts VidLock's custom server. Do not use bare `next start`.                      |
-| **MKV playback is slow**                  | Check the server's GPU detection logs. VidLock may have fallen back to CPU transcoding.                   |
-| **Watch Party drifts**                    | Refresh the affected guest client so its network clock offset is recalculated.                            |
-| **External HDD media appears offline**    | Reconnect the HDD and scan the library again.                                                             |
-| **Forgot Admin PIN**                      | Remove `admin_pin_hash` and `admin_pin_enabled` from the SQLite `config` table.                           |
+| Issue | Solution |
+| --- | --- |
+| `better-sqlite3` fails to install | Install native build tools. On Debian/Ubuntu: `sudo apt install build-essential python3`. |
+| Scan finds 0 files | Check the media path and make sure files use supported extensions (`.mp4`, `.mkv`, `.avi`, `.mov`, `.m4v`, `.wmv`). |
+| Posters missing in production | Use `npm start`, not bare `next start`. |
+| MKV playback is slow | Check the startup log for GPU detection. VidLock may have fallen back to CPU transcoding. |
+| Watch Party drifts | Refresh the affected guest so its clock offset is recalculated. |
+| Drive media shows as offline | Reconnect the drive and scan again. |
+| Subtitle search fails | Add your own OpenSubtitles API key in Settings. |
+| Forgot Admin PIN | Remove `admin_pin_hash` and `admin_pin_enabled` from the SQLite `config` table. |
+
+---
+
+## 🧭 Limitations
+
+Honest notes on what VidLock doesn't do (yet):
+
+* **Single-user state.** Watch progress and favorites are shared by everyone using the server. There are no user profiles.
+* **One quality level.** Transcodes match the source resolution. There is no bitrate ladder for slow connections.
+* **Voice chat is a mesh**, so it degrades beyond roughly 4 to 6 people.
+* **Hardware encoders** (NVENC, AMF, VAAPI, QSV) are auto-detected, but not every combination has been tested on every GPU. If one misbehaves, please open an issue with your GPU and the startup log.
+* **TV player** is basic compared to the desktop player.
 
 ---
 
 ## 📖 Documentation
 
-VidLock includes detailed project and codebase documentation covering:
-
-* Installation
-* Environment configuration
-* Filename parsing
-* GPU acceleration
-* Watch Party protocol
-* TV mode
-* SQLite schema
-* API routes
-* Player pipeline
-* React components
-* Socket.IO events
-* Data-flow diagrams
-* Extension points
-
-See:
-
-[DOCUMENTATION.md](./DOCUMENTATION.md)
+Detailed codebase documentation (API routes, Socket.IO events, database schema, player pipeline, extension points) is in [DOCUMENTATION.md](./DOCUMENTATION.md).
 
 ---
 
 ## ⚠️ Network Security
 
-VidLock is designed primarily for use on a **trusted local network**.
+VidLock is designed for a **trusted local network**.
 
-The current application does not provide full per-user authentication, and some administrative API routes are not protected server-side by the Admin PIN.
+It has no per-user authentication. The Admin PIN protects the settings UI, but media streaming and Watch Party endpoints are open by design so TVs and guests can connect easily, and some administrative API routes are not protected server-side by the PIN.
 
-Do **not** expose VidLock directly to the public internet without adding an authentication and authorization layer.
+Do **not** expose VidLock to the public internet without putting an authentication layer in front of it, such as Cloudflare Access, a VPN like Tailscale, or a reverse proxy with login.
+
+Only use VidLock with media you have the right to watch.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, bug reports, and feature suggestions are welcome.
-
-If you're making changes to areas such as:
-
-* Filename parsing
-* FFmpeg transcoding
-* GPU detection
-* Watch Party synchronization
-* TV compatibility
-
-please test the affected workflow before submitting a pull request.
+Bug reports, feature ideas, and pull requests are welcome. If you change filename parsing, FFmpeg transcoding, GPU detection, Watch Party sync, or TV compatibility, please test the affected workflow first.
 
 ---
 
@@ -638,7 +372,7 @@ VidLock is licensed under the **MIT License**.
 
 <div align="center">
 
-### Your media. Your hardware. Your network.
+### Your media. Your hardware. Your watch party.
 
 **No cloud. No accounts. No subscriptions.**
 
