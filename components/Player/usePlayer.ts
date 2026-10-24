@@ -16,6 +16,8 @@ export interface AudioTrack {
   codec: string;
 }
 
+export type StreamMode = "direct" | "hls";
+
 export interface PlayerState {
   isPlaying: boolean;
   currentTime: number;
@@ -72,6 +74,21 @@ export function usePlayer(
 
   const [transcodeStartTime, setTranscodeStartTime] = useState(initialWatchProgress > 0 && baseNeedsTranscode ? initialWatchProgress : 0);
   const [showResumeToast, setShowResumeToast] = useState(initialWatchProgress > 0);
+  const [streamMode, setStreamMode] = useState<StreamMode>(
+    baseNeedsTranscode ? "hls" : "direct"
+  );
+  const [streamToast, setStreamToast] = useState<string | null>(null);
+  const streamToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showStreamToastMessage = useCallback((msg: string) => {
+    setStreamToast(msg);
+    if (streamToastTimer.current) clearTimeout(streamToastTimer.current);
+    streamToastTimer.current = setTimeout(() => setStreamToast(null), 4000);
+  }, []);
+
+  const pendingDirectSeekTimeRef = useRef<number | null>(
+    initialWatchProgress > 0 && !baseNeedsTranscode ? initialWatchProgress : null
+  );
 
   // Resume toast auto-hide
   useEffect(() => {
@@ -105,9 +122,8 @@ export function usePlayer(
     };
   }, [state.isPlaying, state.currentTime, state.duration, mediaId, exactDuration]);
 
-  // If user selects an alternate audio track on an MP4, we MUST transcode it on the server
-  // because native HTML5 over HTTP doesn't easily let you select audio streams dynamically
-  const needsTranscode = baseNeedsTranscode || state.activeAudioTrack > 0;
+  // If in HLS mode or user selects an alternate audio track on an MP4, transcode on server
+  const needsTranscode = streamMode === "hls" || state.activeAudioTrack > 0;
 
   // Stable client identifier for server-side process tracking
   // Each usePlayer instance (host / guest) gets a unique ID so the server
@@ -119,7 +135,7 @@ export function usePlayer(
     ? `/api/hls/${mediaId}/${state.activeAudioTrack}/${transcodeStartTime}/playlist.m3u8?clientId=${clientIdRef.current}`
     : `/api/stream?id=${mediaId}`;
 
-  console.log('[Player] Video src:', videoSrc);
+  console.log('[Player] Stream mode:', streamMode, '| Video src:', videoSrc);
 
   // hls.js integration
   useEffect(() => {
@@ -220,6 +236,20 @@ export function usePlayer(
     v.volume = savedVolume;
     v.muted = savedMuted;
 
+    const applyPendingDirectSeek = () => {
+      if (!needsTranscode && pendingDirectSeekTimeRef.current !== null) {
+        const target = pendingDirectSeekTimeRef.current;
+        if (v.duration && isFinite(v.duration)) {
+          try {
+            v.currentTime = Math.min(target, v.duration);
+            pendingDirectSeekTimeRef.current = null;
+          } catch {
+            // Will retry on canplay
+          }
+        }
+      }
+    };
+
     const onPlay = () => setState((s) => ({ ...s, isPlaying: true }));
     const onPause = () => {
       if (!ignorePauseRef.current) {
@@ -233,13 +263,17 @@ export function usePlayer(
       setState((s) => ({ ...s, currentTime: realTime }));
     };
     const onDurationChange = () => {
+      applyPendingDirectSeek();
       // Only override duration if we don't have an exact one from the server
       if (!exactDuration && v.duration && isFinite(v.duration)) {
         setState((s) => ({ ...s, duration: v.duration }));
       }
     };
     const onWaiting = () => setState((s) => ({ ...s, isBuffering: true }));
-    const onCanPlay = () => setState((s) => ({ ...s, isBuffering: false }));
+    const onCanPlay = () => {
+      applyPendingDirectSeek();
+      setState((s) => ({ ...s, isBuffering: false }));
+    };
     const onProgress = () => {
       if (v.buffered.length > 0) {
         const end = v.buffered.end(v.buffered.length - 1);
@@ -249,6 +283,25 @@ export function usePlayer(
     };
     const onVolumeChange = () => {
       setState((s) => ({ ...s, volume: v.volume, isMuted: v.muted }));
+    };
+    const onError = () => {
+      if (streamMode === "direct") {
+        console.warn("[Player] Direct playback error on video element:", v.error);
+        showStreamToastMessage("Direct playback unsupported. Switched to HLS transcode.");
+        const currentPos = isFinite(v.currentTime) && v.currentTime > 0
+          ? v.currentTime
+          : state.currentTime;
+
+        pendingDirectSeekTimeRef.current = null;
+        setTranscodeStartTime(Math.floor(currentPos));
+        setStreamMode("hls");
+        setState((s) => ({
+          ...s,
+          currentTime: currentPos,
+          isBuffering: true,
+          bufferedEnd: currentPos,
+        }));
+      }
     };
 
     v.addEventListener("play", onPlay);
@@ -263,6 +316,7 @@ export function usePlayer(
     v.addEventListener("seeked", onCanPlay);
     v.addEventListener("progress", onProgress);
     v.addEventListener("volumechange", onVolumeChange);
+    v.addEventListener("error", onError);
 
     return () => {
       v.removeEventListener("play", onPlay);
@@ -277,8 +331,9 @@ export function usePlayer(
       v.removeEventListener("seeked", onCanPlay);
       v.removeEventListener("progress", onProgress);
       v.removeEventListener("volumechange", onVolumeChange);
+      v.removeEventListener("error", onError);
     };
-  }, [exactDuration, needsTranscode, transcodeStartTime]);
+  }, [exactDuration, needsTranscode, streamMode, transcodeStartTime, showStreamToastMessage, state.currentTime]);
 
   // ---- Controls auto-hide ----
   const resetControlsTimer = useCallback(() => {
@@ -434,6 +489,14 @@ export function usePlayer(
   const setActiveAudioTrack = useCallback((index: number) => {
     const v = videoRef.current;
     const currentTime = v?.currentTime || 0;
+    const realTime = needsTranscode ? transcodeStartTime + currentTime : currentTime;
+
+    if (streamMode === "direct" && index > 0) {
+      showStreamToastMessage("Switched to HLS to support alternate audio track");
+      setTranscodeStartTime(Math.floor(realTime));
+      setStreamMode("hls");
+    }
+
     setState((s) => ({ ...s, activeAudioTrack: index }));
     // After state update triggers source change, restore time
     setTimeout(() => {
@@ -447,7 +510,50 @@ export function usePlayer(
         v2.addEventListener("loadeddata", onLoaded);
       }
     }, 100);
-  }, []);
+  }, [needsTranscode, transcodeStartTime, streamMode, showStreamToastMessage]);
+
+  const switchStreamMode = useCallback((targetMode: StreamMode) => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const currentPos = needsTranscode
+      ? transcodeStartTime + (v.currentTime || 0)
+      : (v.currentTime || 0);
+
+    const wasPlaying = !v.paused;
+    v.pause();
+    ignorePauseRef.current = true;
+
+    if (targetMode === "hls") {
+      pendingDirectSeekTimeRef.current = null;
+      wasPlayingBeforeSeekRef.current = wasPlaying;
+      setTranscodeStartTime(Math.floor(currentPos));
+      setStreamMode("hls");
+      setState((s) => ({
+        ...s,
+        currentTime: currentPos,
+        isBuffering: true,
+        bufferedEnd: currentPos,
+      }));
+      showStreamToastMessage("Switched to HLS transcode");
+    } else {
+      setTranscodeStartTime(0);
+      pendingDirectSeekTimeRef.current = currentPos;
+      wasPlayingBeforeSeekRef.current = wasPlaying;
+      if (state.activeAudioTrack > 0) {
+        setState((s) => ({ ...s, activeAudioTrack: 0, currentTime: currentPos, isBuffering: true }));
+        showStreamToastMessage("Switched to direct stream (primary audio)");
+      } else {
+        setState((s) => ({ ...s, currentTime: currentPos, isBuffering: true }));
+        showStreamToastMessage("Switched to direct stream");
+      }
+      setStreamMode("direct");
+    }
+
+    setTimeout(() => {
+      ignorePauseRef.current = false;
+    }, 300);
+  }, [needsTranscode, transcodeStartTime, state.activeAudioTrack, showStreamToastMessage]);
 
   const setCueText = useCallback((text: string) => {
     setState((s) => ({ ...s, currentCueText: text }));
@@ -505,5 +611,9 @@ export function usePlayer(
     updateTranscodeStart: setTranscodeStartTime,
     forceHideControls,
     fetchSubtitles,
+    streamMode,
+    switchStreamMode,
+    streamToast,
+    setStreamToast,
   };
 }

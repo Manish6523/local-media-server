@@ -12,12 +12,14 @@ import {
   Minimize,
   Subtitles,
   Volume2,
+  Zap,
 } from "lucide-react";
 import { usePlayer } from "./usePlayer";
 import ProgressBar from "./ProgressBar";
 import VolumeControl from "./VolumeControl";
 import SubtitleMenu from "./SubtitleMenu";
 import AudioMenu from "./AudioMenu";
+import StreamModeMenu from "./StreamModeMenu";
 import SkipOverlay from "./SkipOverlay";
 import CastButton from "./CastButton";
 
@@ -91,6 +93,9 @@ export default function NetflixPlayer({
     showResumeToast,
     forceHideControls,
     fetchSubtitles,
+    streamMode,
+    switchStreamMode,
+    streamToast,
   } = usePlayer(
     mediaId,
     baseNeedsTranscode,
@@ -101,6 +106,7 @@ export default function NetflixPlayer({
 
   const [showSubMenu, setShowSubMenu] = useState(false);
   const [showAudioMenu, setShowAudioMenu] = useState(false);
+  const [showStreamMenu, setShowStreamMenu] = useState(false);
   const [switchingAudio, setSwitchingAudio] = useState(false);
   const lastClickTime = useRef(0);
   const lastClickSide = useRef<"left" | "right" | null>(null);
@@ -383,6 +389,7 @@ export default function NetflixPlayer({
       if (!(e.target as HTMLElement).closest("[data-menu]")) {
         setShowSubMenu(false);
         setShowAudioMenu(false);
+        setShowStreamMenu(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -436,7 +443,7 @@ export default function NetflixPlayer({
             watchPartyMode.registerVideoRef(el);
           }
         }}
-        key={`${mediaId}-${state.activeAudioTrack}-${needsTranscode}`}
+        key={`${mediaId}-${state.activeAudioTrack}-${streamMode}-${needsTranscode}`}
         src={needsTranscode ? undefined : videoSrc}
         className="w-full h-full object-contain"
         autoPlay
@@ -465,6 +472,14 @@ export default function NetflixPlayer({
       {showResumeToast && initialWatchProgress > 0 && (
         <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm font-medium backdrop-blur-md border border-white/10 animate-in fade-in slide-in-from-top-4 duration-500 z-40 pointer-events-none shadow-xl">
           Resuming from {formatTime(initialWatchProgress)}
+        </div>
+      )}
+
+      {/* Stream Mode Toast */}
+      {streamToast && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-black/90 text-white px-5 py-2.5 rounded-full text-xs md:text-sm font-medium backdrop-blur-md border border-white/20 animate-in fade-in slide-in-from-top-4 duration-300 z-50 shadow-2xl flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          {streamToast}
         </div>
       )}
 
@@ -610,6 +625,7 @@ export default function NetflixPlayer({
                   onClick={() => {
                     setShowSubMenu(!showSubMenu);
                     setShowAudioMenu(false);
+                    setShowStreamMenu(false);
                   }}
                   className={`p-1.5 rounded-full transition-all ${
                     state.activeSubtitle !== null
@@ -642,6 +658,7 @@ export default function NetflixPlayer({
                   onClick={() => {
                     setShowAudioMenu(!showAudioMenu);
                     setShowSubMenu(false);
+                    setShowStreamMenu(false);
                   }}
                   className="p-1.5 rounded-full text-white/50 active:text-white transition-all"
                 >
@@ -657,6 +674,35 @@ export default function NetflixPlayer({
                 )}
               </div>
             )}
+
+            {/* Stream Mode (landscape) */}
+            <div className="relative" data-menu>
+              <button
+                onClick={() => {
+                  setShowStreamMenu(!showStreamMenu);
+                  setShowSubMenu(false);
+                  setShowAudioMenu(false);
+                }}
+                className={`p-1.5 rounded-full transition-all flex items-center gap-1 ${
+                  streamMode === "direct"
+                    ? "text-emerald-400 bg-emerald-500/15"
+                    : "text-violet-400 bg-violet-500/15"
+                }`}
+                title={`Stream Mode: ${streamMode === "direct" ? "Direct Play" : "HLS Transcode"}`}
+              >
+                <Zap className="w-4 h-4 fill-current" />
+              </button>
+              {showStreamMenu && (
+                <StreamModeMenu
+                  currentMode={streamMode}
+                  onSelect={(mode) => {
+                    switchStreamMode(mode);
+                    setShowStreamMenu(false);
+                  }}
+                  onClose={() => setShowStreamMenu(false)}
+                />
+              )}
+            </div>
 
             <CastButton videoRef={videoRef} videoSrc={videoSrc} title={title} />
             
@@ -786,6 +832,35 @@ export default function NetflixPlayer({
                     />
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Stream Mode (portrait) */}
+            <div className="relative" data-menu>
+              <button
+                onClick={() => {
+                  setShowStreamMenu(!showStreamMenu);
+                  setShowSubMenu(false);
+                  setShowAudioMenu(false);
+                }}
+                className={`p-2 rounded-full transition-all flex items-center gap-1 border ${
+                  streamMode === "direct"
+                    ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30"
+                    : "text-violet-400 bg-violet-500/15 border-violet-500/30"
+                }`}
+                title={`Stream Mode: ${streamMode === "direct" ? "Direct Play" : "HLS Transcode"}`}
+              >
+                <Zap className="w-5 h-5 fill-current" />
+              </button>
+              {showStreamMenu && (
+                <StreamModeMenu
+                  currentMode={streamMode}
+                  onSelect={(mode) => {
+                    switchStreamMode(mode);
+                    setShowStreamMenu(false);
+                  }}
+                  onClose={() => setShowStreamMenu(false)}
+                />
               )}
             </div>
 
@@ -940,6 +1015,38 @@ export default function NetflixPlayer({
                 )}
               </div>
             )}
+
+            {/* Stream Mode (desktop) */}
+            <div className="relative" data-menu>
+              <button
+                onClick={() => {
+                  setShowStreamMenu(!showStreamMenu);
+                  setShowSubMenu(false);
+                  setShowAudioMenu(false);
+                }}
+                className={`flex items-center gap-1.5 p-2 px-3 rounded-full border transition-all ${
+                  streamMode === "direct"
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
+                    : "bg-violet-500/15 border-violet-500/30 text-violet-400 hover:bg-violet-500/25"
+                }`}
+                title={`Streaming Mode: ${streamMode === "direct" ? "Direct Play (0% Server CPU)" : "HLS Transcode"}`}
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span className="hidden md:inline text-[12px] font-bold tracking-wider">
+                  {streamMode === "direct" ? "DIRECT" : "HLS"}
+                </span>
+              </button>
+              {showStreamMenu && (
+                <StreamModeMenu
+                  currentMode={streamMode}
+                  onSelect={(mode) => {
+                    switchStreamMode(mode);
+                    setShowStreamMenu(false);
+                  }}
+                  onClose={() => setShowStreamMenu(false)}
+                />
+              )}
+            </div>
 
             <CastButton 
               videoRef={videoRef} 
