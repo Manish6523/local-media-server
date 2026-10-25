@@ -74,7 +74,7 @@ export default function StatsForNerdsModal({
       }}
     >
       <div
-        className="w-full max-w-lg rounded-3xl glass-apple-popup p-5 md:p-6 text-white text-xs shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg rounded-3xl glass-md p-5 md:p-6 text-white text-xs shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

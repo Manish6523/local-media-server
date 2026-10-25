@@ -8,6 +8,7 @@ import {
   Pause,
   Maximize,
   Minimize,
+  Volume1,
   Volume2,
   VolumeX,
   Subtitles,
@@ -113,6 +114,16 @@ export default function MediaPlayer({
   const [speed, setSpeed] = useState(1);
   const [switchingAudio, setSwitchingAudio] = useState(false);
 
+  // Keep controls visible whenever any modal/popup is open
+  const isAnyMenuOpen =
+    showStats ||
+    showSubMenu ||
+    showAudioMenu ||
+    showSpeedMenu ||
+    showStreamMenu;
+
+  const controlsVisible = state.showControls || isAnyMenuOpen;
+
   // Scrubber drag / hover state
   const scrubberRef = useRef<HTMLDivElement>(null);
   const [isHoveringScrubber, setIsHoveringScrubber] = useState(false);
@@ -122,6 +133,7 @@ export default function MediaPlayer({
   // Volume drag state
   const volumeBarRef = useRef<HTMLDivElement>(null);
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+  const [isHoveredVolume, setIsHoveredVolume] = useState(false);
 
   const lastClickTime = useRef(0);
   const lastClickSide = useRef<"left" | "right" | null>(null);
@@ -259,8 +271,17 @@ export default function MediaPlayer({
 
   // Controls auto-hide
   useEffect(() => {
+    if (isAnyMenuOpen) {
+      resetControlsTimer();
+      return;
+    }
     const handler = (e: MouseEvent | TouchEvent) => {
-      if (e instanceof MouseEvent && e.clientX <= 50) {
+      if (
+        e instanceof MouseEvent &&
+        e.clientX <= 25 &&
+        e.clientY >= 85 &&
+        e.clientY <= window.innerHeight - 120
+      ) {
         forceHideControls();
         return;
       }
@@ -273,7 +294,7 @@ export default function MediaPlayer({
       document.removeEventListener("mousemove", handler);
       document.removeEventListener("touchstart", handler);
     };
-  }, [resetControlsTimer, forceHideControls]);
+  }, [isAnyMenuOpen, resetControlsTimer, forceHideControls]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -500,23 +521,15 @@ export default function MediaPlayer({
     setHoverX(Math.max(0, Math.min(e.clientX - rect.left, rect.width)));
   }, []);
 
-  // Volume slider handlers (supports both horizontal on desktop and vertical on mobile)
+  // Volume slider handlers (horizontal slider)
   const handleVolumeSeek = useCallback(
-    (clientX: number, clientY: number) => {
+    (clientX: number) => {
       if (!volumeBarRef.current) return;
       const rect = volumeBarRef.current.getBoundingClientRect();
-      const isVertical = rect.height > rect.width;
-      if (isVertical) {
-        // Vertical slider: bottom is 0, top is 1
-        const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
-        const newVol = 1 - y / rect.height;
-        setVolume(newVol);
-      } else {
-        // Horizontal slider: left is 0, right is 1
-        const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-        const newVol = x / rect.width;
-        setVolume(newVol);
-      }
+      if (rect.width <= 0) return;
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const newVol = Math.max(0, Math.min(1, x / rect.width));
+      setVolume(newVol);
     },
     [setVolume]
   );
@@ -525,9 +538,9 @@ export default function MediaPlayer({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       setIsDraggingVolume(true);
-      handleVolumeSeek(e.clientX, e.clientY);
+      handleVolumeSeek(e.clientX);
 
-      const onMove = (ev: MouseEvent) => handleVolumeSeek(ev.clientX, ev.clientY);
+      const onMove = (ev: MouseEvent) => handleVolumeSeek(ev.clientX);
       const onUp = () => {
         setIsDraggingVolume(false);
         window.removeEventListener("mousemove", onMove);
@@ -544,11 +557,11 @@ export default function MediaPlayer({
       e.stopPropagation();
       if (!e.touches[0]) return;
       setIsDraggingVolume(true);
-      handleVolumeSeek(e.touches[0].clientX, e.touches[0].clientY);
+      handleVolumeSeek(e.touches[0].clientX);
 
       const onTouchMove = (ev: TouchEvent) => {
         if (ev.touches[0]) {
-          handleVolumeSeek(ev.touches[0].clientX, ev.touches[0].clientY);
+          handleVolumeSeek(ev.touches[0].clientX);
         }
       };
       const onTouchEnd = () => {
@@ -584,7 +597,7 @@ export default function MediaPlayer({
     <div
       ref={containerRef}
       className="fixed inset-0 bg-black select-none overflow-hidden"
-      style={{ cursor: state.showControls ? "default" : "none" }}
+      style={{ cursor: controlsVisible ? "default" : "none" }}
       onClick={handleVideoClick}
     >
       {/* Video */}
@@ -605,12 +618,16 @@ export default function MediaPlayer({
         crossOrigin="anonymous"
       />
 
-      {/* Desktop-only: transparent auto-hide overlay */}
+      {/* Desktop-only: left-side bar (below cross button for testing as requested) */}
       <div
         data-controls
-        className="hidden md:block absolute top-0 bottom-0 left-0 w-[50px] z-[999] bg-transparent"
-        style={{ pointerEvents: state.showControls ? "auto" : "none" }}
-        onMouseEnter={forceHideControls}
+        className="hidden md:block absolute top-[85px] bottom-[120px] left-0 w-[25px] z-[999] bg-red-500/20 border-r-2 border-red-500 pointer-events-auto"
+        onMouseEnter={() => {
+          if (!isAnyMenuOpen) {
+            forceHideControls();
+          }
+        }}
+        title="Left side auto-hide test bar (25px)"
       />
 
       {/* Buffering spinner */}
@@ -622,14 +639,14 @@ export default function MediaPlayer({
 
       {/* Resume toast */}
       {showResumeToast && initialWatchProgress > 0 && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-apple px-6 py-3 rounded-full text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-500 z-40 pointer-events-none shadow-2xl text-white">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-md px-6 py-3 rounded-full text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-500 z-40 pointer-events-none shadow-2xl text-white">
           Resuming from {formatTime(initialWatchProgress)}
         </div>
       )}
 
       {/* Stream Mode Toast */}
       {streamToast && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-apple px-5 py-2.5 rounded-full text-xs md:text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-300 z-50 shadow-2xl flex items-center gap-2 text-white">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-md px-5 py-2.5 rounded-full text-xs md:text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-300 z-50 shadow-2xl flex items-center gap-2 text-white">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           {streamToast}
         </div>
@@ -641,7 +658,7 @@ export default function MediaPlayer({
       {/* Switching audio overlay */}
       {switchingAudio && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="glass-apple px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl text-white">
+          <div className="glass-md px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl text-white">
             <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             <span className="text-sm font-medium">Switching audio stream...</span>
           </div>
@@ -680,7 +697,7 @@ export default function MediaPlayer({
       <div
         data-controls
         className={`absolute top-0 left-0 right-0 p-3.5 sm:p-5 md:p-8 flex items-start justify-between z-40 transition-all duration-300 ${
-          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+          controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
         {/* Top Left: Close [X] + Capsule Controls */}
@@ -690,14 +707,14 @@ export default function MediaPlayer({
               e.stopPropagation();
               router.back();
             }}
-            className="w-9 h-9 sm:w-10 sm:h-10 glass-apple-circle flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all shadow-lg shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-lg shrink-0"
             title="Close Player"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </button>
 
           {/* Picture-in-Picture & Cast Pill [ Always Horizontal ] */}
-          <div className="glass-apple-pill px-3 py-1.5 flex items-center gap-3 md:gap-3.5 shadow-lg shrink-0">
+          <div className="glass-md !rounded-full px-3 py-1.5 flex items-center gap-3 md:gap-3.5 shadow-lg shrink-0">
             <button
               onClick={togglePiP}
               className="text-white/80 hover:text-white transition-colors"
@@ -722,10 +739,10 @@ export default function MediaPlayer({
                 e.stopPropagation();
                 watchPartyMode.onToggleChat?.();
               }}
-              className={`glass-apple-pill px-3 py-1.5 flex items-center gap-2 transition-all shadow-lg text-xs font-semibold shrink-0 ${
+              className={`glass-md !rounded-full px-3 py-1.5 flex items-center gap-2 transition-all shadow-lg text-xs font-semibold shrink-0 ${
                 watchPartyMode.isChatOpen
                   ? "bg-white/30 text-white border-white/40 shadow-[0_0_20px_rgba(255,255,255,0.35)]"
-                  : "text-white/80 hover:text-white"
+                  : "text-white/80 hover:text-white hover:bg-white/15"
               }`}
               title={watchPartyMode.isChatOpen ? "Hide Watch Party Panel" : "Open Watch Party Panel"}
             >
@@ -743,50 +760,66 @@ export default function MediaPlayer({
           )}
         </div>
 
-        {/* Top Right: Volume Capsule [ Vertical on Mobile, Horizontal on Desktop ] */}
+        {/* Top Right: Volume Capsule [ Collapsed: Icon + %, Hover/Drag: Extends Slider Track ] */}
         <div
-          className="glass-apple-pill px-2 py-2.5 md:px-3.5 md:py-2 flex flex-col-reverse md:flex-row items-center gap-2.5 md:gap-3 shadow-lg select-none shrink-0"
-          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={() => setIsHoveredVolume(true)}
+          onMouseLeave={() => setIsHoveredVolume(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
+              setIsHoveredVolume((prev) => !prev);
+            }
+          }}
+          className="glass-md !rounded-full px-3 py-1.5 md:py-2 flex items-center shadow-lg select-none shrink-0 transition-all duration-300 ease-out group/volume cursor-pointer"
         >
-          {/* Responsive Volume Track: Vertical on Mobile (< md), Horizontal on Desktop (md+) */}
-          <div
-            ref={volumeBarRef}
-            onMouseDown={handleVolumeMouseDown}
-            onTouchStart={handleVolumeTouchStart}
-            className="w-1.5 h-16 md:w-28 md:h-1 bg-white/30 hover:bg-white/40 md:hover:h-1.5 transition-all rounded-full cursor-pointer relative"
-          >
-            {/* Mobile Vertical Track Fill & Thumb (< md) */}
-            <div
-              className="md:hidden absolute inset-x-0 bottom-0 bg-white rounded-full pointer-events-none"
-              style={{ height: `${state.isMuted ? 0 : state.volume * 100}%` }}
-            />
-            <div
-              className="md:hidden absolute left-1/2 -translate-x-1/2 translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm pointer-events-none"
-              style={{ bottom: `${state.isMuted ? 0 : state.volume * 100}%` }}
-            />
-
-            {/* Desktop Horizontal Track Fill & Thumb (md+) */}
-            <div
-              className="hidden md:block absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
-              style={{ width: `${state.isMuted ? 0 : state.volume * 100}%` }}
-            />
-            <div
-              className="hidden md:block absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm pointer-events-none"
-              style={{ left: `${state.isMuted ? 0 : state.volume * 100}%` }}
-            />
-          </div>
-
           <button
-            onClick={toggleMute}
-            className="text-white/80 hover:text-white transition-colors p-0.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMute();
+            }}
+            className="text-white/80 hover:text-white transition-colors p-0.5 shrink-0"
             title={state.isMuted ? "Unmute" : "Mute"}
           >
             {state.isMuted || state.volume === 0 ? (
               <VolumeX className="w-4 h-4" />
+            ) : state.volume < 0.5 ? (
+              <Volume1 className="w-4 h-4" />
             ) : (
               <Volume2 className="w-4 h-4" />
             )}
           </button>
+
+          {/* Expandable Slider Track with smooth animation */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-out flex items-center ${
+              isHoveredVolume || isDraggingVolume
+                ? "w-20 sm:w-24 md:w-28 opacity-100 mx-2 md:mx-2.5 pointer-events-auto"
+                : "w-0 opacity-0 pointer-events-none mx-0"
+            }`}
+          >
+            <div
+              ref={volumeBarRef}
+              onMouseDown={handleVolumeMouseDown}
+              onTouchStart={handleVolumeTouchStart}
+              className="w-full py-2 cursor-pointer flex items-center relative group/voltrack"
+            >
+              <div className="w-full h-1 bg-white/30 group-hover/voltrack:bg-white/40 group-hover/voltrack:h-1.5 transition-all rounded-full relative">
+                <div
+                  className="absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
+                  style={{ width: `${state.isMuted ? 0 : state.volume * 100}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm pointer-events-none"
+                  style={{ left: `${state.isMuted ? 0 : state.volume * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Volume % Display */}
+          <span className="text-xs font-semibold text-white/90 font-mono tracking-tight select-none shrink-0 min-w-[2.2rem] text-right">
+            {state.isMuted ? 0 : Math.round(state.volume * 100)}%
+          </span>
         </div>
       </div>
 
@@ -794,14 +827,14 @@ export default function MediaPlayer({
       <div
         data-controls
         className={`absolute inset-0 flex items-center justify-center pointer-events-none z-30 transition-all duration-300 ${
-          state.showControls ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          controlsVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
         <div className="flex items-center gap-4 sm:gap-6 md:gap-10 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           {/* Rewind 10s */}
           <button
             onClick={wpSkipBack}
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 glass-apple-circle flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all shadow-2xl"
+            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
             title="Rewind 10 seconds"
           >
             <svg
@@ -832,7 +865,7 @@ export default function MediaPlayer({
           {/* Center Play / Pause */}
           <button
             onClick={wpTogglePlay}
-            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-apple-circle flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
             title={state.isPlaying ? "Pause (Space)" : "Play (Space)"}
           >
             {state.isPlaying ? (
@@ -845,7 +878,7 @@ export default function MediaPlayer({
           {/* Forward 10s */}
           <button
             onClick={wpSkipForward}
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 glass-apple-circle flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all shadow-2xl"
+            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
             title="Forward 10 seconds"
           >
             <svg
@@ -879,7 +912,7 @@ export default function MediaPlayer({
       <div
         data-controls
         className={`absolute bottom-0 left-0 right-0 p-3.5 sm:p-5 md:p-8 pt-12 md:pt-16 bg-gradient-to-t from-black/90 via-black/45 to-transparent z-40 transition-all duration-300 ${
-          state.showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+          controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -896,9 +929,9 @@ export default function MediaPlayer({
             </div>
 
             {/* Apple TV+ Control Pill [ ⏱ Speed | ıll Audio | 💬 Subtitles ] */}
-            <div className="glass-apple-pill px-2.5 py-1.5 sm:px-3 sm:py-1.5 flex items-center gap-2.5 sm:gap-4 shadow-lg relative shrink-0">
-              {/* Playback Speed */}
-              <div className="relative">
+            <div className="relative shrink-0">
+              <div className="glass-md !rounded-full p-1 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 shadow-lg">
+                {/* Playback Speed Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -907,38 +940,18 @@ export default function MediaPlayer({
                     setShowSubMenu(false);
                     setShowStreamMenu(false);
                   }}
-                  className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
-                    speed !== 1 ? "text-violet-300" : "text-white/80 hover:text-white"
+                  className={`h-7 px-2 flex items-center gap-1 rounded-full text-xs font-semibold transition-all ${
+                    speed !== 1 || showSpeedMenu
+                      ? "bg-white/20 text-violet-300 shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
                   title="Playback Speed"
                 >
                   <Gauge className="w-4 h-4" />
-                  <span className="text-[11px]">{speed}x</span>
+                  <span className="text-[11px] font-medium">{speed}x</span>
                 </button>
 
-                {showSpeedMenu && (
-                  <div className="absolute bottom-full right-0 mb-3 w-36 glass-apple-popup rounded-2xl p-1 shadow-2xl z-50">
-                    <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-white/40 border-b border-white/10">
-                      Speed
-                    </div>
-                    {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => handleSpeedSelect(s)}
-                        className={`w-full text-left px-2.5 py-1.5 text-xs font-medium rounded-xl flex items-center justify-between transition-colors ${
-                          speed === s ? "bg-white/20 text-white font-bold" : "text-white/70 hover:bg-white/10"
-                        }`}
-                      >
-                        <span>{s === 1 ? "1x (Normal)" : `${s}x`}</span>
-                        {speed === s && <Check className="w-3.5 h-3.5 text-white" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Audio Tracks */}
-              <div className="relative">
+                {/* Audio Tracks Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -947,27 +960,17 @@ export default function MediaPlayer({
                     setShowSpeedMenu(false);
                     setShowStreamMenu(false);
                   }}
-                  className="text-white/80 hover:text-white transition-colors p-0.5"
+                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${
+                    (state.activeAudioTrack !== null && state.activeAudioTrack > 0) || showAudioMenu
+                      ? "bg-white/20 text-violet-300 shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  }`}
                   title="Audio Options"
                 >
                   <AudioWaveform className="w-4 h-4" />
                 </button>
 
-                {showAudioMenu && (
-                  <AudioMenu
-                    tracks={state.audioTracks}
-                    activeIndex={state.activeAudioTrack}
-                    onSelect={(idx) => {
-                      handleAudioSwitch(idx);
-                      setShowAudioMenu(false);
-                    }}
-                    onClose={() => setShowAudioMenu(false)}
-                  />
-                )}
-              </div>
-
-              {/* Subtitles */}
-              <div className="relative">
+                {/* Subtitles Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -976,28 +979,63 @@ export default function MediaPlayer({
                     setShowSpeedMenu(false);
                     setShowStreamMenu(false);
                   }}
-                  className={`transition-colors p-0.5 ${
-                    state.activeSubtitle !== null ? "text-violet-300" : "text-white/80 hover:text-white"
+                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${
+                    state.activeSubtitle !== null || showSubMenu
+                      ? "bg-white/20 text-violet-300 shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
                   title="Subtitles"
                 >
                   <Subtitles className="w-4 h-4" />
                 </button>
-
-                {showSubMenu && (
-                  <SubtitleMenu
-                    tracks={state.subtitleTracks}
-                    activeIndex={state.activeSubtitle}
-                    state={state}
-                    mediaId={mediaId}
-                    onSubtitleDownloaded={fetchSubtitles}
-                    onSelect={setActiveSubtitle}
-                    onSizeSelect={setSubtitleSize}
-                    onColorSelect={setSubtitleColor}
-                    onClose={() => setShowSubMenu(false)}
-                  />
-                )}
               </div>
+
+              {/* Popovers rendered outside the glass-md pill, eliminating nested backdrop-filter clipping */}
+              {showSpeedMenu && (
+                <div className="absolute bottom-full right-0 mb-3 w-36 glass-md rounded-2xl p-1 shadow-2xl z-50">
+                  <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-white/40 border-b border-white/10">
+                    Speed
+                  </div>
+                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleSpeedSelect(s)}
+                      className={`w-full text-left px-2.5 py-1.5 text-xs font-medium rounded-xl flex items-center justify-between transition-colors ${
+                        speed === s ? "bg-white/20 text-white font-bold" : "text-white/70 hover:bg-white/10"
+                      }`}
+                    >
+                      <span>{s === 1 ? "1x (Normal)" : `${s}x`}</span>
+                      {speed === s && <Check className="w-3.5 h-3.5 text-white" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showAudioMenu && (
+                <AudioMenu
+                  tracks={state.audioTracks}
+                  activeIndex={state.activeAudioTrack}
+                  onSelect={(idx) => {
+                    handleAudioSwitch(idx);
+                    setShowAudioMenu(false);
+                  }}
+                  onClose={() => setShowAudioMenu(false)}
+                />
+              )}
+
+              {showSubMenu && (
+                <SubtitleMenu
+                  tracks={state.subtitleTracks}
+                  activeIndex={state.activeSubtitle}
+                  state={state}
+                  mediaId={mediaId}
+                  onSubtitleDownloaded={fetchSubtitles}
+                  onSelect={setActiveSubtitle}
+                  onSizeSelect={setSubtitleSize}
+                  onColorSelect={setSubtitleColor}
+                  onClose={() => setShowSubMenu(false)}
+                />
+              )}
             </div>
           </div>
 
@@ -1036,7 +1074,7 @@ export default function MediaPlayer({
 
               {isHoveringScrubber && state.duration > 0 && (
                 <div
-                  className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded-md glass-apple text-white text-[11px] font-mono shadow-xl pointer-events-none"
+                  className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded-md glass-md text-white text-[11px] font-mono shadow-xl pointer-events-none"
                   style={{ left: `${hoverX}px` }}
                 >
                   {formatTime(hoverTime)}
@@ -1050,10 +1088,10 @@ export default function MediaPlayer({
           </div>
 
           {/* Bottom Action Pills: [ Info ] [ Stream Mode ] [ Fullscreen ] */}
-          <div className="flex items-center gap-2 pt-1 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 pt-1">
             <button
               onClick={() => setShowStats(true)}
-              className="glass-apple-pill px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white transition-all flex items-center gap-1.5 shrink-0"
+              className="glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Info className="w-3.5 h-3.5" />
               Info
@@ -1068,7 +1106,7 @@ export default function MediaPlayer({
                   setShowSubMenu(false);
                   setShowSpeedMenu(false);
                 }}
-                className={`glass-apple-pill px-3 sm:px-4 py-1.5 text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                className={`glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold hover:bg-white/15 transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   streamMode === "direct" ? "text-emerald-300" : "text-violet-300"
                 }`}
               >
@@ -1095,7 +1133,7 @@ export default function MediaPlayer({
 
             <button
               onClick={toggleFullscreen}
-              className="glass-apple-pill px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white transition-all ml-auto flex items-center gap-1.5 shrink-0"
+              className="glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all ml-auto flex items-center gap-1.5 shrink-0"
               title={state.isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {state.isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}

@@ -12,7 +12,7 @@ export default function SyncOverlay({ visible, waitingMembers }: SyncOverlayProp
 
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-none animate-in fade-in duration-200">
-      <div className="glass-apple-popup p-6 rounded-3xl flex flex-col items-center gap-3.5 max-w-sm text-center shadow-2xl border border-white/20">
+      <div className="glass-md p-6 rounded-3xl flex flex-col items-center gap-3.5 max-w-sm text-center shadow-2xl border border-white/20">
         <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin shadow-lg" />
         <div>
           <span className="text-white text-sm font-bold tracking-tight block">
@@ -28,7 +28,7 @@ export default function SyncOverlay({ visible, waitingMembers }: SyncOverlayProp
             {waitingMembers.map((name, index) => (
               <span
                 key={`${name}-${index}`}
-                className="glass-apple-pill text-white/80 text-[11px] font-medium px-2.5 py-0.5"
+                className="glass-md rounded-full text-white/80 text-[11px] font-medium px-2.5 py-0.5"
               >
                 {name}
               </span>

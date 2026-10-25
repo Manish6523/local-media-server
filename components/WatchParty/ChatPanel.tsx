@@ -119,7 +119,7 @@ export default function ChatPanel({
 
   return (
     <aside
-      className="fixed inset-x-0 bottom-0 md:relative md:inset-auto w-full md:w-80 lg:w-96 h-[80vh] md:h-full max-h-[85vh] md:max-h-none shrink-0 z-50 glass-apple-popup md:border-l md:border-white/15 flex flex-col shadow-2xl rounded-t-3xl md:rounded-none animate-in slide-in-from-bottom-6 md:slide-in-from-right-8 duration-300 select-none overflow-hidden"
+      className="fixed inset-x-0 bottom-0 md:relative md:inset-auto w-full md:w-80 lg:w-96 h-[80vh] md:h-full max-h-[85vh] md:max-h-none shrink-0 z-50 glass-md md:border-l md:border-white/15 flex flex-col shadow-2xl rounded-t-3xl md:rounded-none animate-in slide-in-from-bottom-6 md:slide-in-from-right-8 duration-300 select-none overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Mobile drag handle */}
@@ -130,7 +130,7 @@ export default function ChatPanel({
       {/* ── HEADER ── */}
       <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-full glass-apple-circle flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-full glass-md flex items-center justify-center shrink-0">
             <Users className="w-4 h-4 text-violet-300" />
           </div>
           <div className="min-w-0">
@@ -151,7 +151,7 @@ export default function ChatPanel({
           {roomCode && (
             <button
               onClick={handleCopyCode}
-              className="glass-apple-pill px-2.5 py-1 text-[11px] font-mono font-bold text-white/80 hover:text-white flex items-center gap-1.5 transition-all"
+              className="glass-md rounded-full px-2.5 py-1 text-[11px] font-mono font-bold text-white/80 hover:text-white hover:bg-white/15 flex items-center gap-1.5 transition-all"
               title="Click to copy Room Code"
             >
               <span>{roomCode}</span>
@@ -167,7 +167,7 @@ export default function ChatPanel({
           {!isVoiceEnabled && onJoinVoice && (
             <button
               onClick={onJoinVoice}
-              className="glass-apple-pill px-2.5 py-1 text-emerald-300 hover:text-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              className="glass-md rounded-full px-2.5 py-1 text-emerald-300 hover:text-emerald-200 hover:bg-white/15 text-xs font-semibold flex items-center gap-1.5 transition-all"
               title="Join Voice Chat"
             >
               <Phone className="w-3.5 h-3.5" />
@@ -178,7 +178,7 @@ export default function ChatPanel({
           {/* Close Panel Button */}
           <button
             onClick={onClose}
-            className="w-8 h-8 glass-apple-circle flex items-center justify-center text-white/70 hover:text-white transition-all"
+            className="w-8 h-8 rounded-full glass-md flex items-center justify-center text-white/70 hover:text-white hover:bg-white/15 transition-all"
             title="Close Watch Party"
           >
             <X className="w-4 h-4" />
@@ -211,7 +211,7 @@ export default function ChatPanel({
             <div className="flex items-center gap-2">
               <button
                 onClick={onToggleMute}
-                className={`glass-apple-pill px-3 py-1 text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`glass-md rounded-full px-3 py-1 text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   isMuted ? "bg-red-500/20 text-red-300 border-red-500/40" : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                 }`}
                 title={isMuted ? "Unmute Mic" : "Mute Mic"}
@@ -222,7 +222,7 @@ export default function ChatPanel({
 
               <button
                 onClick={onLeaveVoice}
-                className="glass-apple-pill px-2.5 py-1 text-xs text-red-400 hover:text-red-300 transition-all flex items-center gap-1"
+                className="glass-md rounded-full px-2.5 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-white/15 transition-all flex items-center gap-1"
                 title="Leave Voice Chat"
               >
                 <PhoneOff className="w-3.5 h-3.5" />
@@ -296,7 +296,7 @@ export default function ChatPanel({
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
-            <div className="w-12 h-12 rounded-full glass-apple flex items-center justify-center mb-1">
+            <div className="w-12 h-12 rounded-full glass-md flex items-center justify-center mb-1">
               <Sparkles className="w-6 h-6 text-violet-300" />
             </div>
             <p className="text-white font-semibold text-sm">Room is ready!</p>
@@ -309,7 +309,7 @@ export default function ChatPanel({
             if (msg.isSystem) {
               return (
                 <div key={msg.id} className="flex justify-center my-2">
-                  <span className="glass-apple-pill px-3 py-0.5 text-[10px] font-medium text-white/60 tracking-wider">
+                  <span className="glass-md rounded-full px-3 py-0.5 text-[10px] font-medium text-white/60 tracking-wider">
                     {msg.text}
                   </span>
                 </div>
@@ -332,7 +332,7 @@ export default function ChatPanel({
                   className={`max-w-[85%] px-3.5 py-2 text-sm leading-relaxed break-words shadow-lg ${
                     isMine
                       ? "bg-gradient-to-br from-violet-600/90 to-purple-600/90 text-white rounded-2xl rounded-br-sm"
-                      : "glass-apple text-white/95 rounded-2xl rounded-bl-sm border border-white/15"
+                      : "glass-md text-white/95 rounded-2xl rounded-bl-sm border border-white/15"
                   }`}
                 >
                   {msg.text}
@@ -363,7 +363,7 @@ export default function ChatPanel({
 
       {/* ── INPUT BAR ── */}
       <div className="p-3 bg-white/[0.03]">
-        <div className="glass-apple-pill px-3 py-1 flex items-center gap-2 border border-white/15 focus-within:border-violet-400/60 transition-all">
+        <div className="glass-md rounded-full px-3 py-1 flex items-center gap-2 border border-white/15 focus-within:border-violet-400/60 transition-all">
           <input
             type="text"
             value={text}

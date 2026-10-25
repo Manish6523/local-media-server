@@ -109,7 +109,7 @@ export default function SubtitleMenu({
 
   return (
     <div
-      className="absolute bottom-full right-0 mb-3 glass-apple-popup rounded-3xl min-w-[280px] md:min-w-[320px] max-w-[calc(100vw-2rem)] sm:max-w-[360px] max-h-[75vh] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 duration-150 flex flex-col overflow-hidden"
+      className="absolute bottom-full right-0 mb-3 glass-md rounded-3xl min-w-[280px] md:min-w-[320px] max-w-[calc(100vw-2rem)] sm:max-w-[360px] max-h-[75vh] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 origin-bottom-right duration-150 flex flex-col overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {view === "menu" ? (
@@ -272,7 +272,7 @@ export default function SubtitleMenu({
                   setView("search");
                   if (searchResults.length === 0) handleSearch();
                 }}
-                className="w-full py-2 px-3 rounded-2xl glass-apple-pill flex items-center justify-center gap-2 text-xs font-semibold text-white/90 hover:text-white transition-all shadow-sm"
+                className="w-full py-2 px-3 rounded-2xl glass-md hover:bg-white/15 flex items-center justify-center gap-2 text-xs font-semibold text-white/90 hover:text-white transition-all shadow-sm"
               >
                 <Search className="w-3.5 h-3.5" />
                 Search Online Subtitles

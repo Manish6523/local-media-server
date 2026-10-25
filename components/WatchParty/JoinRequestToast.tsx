@@ -60,7 +60,7 @@ function SingleToast({
     <div
       className={`
         relative overflow-hidden
-        glass-apple-popup border border-white/20
+        glass-md border border-white/20
         rounded-2xl shadow-2xl shadow-black/70
         transition-all duration-300 ease-out
         ${visible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}
@@ -71,7 +71,7 @@ function SingleToast({
       <div className="p-4">
         <div className="flex items-start gap-3">
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full glass-apple-circle flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-9 h-9 rounded-full glass-md flex items-center justify-center shrink-0 mt-0.5">
             <UserPlus className="w-4 h-4 text-violet-300" />
           </div>
 
@@ -87,14 +87,14 @@ function SingleToast({
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => onApprove(request.requestId)}
-                className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold py-1.5 px-3 rounded-xl transition-all shadow-md active:scale-95"
+                className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold py-1.5 px-3 !rounded-full transition-all shadow-md active:scale-95"
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                 Approve
               </button>
               <button
                 onClick={() => onDecline(request.requestId)}
-                className="flex-1 flex items-center justify-center gap-1.5 glass-apple hover:bg-white/15 text-white/70 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-xl transition-all active:scale-95"
+                className="flex-1 flex items-center justify-center gap-1.5 glass-md hover:bg-white/15 text-white/70 hover:text-white text-xs font-semibold py-1.5 px-3 !rounded-full transition-all active:scale-95"
               >
                 <X className="w-3.5 h-3.5" />
                 Decline

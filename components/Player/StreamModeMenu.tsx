@@ -16,7 +16,7 @@ export default function StreamModeMenu({
 }: StreamModeMenuProps) {
   return (
     <div
-      className="absolute bottom-full left-0 mb-3 glass-apple-popup rounded-3xl min-w-[260px] sm:min-w-[300px] max-w-[calc(100vw-2rem)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 duration-150"
+      className="absolute bottom-full left-0 mb-3 glass-md rounded-3xl min-w-[260px] sm:min-w-[300px] max-w-[calc(100vw-2rem)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 origin-bottom-left duration-150"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50 border-b border-white/10 mb-2 flex items-center justify-between">

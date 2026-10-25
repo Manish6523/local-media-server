@@ -16,7 +16,7 @@
     "serve": "npm run build && npm run start",
     "lint": "eslint",
     "electron:deps": "electron-builder install-app-deps",
-    "electron:dev": "npm rebuild better-sqlite3 && tsc -p tsconfig.electron.json && concurrently --kill-others \"npm run dev\" \"wait-on http://localhost:2886 && electron .\"",
+    "electron:dev": "npm rebuild better-sqlite3 && tsc -p tsconfig.electron.json && concurrently --kill-others \"npm start\" \"wait-on http://localhost:2886 && electron .\"",
     "electron:build": "npm run build:fresh && tsc -p tsconfig.electron.json && electron-builder",
     "electron:build:linux": "npm run electron:build -- --linux",
     "electron:build:win": "npm run electron:build -- --win",

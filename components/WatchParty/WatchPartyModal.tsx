@@ -220,7 +220,7 @@ export default function WatchPartyModal({
       onClick={(e) => { e.stopPropagation(); onClose(); }}
     >
       <div
-        className="glass-heavy w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden max-h-[90vh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 shadow-[0_-10px_60px_rgba(0,0,0,0.5)]"
+        className="glass-md w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden max-h-[90vh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 shadow-[0_-10px_60px_rgba(0,0,0,0.5)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
