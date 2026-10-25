@@ -72,11 +72,9 @@ export function usePlayer(
     subtitleColor: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_color")) as any || "white",
   });
 
-  const [transcodeStartTime, setTranscodeStartTime] = useState(initialWatchProgress > 0 && baseNeedsTranscode ? initialWatchProgress : 0);
+  const [transcodeStartTime, setTranscodeStartTime] = useState(0);
   const [showResumeToast, setShowResumeToast] = useState(initialWatchProgress > 0);
-  const [streamMode, setStreamMode] = useState<StreamMode>(
-    baseNeedsTranscode ? "hls" : "direct"
-  );
+  const [streamMode, setStreamMode] = useState<StreamMode>("direct");
   const [streamToast, setStreamToast] = useState<string | null>(null);
   const streamToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -87,7 +85,7 @@ export function usePlayer(
   }, []);
 
   const pendingDirectSeekTimeRef = useRef<number | null>(
-    initialWatchProgress > 0 && !baseNeedsTranscode ? initialWatchProgress : null
+    initialWatchProgress > 0 ? initialWatchProgress : null
   );
 
   // Resume toast auto-hide
@@ -216,8 +214,10 @@ export function usePlayer(
 
     fetch(`/api/audio-tracks?id=${mediaId}`)
       .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setState((s) => ({ ...s, audioTracks: data }));
+      .then((data: AudioTrack[]) => {
+        if (Array.isArray(data)) {
+          setState((s) => ({ ...s, audioTracks: data }));
+        }
       })
       .catch(console.error);
   }, [mediaId]);
@@ -535,17 +535,23 @@ export function usePlayer(
         isBuffering: true,
         bufferedEnd: currentPos,
       }));
-      showStreamToastMessage("Switched to HLS transcode");
+      showStreamToastMessage("Switched to Direct Stream (Audio Transcode)");
     } else {
       setTranscodeStartTime(0);
       pendingDirectSeekTimeRef.current = currentPos;
       wasPlayingBeforeSeekRef.current = wasPlaying;
+
+      const activeTrack = state.audioTracks.find((t) => t.index === state.activeAudioTrack) || state.audioTracks[0];
+      const codec = activeTrack?.codec?.toLowerCase();
+      const INCOMPATIBLE_BROWSER_AUDIO = ['eac3', 'ac3', 'dts', 'dts-hd', 'truehd'];
+      const hasDolby = codec && INCOMPATIBLE_BROWSER_AUDIO.includes(codec);
+
       if (state.activeAudioTrack > 0) {
         setState((s) => ({ ...s, activeAudioTrack: 0, currentTime: currentPos, isBuffering: true }));
-        showStreamToastMessage("Switched to direct stream (primary audio)");
+        showStreamToastMessage(hasDolby ? `Direct Play (Warning: ${codec.toUpperCase()} may not play sound in browser)` : "Switched to Direct Play");
       } else {
         setState((s) => ({ ...s, currentTime: currentPos, isBuffering: true }));
-        showStreamToastMessage("Switched to direct stream");
+        showStreamToastMessage(hasDolby ? `Direct Play (Warning: ${codec.toUpperCase()} may not play sound in browser)` : "Switched to Direct Play");
       }
       setStreamMode("direct");
     }

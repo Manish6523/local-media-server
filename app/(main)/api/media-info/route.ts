@@ -66,28 +66,25 @@ async function probeFile(filepath: string): Promise<MediaInfo> {
         const remuxableCodecs = ["h264", "avc"];
         const hevcCodecs = ["hevc", "h265"];
         const nativeContainers = ["mp4", "m4v", "mov", "webm"];
+        const browserAudioCodecs = ["aac", "mp3", "opus", "vorbis", "flac"];
 
         const isNativeCodec = nativeCodecs.includes(videoCodec);
         const isHevc = hevcCodecs.includes(videoCodec);
         const isRemuxable = remuxableCodecs.includes(videoCodec);
         const isNativeContainer = nativeContainers.includes(ext);
+        const isBrowserAudio = browserAudioCodecs.includes(audioCodec);
 
         let streamingTier: "direct" | "remux" | "transcode";
 
-        if (isNativeCodec && isNativeContainer) {
-          // MP4 H.264, WebM VP9 — best case
+        if (isNativeCodec && isNativeContainer && isBrowserAudio) {
+          // Direct Play: Video and audio are natively supported by browsers without server transcoding
           streamingTier = "direct";
-        } else if (isHevc) {
-          // HEVC — try direct first, Chrome supports it on most Linux
-          streamingTier = "direct";
-        } else if (isNativeCodec && !isNativeContainer) {
-          // H.264 in MKV/AVI — just repackage the container
-          streamingTier = "remux";
-        } else if (isRemuxable) {
-          // Fallback remux for anything H.264
+        } else if (isRemuxable || isNativeCodec) {
+          // Direct Stream: Video is copied as-is (-c:v copy) — 0% CPU usage, original video quality, instant seeking.
+          // Audio is transcoded to stereo AAC.
           streamingTier = "remux";
         } else {
-          // Old codec (MPEG4, XviD, WMV, etc) — must transcode
+          // Old/incompatible codec (MPEG4, XviD, WMV, etc) — must transcode
           streamingTier = "transcode";
         }
 

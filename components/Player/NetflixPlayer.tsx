@@ -63,7 +63,8 @@ export default function NetflixPlayer({
 
   const NATIVE_FORMATS = ["mp4", "m4v", "mov", "webm"];
   const ext = filename.split(".").pop()?.toLowerCase() || "";
-  const baseNeedsTranscode = !NATIVE_FORMATS.includes(ext);
+  // Auto-select Direct Play by default for the player
+  const baseNeedsTranscode = false;
 
   console.log('[Player] File:', filename);
   console.log('[Player] Extension:', ext);
@@ -688,7 +689,7 @@ export default function NetflixPlayer({
                     ? "text-emerald-400 bg-emerald-500/15"
                     : "text-violet-400 bg-violet-500/15"
                 }`}
-                title={`Stream Mode: ${streamMode === "direct" ? "Direct Play" : "HLS Transcode"}`}
+                title={`Stream Mode: ${streamMode === "direct" ? "Direct Play" : "Direct Stream (HLS)"}`}
               >
                 <Zap className="w-4 h-4 fill-current" />
               </button>
@@ -848,7 +849,7 @@ export default function NetflixPlayer({
                     ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/30"
                     : "text-violet-400 bg-violet-500/15 border-violet-500/30"
                 }`}
-                title={`Stream Mode: ${streamMode === "direct" ? "Direct Play" : "HLS Transcode"}`}
+                title={`Stream Mode: ${streamMode === "direct" ? "Direct Play" : "Direct Stream (HLS)"}`}
               >
                 <Zap className="w-5 h-5 fill-current" />
               </button>

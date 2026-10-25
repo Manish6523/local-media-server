@@ -30,8 +30,15 @@ const pixelFormatCache = new Map<string, boolean>();
 // Cache audio codec results per filepath+track to avoid re-probing
 const audioCodecCache = new Map<string, string>();
 
-function detect10bit(filepath: string): boolean {
-  const cached = pixelFormatCache.get(filepath);
+interface VideoStreamInfo {
+  codec: string;
+  is10bit: boolean;
+}
+
+const videoStreamCache = new Map<string, VideoStreamInfo>();
+
+function detectVideoInfo(filepath: string): VideoStreamInfo {
+  const cached = videoStreamCache.get(filepath);
   if (cached !== undefined) return cached;
 
   try {
@@ -41,16 +48,23 @@ function detect10bit(filepath: string): boolean {
     );
     const streams = JSON.parse(probeResult).streams;
     const videoStream = streams?.find((s: any) => s.codec_type === 'video');
+    const codec = (videoStream?.codec_name || 'unknown').toLowerCase();
     const is10bit = videoStream?.pix_fmt?.includes('10le') ||
                     videoStream?.pix_fmt?.includes('10be') ||
                     videoStream?.profile?.toLowerCase()?.includes('10') || false;
-    pixelFormatCache.set(filepath, is10bit);
-    return is10bit;
+    const info: VideoStreamInfo = { codec, is10bit };
+    videoStreamCache.set(filepath, info);
+    return info;
   } catch (err) {
-    console.error('[HLS] ffprobe failed, assuming 8-bit:', err);
-    pixelFormatCache.set(filepath, false);
-    return false;
+    console.error('[HLS] ffprobe video detection failed:', err);
+    const fallback: VideoStreamInfo = { codec: 'unknown', is10bit: false };
+    videoStreamCache.set(filepath, fallback);
+    return fallback;
   }
+}
+
+function detect10bit(filepath: string): boolean {
+  return detectVideoInfo(filepath).is10bit;
 }
 
 function detectAudioCodec(filepath: string, trackNum: number): string {
@@ -82,60 +96,60 @@ function buildHlsArgs(
   filepath: string,
   startSec: number,
   trackNum: number,
-  is10bit: boolean,
+  videoInfo: VideoStreamInfo,
   audioCodec: string,
   outDir: string,
   playlistPath: string,
 ): string[] {
   const args: string[] = ["-hide_banner"];
 
-  // ── Hardware acceleration (decode) ──────────────────────────────
-  // For VAAPI: use full hardware decode for BOTH 8-bit and 10-bit.
-  // AMD Vega 10 supports HEVC Main10 hardware decode.
-  // The 10→8-bit conversion happens on GPU via scale_vaapi=format=nv12.
-  if (gpu.type === "vaapi" && gpu.device) {
-    args.push("-hwaccel", "vaapi", "-hwaccel_device", gpu.device, "-hwaccel_output_format", "vaapi");
-  } else if (gpu.type === "nvenc") {
-    args.push("-hwaccel", "cuda", "-hwaccel_output_format", "cuda");
-  } else if (gpu.type === "qsv") {
-    args.push("-hwaccel", "qsv", "-hwaccel_output_format", "qsv");
+  // Video is copied as-is (-c:v copy) — 0% CPU usage, original video quality, instant seeking.
+  const canCopyVideo = (videoInfo.codec === "h264" || videoInfo.codec === "avc") && !videoInfo.is10bit;
+
+  // ── Hardware acceleration (only when re-encoding video) ─────────
+  if (!canCopyVideo) {
+    if (gpu.type === "vaapi" && gpu.device) {
+      args.push("-hwaccel", "vaapi", "-hwaccel_device", gpu.device, "-hwaccel_output_format", "vaapi");
+    } else if (gpu.type === "nvenc") {
+      args.push("-hwaccel", "cuda", "-hwaccel_output_format", "cuda");
+    } else if (gpu.type === "qsv") {
+      args.push("-hwaccel", "qsv", "-hwaccel_output_format", "qsv");
+    }
   }
 
   // ── Input + seek ────────────────────────────────────────────────
   args.push("-ss", startSec.toString(), "-i", filepath);
   args.push("-map", "0:V:0", "-map", `0:a:${trackNum}`);
 
-  // ── Video filter (GPU-side) ─────────────────────────────────────
-  if (gpu.type === "vaapi") {
-    if (is10bit) {
-      // 10-bit→8-bit conversion entirely on GPU: scale_vaapi converts
-      // P010/P010LE (10-bit) to NV12 (8-bit) in VAAPI surface memory.
-      // w=-2:h=-2 preserves original resolution with even-number alignment.
-      args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
-    } else {
-      args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
-    }
-  } else if (is10bit && (gpu.type === "cpu" || gpu.type === "amf")) {
-    // CPU fallback or AMF: software scale for 10-bit
-    args.push("-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2");
-  }
-
-  // ── Encoder + quality ───────────────────────────────────────────
-  args.push("-c:v", gpu.encoder);
-  if (gpu.type === "nvenc") {
-    args.push("-preset", "p4", "-rc", "vbr", "-cq", "26");
-  } else if (gpu.type === "vaapi") {
-    args.push("-qp", "26", "-profile:v", "main", "-level:v", "4.1");
-  } else if (gpu.type === "qsv") {
-    args.push("-preset", "medium", "-global_quality", "26");
-  } else if (gpu.type === "amf") {
-    args.push("-rc", "cqp", "-qp_i", "26", "-qp_p", "26");
+  if (canCopyVideo) {
+    // Video is copied as-is (-c:v copy) — 0% CPU usage, original video quality, instant seeking.
+    args.push("-c:v", "copy");
   } else {
-    args.push("-preset", "ultrafast", "-crf", "26");
-  }
+    // ── Video filter (GPU-side) ─────────────────────────────────────
+    if (gpu.type === "vaapi") {
+      args.push("-vf", "scale_vaapi=w=-2:h=-2:format=nv12");
+    } else if (videoInfo.is10bit && (gpu.type === "cpu" || gpu.type === "amf")) {
+      // CPU fallback or AMF: software scale for 10-bit
+      args.push("-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2");
+    }
 
-  // Ensure keyframes every 3 seconds for HLS seeking (required by Firefox)
-  args.push("-force_key_frames", "expr:gte(t,n_forced*3)");
+    // ── Encoder + quality ───────────────────────────────────────────
+    args.push("-c:v", gpu.encoder);
+    if (gpu.type === "nvenc") {
+      args.push("-preset", "p4", "-rc", "vbr", "-cq", "26");
+    } else if (gpu.type === "vaapi") {
+      args.push("-qp", "26", "-profile:v", "main", "-level:v", "4.1");
+    } else if (gpu.type === "qsv") {
+      args.push("-preset", "medium", "-global_quality", "26");
+    } else if (gpu.type === "amf") {
+      args.push("-rc", "cqp", "-qp_i", "26", "-qp_p", "26");
+    } else {
+      args.push("-preset", "ultrafast", "-crf", "26");
+    }
+
+    // Ensure keyframes every 3 seconds for HLS seeking (required by Firefox)
+    args.push("-force_key_frames", "expr:gte(t,n_forced*3)");
+  }
 
   // ── Audio handling ──────────────────────────────────────────────
   // EAC3 (Dolby Digital Plus), AC3, DTS → need resampling + stereo downmix
@@ -147,7 +161,7 @@ function buildHlsArgs(
 
   // ── Audio codec + HLS output ────────────────────────────────────
   args.push(
-    "-c:a", "aac", "-b:a", "128k",
+    "-c:a", "aac", "-b:a", "192k",
   );
   if (needsAudioFix) {
     args.push("-strict", "experimental");
@@ -223,13 +237,14 @@ export async function GET(
       // The existing lastAccessed idle cleanup retires unused encoders.
 
       if (!active && !fs.existsSync(requestedFilePath)) {
-        const is10bit = detect10bit(media.filepath);
+        const videoInfo = detectVideoInfo(media.filepath);
         const audioCodec = detectAudioCodec(media.filepath, trackNum);
         const gpu = getDetectedGPU();
-        console.log(`[HLS] Spawning ${gpu.label}${is10bit ? ' (10-bit)' : ''}${audioCodec !== 'aac' ? ` (audio: ${audioCodec})` : ''} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
+        const canCopyVideo = (videoInfo.codec === "h264" || videoInfo.codec === "avc") && !videoInfo.is10bit;
+        console.log(`[HLS] Spawning ${canCopyVideo ? 'Direct Stream (-c:v copy passthrough)' : gpu.label}${videoInfo.is10bit ? ' (10-bit)' : ''}${audioCodec !== 'aac' ? ` (audio: ${audioCodec})` : ''} segmenter for ${streamKey} — ${path.basename(media.filepath)}`);
         
-        // Build FFmpeg args dynamically based on detected GPU
-        const ffmpegArgs = buildHlsArgs(gpu, media.filepath, startSec, trackNum, is10bit, audioCodec, outDir, requestedFilePath);
+        // Build FFmpeg args dynamically based on detected GPU and video capability
+        const ffmpegArgs = buildHlsArgs(gpu, media.filepath, startSec, trackNum, videoInfo, audioCodec, outDir, requestedFilePath);
         console.log(`[HLS] Full command: ffmpeg ${ffmpegArgs.join(" ")}`);
 
         const ffmpeg = spawn(FFMPEG, ffmpegArgs, { stdio: ["ignore", "pipe", "pipe"] });

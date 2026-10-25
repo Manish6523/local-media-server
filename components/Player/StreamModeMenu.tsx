@@ -47,18 +47,18 @@ export default function StreamModeMenu({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">Direct Stream</span>
+            <span className="text-sm font-semibold">Direct Play</span>
             {currentMode === "direct" && (
               <Check className="w-3.5 h-3.5 text-emerald-400" />
             )}
           </div>
           <p className="text-[11px] text-white/50 leading-tight mt-0.5">
-            Original file. 0% server transcode, fastest load.
+            Raw file. 0% processing (Ideal for Smart TVs; desktop browsers lack Dolby E-AC-3 audio).
           </p>
         </div>
       </button>
 
-      {/* HLS Transcode Option */}
+      {/* Direct Stream (Audio Transcode) Option */}
       <button
         onClick={() => {
           onSelect("hls");
@@ -81,13 +81,13 @@ export default function StreamModeMenu({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">HLS Transcode</span>
+            <span className="text-sm font-semibold">Direct Stream (HLS)</span>
             {currentMode === "hls" && (
               <Check className="w-3.5 h-3.5 text-violet-400" />
             )}
           </div>
-          <p className="text-[11px] text-white/50 leading-tight mt-0.5">
-            Server FFmpeg transcode. Maximum compatibility.
+          <p className="text-[11px] text-violet-200/70 leading-tight mt-0.5">
+            Video is copied as-is (-c:v copy) — 0% CPU usage, original video quality, instant seeking.
           </p>
         </div>
       </button>
