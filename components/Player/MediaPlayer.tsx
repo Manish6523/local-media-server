@@ -375,7 +375,7 @@ export default function MediaPlayer({
         case "Escape":
           e.preventDefault();
           if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {});
+            document.exitFullscreen().catch(() => { });
           } else {
             router.back();
           }
@@ -560,8 +560,7 @@ export default function MediaPlayer({
   const handleVolumeSeek = useCallback(
     (clientX: number) => {
       if (!volumeBarRef.current) return;
-      const innerTrack = (volumeBarRef.current.firstElementChild as HTMLElement) || volumeBarRef.current;
-      const rect = innerTrack.getBoundingClientRect();
+      const rect = volumeBarRef.current.getBoundingClientRect();
       if (rect.width <= 0) return;
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
       const newVol = Math.max(0, Math.min(1, x / rect.width));
@@ -622,11 +621,10 @@ export default function MediaPlayer({
 
   const eyebrowLabel =
     type === "show" && season
-      ? `S${String(season).padStart(2, "0")} • ${
-          episodeStart === episodeEnd
-            ? `E${String(episodeStart).padStart(2, "0")}`
-            : `E${String(episodeStart).padStart(2, "0")}–E${String(episodeEnd).padStart(2, "0")}`
-        }`
+      ? `S${String(season).padStart(2, "0")} • ${episodeStart === episodeEnd
+        ? `E${String(episodeStart).padStart(2, "0")}`
+        : `E${String(episodeStart).padStart(2, "0")}–E${String(episodeEnd).padStart(2, "0")}`
+      }`
       : "Now Playing";
 
   return (
@@ -704,25 +702,22 @@ export default function MediaPlayer({
       {/* Custom subtitle rendering */}
       {state.currentCueText && (
         <div
-          className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 z-20 ${
-            state.subtitleSize === "small"
-              ? "bottom-12 md:bottom-12"
-              : state.subtitleSize === "large"
-                ? "bottom-32 md:bottom-28"
-                : "bottom-28 md:bottom-24"
-          }`}
+          className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 z-20 ${state.subtitleSize === "small"
+            ? "bottom-12 md:bottom-12"
+            : state.subtitleSize === "large"
+              ? "bottom-32 md:bottom-28"
+              : "bottom-28 md:bottom-24"
+            }`}
         >
           <div className="bg-black/75 px-5 py-2 rounded-xl backdrop-blur-sm text-center max-w-[80%] shadow-lg border border-white/5">
             <span
-              className={`font-medium leading-relaxed drop-shadow-md ${
-                state.subtitleSize === "small"
-                  ? "text-[0.85rem] md:text-[1rem]"
-                  : state.subtitleSize === "large"
-                    ? "text-[1.4rem] md:text-[2rem]"
-                    : "text-[1.1rem] md:text-[1.4rem]"
-              } ${
-                state.subtitleColor === "yellow" ? "text-[#f3f315]" : "text-white"
-              }`}
+              className={`font-medium leading-relaxed drop-shadow-md ${state.subtitleSize === "small"
+                ? "text-[0.85rem] md:text-[1rem]"
+                : state.subtitleSize === "large"
+                  ? "text-[1.4rem] md:text-[2rem]"
+                  : "text-[1.1rem] md:text-[1.4rem]"
+                } ${state.subtitleColor === "yellow" ? "text-[#f3f315]" : "text-white"
+                }`}
               dangerouslySetInnerHTML={{ __html: state.currentCueText }}
             />
           </div>
@@ -870,9 +865,8 @@ export default function MediaPlayer({
       {/* ── DEAD-CENTER PLAYBACK CONTROLS (Apple TV+ Cluster) ── */}
       <div
         data-controls
-        className={`absolute inset-0 flex items-center justify-center pointer-events-none z-30 transition-all duration-300 ${
-          controlsVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-        }`}
+        className={`absolute inset-0 flex items-center justify-center pointer-events-none z-30 transition-all duration-300 ${controlsVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          }`}
       >
         <div className="flex items-center gap-4 sm:gap-6 md:gap-10 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
           {/* Rewind 10s */}
@@ -909,7 +903,7 @@ export default function MediaPlayer({
           {/* Center Play / Pause */}
           <button
             onClick={wpTogglePlay}
-            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-heavy !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
             title={state.isPlaying ? "Pause (Space)" : "Play (Space)"}
           >
             {state.isPlaying ? (
@@ -955,9 +949,8 @@ export default function MediaPlayer({
       {/* ── BOTTOM AREA ── */}
       <div
         data-controls
-        className={`absolute bottom-0 left-0 right-0 p-3.5 sm:p-5 md:p-8 pt-12 md:pt-16 bg-gradient-to-t from-black/90 via-black/45 to-transparent z-40 transition-all duration-300 ${
-          controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
-        }`}
+        className={`absolute bottom-0 left-0 right-0 p-3.5 sm:p-5 md:p-8 pt-12 md:pt-16 bg-gradient-to-t from-black/90 via-black/45 to-transparent z-40 transition-all duration-300 ${controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="max-w-7xl mx-auto space-y-2.5 sm:space-y-3">
@@ -984,11 +977,10 @@ export default function MediaPlayer({
                     setShowSubMenu(false);
                     setShowStreamMenu(false);
                   }}
-                  className={`h-7 px-2 flex items-center gap-1 rounded-full text-xs font-semibold transition-all ${
-                    speed !== 1 || showSpeedMenu
-                      ? "bg-white/20 text-violet-300 shadow-sm"
-                      : "text-white/80 hover:text-white hover:bg-white/10"
-                  }`}
+                  className={`h-7 px-2 flex items-center gap-1 rounded-full text-xs font-semibold transition-all ${speed !== 1 || showSpeedMenu
+                    ? "bg-white/20 text-violet-300 shadow-sm"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                    }`}
                   title="Playback Speed"
                 >
                   <Gauge className="w-4 h-4" />
@@ -1004,11 +996,10 @@ export default function MediaPlayer({
                     setShowSpeedMenu(false);
                     setShowStreamMenu(false);
                   }}
-                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${
-                    (state.activeAudioTrack !== null && state.activeAudioTrack > 0) || showAudioMenu
-                      ? "bg-white/20 text-violet-300 shadow-sm"
-                      : "text-white/80 hover:text-white hover:bg-white/10"
-                  }`}
+                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${(state.activeAudioTrack !== null && state.activeAudioTrack > 0) || showAudioMenu
+                    ? "bg-white/20 text-violet-300 shadow-sm"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                    }`}
                   title="Audio Options"
                 >
                   <AudioWaveform className="w-4 h-4" />
@@ -1023,11 +1014,10 @@ export default function MediaPlayer({
                     setShowSpeedMenu(false);
                     setShowStreamMenu(false);
                   }}
-                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${
-                    state.activeSubtitle !== null || showSubMenu
-                      ? "bg-white/20 text-violet-300 shadow-sm"
-                      : "text-white/80 hover:text-white hover:bg-white/10"
-                  }`}
+                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${state.activeSubtitle !== null || showSubMenu
+                    ? "bg-white/20 text-violet-300 shadow-sm"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                    }`}
                   title="Subtitles"
                 >
                   <Subtitles className="w-4 h-4" />
@@ -1044,9 +1034,8 @@ export default function MediaPlayer({
                     <button
                       key={s}
                       onClick={() => handleSpeedSelect(s)}
-                      className={`w-full text-left px-2.5 py-1.5 text-xs font-medium rounded-xl flex items-center justify-between transition-colors ${
-                        speed === s ? "bg-white/20 text-white font-bold" : "text-white/70 hover:bg-white/10"
-                      }`}
+                      className={`w-full text-left px-2.5 py-1.5 text-xs font-medium rounded-xl flex items-center justify-between transition-colors ${speed === s ? "bg-white/20 text-white font-bold" : "text-white/70 hover:bg-white/10"
+                        }`}
                     >
                       <span>{s === 1 ? "1x (Normal)" : `${s}x`}</span>
                       {speed === s && <Check className="w-3.5 h-3.5 text-white" />}
@@ -1110,9 +1099,8 @@ export default function MediaPlayer({
               </div>
 
               <div
-                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md pointer-events-none transition-transform duration-100 ${
-                  isHoveringScrubber || isDraggingScrubber ? "scale-100" : "scale-0"
-                }`}
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md pointer-events-none transition-transform duration-100 ${isHoveringScrubber || isDraggingScrubber ? "scale-100" : "scale-0"
+                  }`}
                 style={{ left: `${Math.min(100, Math.max(0, progressPercent))}%` }}
               />
 
@@ -1150,9 +1138,8 @@ export default function MediaPlayer({
                   setShowSubMenu(false);
                   setShowSpeedMenu(false);
                 }}
-                className={`glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold hover:bg-white/15 transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                  streamMode === "direct" ? "text-emerald-300" : "text-violet-300"
-                }`}
+                className={`glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold hover:bg-white/15 transition-all flex items-center gap-1.5 whitespace-nowrap ${streamMode === "direct" ? "text-emerald-300" : "text-violet-300"
+                  }`}
               >
                 <Zap className="w-3.5 h-3.5 fill-current" />
                 <span className="hidden sm:inline">
