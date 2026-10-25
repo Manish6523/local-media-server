@@ -19,7 +19,7 @@ export default function ContinueWatchingList({ items }: { items: MediaEntry[] })
       <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-6 pt-2 px-1">
         {items.slice(0, 6).map((item) => (
           <div key={item.id} className="w-[280px] md:w-[340px] lg:w-[400px] shrink-0">
-            <PosterCard media={item} variant="landscape" />
+            <PosterCard media={item} variant="landscape" useEpisodeThumbnail />
           </div>
         ))}
       </div>

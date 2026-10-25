@@ -79,9 +79,18 @@ interface PosterCardProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: number) => void;
+  useEpisodeThumbnail?: boolean;
 }
 
-export default function PosterCard({ media, showEpisodeInfo = false, variant = "poster", selectionMode = false, isSelected = false, onToggleSelect }: PosterCardProps) {
+export default function PosterCard({
+  media,
+  showEpisodeInfo = false,
+  variant = "poster",
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+  useEpisodeThumbnail = false,
+}: PosterCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showWatchParty, setShowWatchParty] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -118,7 +127,7 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           href={isUnavailable ? "#" : href}
           className="relative block aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02] backdrop-blur-md hover:border-violet-500/20 transition-all duration-300 shadow-lg shadow-black/20"
         >
-          {media.type === "show" ? (
+          {useEpisodeThumbnail && media.type === "show" ? (
             <EpisodeThumbnail
               mediaAssetId={media.id}
               fallbackSrc={media.backdrop || media.poster || "/placeholder.jpg"}
