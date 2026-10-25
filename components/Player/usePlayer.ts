@@ -474,10 +474,11 @@ export function usePlayer(
     const c = containerRef.current;
     if (!c) return;
     if (document.fullscreenElement) {
-      document.exitFullscreen();
+      document.exitFullscreen().catch(() => {});
       setState((s) => ({ ...s, isFullscreen: false }));
     } else {
-      c.requestFullscreen();
+      const root = (c.closest("[data-fullscreen-root]") as HTMLElement) || c;
+      root.requestFullscreen().catch(() => {});
       setState((s) => ({ ...s, isFullscreen: true }));
     }
   }, []);

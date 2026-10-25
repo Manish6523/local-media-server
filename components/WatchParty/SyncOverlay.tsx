@@ -1,7 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-
 interface SyncOverlayProps {
   visible: boolean;
   waitingMembers?: string[];
@@ -13,18 +11,24 @@ export default function SyncOverlay({ visible, waitingMembers }: SyncOverlayProp
   const isWaitingForOthers = waitingMembers && waitingMembers.length > 0;
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none animate-in fade-in duration-200">
-      <div className="flex flex-col items-center gap-3 max-w-xs text-center">
-        <Loader2 className="w-10 h-10 text-white animate-spin" />
-        <span className="text-white text-sm font-medium tracking-wide">
-          {isWaitingForOthers ? "Waiting for everyone to buffer..." : "Syncing..."}
-        </span>
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-none animate-in fade-in duration-200">
+      <div className="glass-apple-popup p-6 rounded-3xl flex flex-col items-center gap-3.5 max-w-sm text-center shadow-2xl border border-white/20">
+        <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin shadow-lg" />
+        <div>
+          <span className="text-white text-sm font-bold tracking-tight block">
+            {isWaitingForOthers ? "Waiting for group to buffer..." : "Synchronizing Playback..."}
+          </span>
+          <p className="text-white/50 text-xs mt-0.5">
+            Matching audio & video timeline across peers
+          </p>
+        </div>
+
         {isWaitingForOthers && (
-          <div className="flex flex-wrap justify-center gap-2 mt-1">
+          <div className="flex flex-wrap justify-center gap-1.5 mt-1">
             {waitingMembers.map((name, index) => (
               <span
                 key={`${name}-${index}`}
-                className="bg-white/10 text-white/70 text-xs px-2.5 py-1 rounded-full"
+                className="glass-apple-pill text-white/80 text-[11px] font-medium px-2.5 py-0.5"
               >
                 {name}
               </span>

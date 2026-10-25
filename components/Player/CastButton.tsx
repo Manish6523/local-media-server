@@ -7,7 +7,7 @@ declare const chrome: any;
 
 interface CastButtonProps {
   videoRef: RefObject<HTMLVideoElement | null>;
-  videoSrc: string | undefined;
+  videoSrc?: string | null;
   title: string;
   className?: string;
   iconClassName?: string;

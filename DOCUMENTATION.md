@@ -315,7 +315,7 @@ vidlock/
 │   │   ├── NavBar.tsx         Main nav (desktop + mobile tray + QR)
 │   │   └── CommandMenu.tsx    ⌘K search (cmdk)
 │   ├── Player/
-│   │   ├── NetflixPlayer.tsx  Main player UI
+│   │   ├── MediaPlayer.tsx    Apple TV+ / VisionOS Liquid Glass player UI
 │   │   ├── usePlayer.ts       All HLS/MP4 + subtitle + transcode wiring
 │   │   ├── ProgressBar.tsx
 │   │   ├── VolumeControl.tsx
@@ -636,7 +636,7 @@ All routes are Node-runtime, `export const dynamic = "force-dynamic"`. Conventio
 | `/shows/[slug]` | `app/(main)/shows/[slug]/page.tsx` | Seasons tabs + episode list. |
 | `/favorites` | `app/(main)/favorites/page.tsx` | `/api/favorites`. |
 | `/settings` | `app/(main)/settings/page.tsx` | Whole admin surface: paths, scan, PIN, GPU, offline toggle. Wrapped in `<AdminPinGate>`. |
-| `/player/[id]` | `app/(main)/player/[id]/page.tsx` | Solo full-screen `<NetflixPlayer>`. |
+| `/player/[id]` | `app/(main)/player/[id]/page.tsx` | Solo full-screen `<MediaPlayer>`. |
 | `/join/[roomCode]` | `app/(main)/join/[roomCode]/page.tsx` | Watch party lobby (guest waits for `party-started`). |
 | `/watch/[roomCode]` | `app/(main)/watch/[roomCode]/page.tsx` | Player + chat panel + sync overlay. |
 | `/tv` | `app/(tv)/tv/page.tsx` | Server component for webOS. |
@@ -674,7 +674,7 @@ Notes:
 - **`QRModal.tsx`** — Calls `/api/local-ip`, encodes the URL with `qrcode`, draws into a canvas.
 
 ### Player
-- **`NetflixPlayer.tsx`** — Player UI shell. Receives `mediaId`, `exactDuration`, optional `watchPartyMode`. Decides `baseNeedsTranscode` from the file extension (`mkv|avi|wmv`). Delegates state to `usePlayer`.
+- **`MediaPlayer.tsx`** — Apple TV+ Liquid Glass Player UI shell. Receives `mediaId`, `exactDuration`, optional `watchPartyMode`. Delegates state to `usePlayer`.
 - **`usePlayer.ts`** — The big one. Owns:
   - Refs: `videoRef`, `containerRef`, `hideTimer`, `skipAnimTimer`, `progressInterval`, `hasResumed`.
   - State: `PlayerState` (play/pause, duration, volume, mute, buffer, fullscreen, controls visibility, subtitle/audio selection, skip animation, cue text, subtitle size/color).
@@ -739,7 +739,7 @@ A state setter would cause a re-render and a setTimeout cleanup race. A ref is t
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ Browser opens /player/<id>                                   │
-│ NetflixPlayer reads media.filename → baseNeedsTranscode?     │
+│ MediaPlayer reads media.filename → baseNeedsTranscode?       │
 │                                                              │
 │   .mp4/.m4v/.mov   →  /api/stream?id=N      (Range stream)   │
 │   .mkv/.avi/.wmv   →  /api/hls/N/0/0/playlist.m3u8           │

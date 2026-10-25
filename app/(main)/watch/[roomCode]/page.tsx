@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import NetflixPlayer from "@/components/Player/NetflixPlayer";
+import MediaPlayer from "@/components/Player/MediaPlayer";
 import ChatPanel from "@/components/WatchParty/ChatPanel";
 import SyncOverlay from "@/components/WatchParty/SyncOverlay";
 import JoinRequestToast, { JoinRequest } from "@/components/WatchParty/JoinRequestToast";
@@ -48,6 +48,31 @@ export default function WatchPartyPage() {
   const [joined, setJoined] = useState(false);
   const [videoMounted, setVideoMounted] = useState(false);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevMsgCount = useRef(0);
+
+  // Auto-close on small mobile screens on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setIsChatOpen(false);
+    }
+  }, []);
+
+  // Track unread messages when sidebar is closed
+  useEffect(() => {
+    if (!isChatOpen && messages.length > prevMsgCount.current) {
+      setUnreadCount((c) => c + (messages.length - prevMsgCount.current));
+    }
+    prevMsgCount.current = messages.length;
+  }, [messages.length, isChatOpen]);
+
+  const toggleChat = useCallback(() => {
+    setIsChatOpen((prev) => {
+      if (!prev) setUnreadCount(0);
+      return !prev;
+    });
+  }, []);
 
   const {
     isVoiceEnabled,
@@ -562,9 +587,10 @@ export default function WatchPartyPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex">
-      <div className="flex-1 relative">
-        <NetflixPlayer
+    <div data-fullscreen-root="true" className="fixed inset-0 w-full h-full bg-black flex overflow-hidden">
+      {/* Video Cinema Container: Resizes smoothly when Watch Party sidebar is toggled */}
+      <div className="flex-1 relative h-full min-w-0 transition-all duration-300">
+        <MediaPlayer
           mediaId={String(media.id)}
           title={media.title}
           type={media.type}
@@ -596,49 +622,53 @@ export default function WatchPartyPage() {
             registerTranscodeStart: (startTime: number) => {
               transcodeStartTimeRef.current = startTime;
             },
+            memberCount: members.length,
+            unreadCount,
+            isChatOpen,
+            onToggleChat: toggleChat,
           }}
         />
-        {/* Both Host and Guest see brief 'Syncing...' overlay during seek. */}
+
+        {/* Sync Overlay */}
         <SyncOverlay 
           visible={syncing || waitingForReady} 
-          waitingMembers={members.filter(m => !m.ready).map(m => m.name)}
+          waitingMembers={members.filter((m) => !m.ready).map((m) => m.name)}
         />
 
+        {/* Knock-to-join Host Toast */}
         <JoinRequestToast
           requests={joinRequests}
           onApprove={(requestId) => {
-            socket?.emit('approve-join', { roomCode, requestId });
+            socket?.emit("approve-join", { roomCode, requestId });
             setJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
           }}
           onDecline={(requestId) => {
-            socket?.emit('decline-join', { roomCode, requestId });
+            socket?.emit("decline-join", { roomCode, requestId });
             setJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
           }}
         />
-
-        {!effectiveIsHost && (
-          <div className="absolute top-4 right-4 z-30 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white/60 text-xs flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Host controls playback
-          </div>
-        )}
-
-        <ChatPanel
-          members={members}
-          messages={messages}
-          onSendMessage={sendMessage}
-          isConnected={isConnected}
-          isVoiceEnabled={isVoiceEnabled}
-          isMuted={voiceMuted}
-          isSpeaking={isSpeaking}
-          micPermission={micPermission}
-          voicePeers={voicePeers}
-          onJoinVoice={joinVoice}
-          onLeaveVoice={leaveVoice}
-          onToggleMute={toggleVoiceMute}
-          myName={myName}
-        />
       </div>
+
+      {/* Docked Watch Party Cinema Sidebar (Desktop: Side-by-side dock; Mobile: Slide-over drawer) */}
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        members={members}
+        messages={messages}
+        onSendMessage={sendMessage}
+        isConnected={isConnected}
+        roomCode={roomCode}
+        isHost={effectiveIsHost}
+        isVoiceEnabled={isVoiceEnabled}
+        isMuted={voiceMuted}
+        isSpeaking={isSpeaking}
+        micPermission={micPermission}
+        voicePeers={voicePeers}
+        onJoinVoice={joinVoice}
+        onLeaveVoice={leaveVoice}
+        onToggleMute={toggleVoiceMute}
+        myName={myName}
+      />
     </div>
   );
 }

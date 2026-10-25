@@ -60,41 +60,41 @@ function SingleToast({
     <div
       className={`
         relative overflow-hidden
-        bg-black/85 backdrop-blur-xl border border-white/15
-        rounded-xl shadow-2xl shadow-black/50
+        glass-apple-popup border border-white/20
+        rounded-2xl shadow-2xl shadow-black/70
         transition-all duration-300 ease-out
         ${visible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}
       `}
-      style={{ width: 300 }}
+      style={{ width: 310 }}
     >
       {/* Content */}
-      <div className="p-3.5">
+      <div className="p-4">
         <div className="flex items-start gap-3">
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-[#E50914]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <UserPlus className="w-4 h-4 text-[#E50914]" />
+          <div className="w-9 h-9 rounded-full glass-apple-circle flex items-center justify-center shrink-0 mt-0.5">
+            <UserPlus className="w-4 h-4 text-violet-300" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">
+            <p className="text-white text-sm font-bold truncate">
               {request.guestName}
             </p>
-            <p className="text-white/40 text-xs mt-0.5">
-              wants to join the party
+            <p className="text-white/50 text-xs mt-0.5">
+              knocking to join watch party
             </p>
 
             {/* Action buttons */}
-            <div className="flex gap-2 mt-2.5">
+            <div className="flex gap-2 mt-3">
               <button
                 onClick={() => onApprove(request.requestId)}
-                className="flex-1 flex items-center justify-center gap-1.5 bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-medium py-1.5 px-3 rounded-lg transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold py-1.5 px-3 rounded-xl transition-all shadow-md active:scale-95"
               >
-                <Check className="w-3.5 h-3.5" />
-                Let in
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                Approve
               </button>
               <button
                 onClick={() => onDecline(request.requestId)}
-                className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-medium py-1.5 px-3 rounded-lg transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 glass-apple hover:bg-white/15 text-white/70 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-xl transition-all active:scale-95"
               >
                 <X className="w-3.5 h-3.5" />
                 Decline
@@ -105,9 +105,9 @@ function SingleToast({
       </div>
 
       {/* Countdown progress bar */}
-      <div className="h-0.5 bg-white/5">
+      <div className="h-1 bg-white/10">
         <div
-          className="h-full bg-[#E50914]/60 transition-none"
+          className="h-full bg-violet-400/80 transition-none"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -123,7 +123,7 @@ export default function JoinRequestToast({
   if (requests.length === 0) return null;
 
   return (
-    <div className="absolute top-4 right-4 z-50 flex flex-col gap-2.5 pointer-events-auto">
+    <div className="absolute top-20 right-6 z-50 flex flex-col gap-2.5 pointer-events-auto">
       {requests.map((req) => (
         <SingleToast
           key={req.requestId}

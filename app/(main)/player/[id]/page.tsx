@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import NetflixPlayer from "@/components/Player/NetflixPlayer";
+import MediaPlayer from "@/components/Player/MediaPlayer";
 
 import type { MediaEntry } from "@/lib/db";
 
@@ -28,7 +28,7 @@ export default function PlayerPage() {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="w-14 h-14 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+        <div className="w-14 h-14 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
@@ -38,7 +38,7 @@ export default function PlayerPage() {
       <div className="fixed inset-0 bg-black flex items-center justify-center">
         <div className="text-center">
           <p className="text-white/60 text-lg mb-4">{error || "Not found"}</p>
-          <Link href="/" className="text-[#E50914] hover:text-[#f6121d] transition-colors">
+          <Link href="/" className="text-violet-400 hover:text-violet-300 transition-colors font-medium">
             ← Go back home
           </Link>
         </div>
@@ -47,7 +47,7 @@ export default function PlayerPage() {
   }
 
   return (
-    <NetflixPlayer
+    <MediaPlayer
       mediaId={id}
       title={media.title}
       type={media.type}

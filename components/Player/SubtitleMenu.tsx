@@ -1,7 +1,17 @@
-    "use client";
+"use client";
 
 import { useState } from "react";
-import { Check, Settings as SettingsIcon, Search, Download, Loader2, AlertCircle, ArrowLeft, Trash2 } from "lucide-react";
+import {
+  Check,
+  Search,
+  Download,
+  Loader2,
+  AlertCircle,
+  ArrowLeft,
+  Trash2,
+  Subtitles,
+  Sparkles,
+} from "lucide-react";
 import type { SubtitleTrack, PlayerState } from "./usePlayer";
 
 interface SubtitleMenuProps {
@@ -16,7 +26,17 @@ interface SubtitleMenuProps {
   onSubtitleDownloaded?: () => void;
 }
 
-export default function SubtitleMenu({ tracks, activeIndex, state, onSelect, onSizeSelect, onColorSelect, onClose, mediaId, onSubtitleDownloaded }: SubtitleMenuProps) {
+export default function SubtitleMenu({
+  tracks,
+  activeIndex,
+  state,
+  onSelect,
+  onSizeSelect,
+  onColorSelect,
+  onClose,
+  mediaId,
+  onSubtitleDownloaded,
+}: SubtitleMenuProps) {
   const [view, setView] = useState<"menu" | "search">("menu");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -31,7 +51,9 @@ export default function SubtitleMenu({ tracks, activeIndex, state, onSelect, onS
     setSearchError("");
     try {
       const q = queryOverride !== undefined ? queryOverride : searchQuery;
-      const url = q.trim() ? `/api/subtitles/search?id=${mediaId}&q=${encodeURIComponent(q)}` : `/api/subtitles/search?id=${mediaId}`;
+      const url = q.trim()
+        ? `/api/subtitles/search?id=${mediaId}&q=${encodeURIComponent(q)}`
+        : `/api/subtitles/search?id=${mediaId}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.error) {
@@ -77,7 +99,7 @@ export default function SubtitleMenu({ tracks, activeIndex, state, onSelect, onS
     setDeletingUrl(url);
     try {
       await fetch(url, { method: "DELETE" });
-      if (onSubtitleDownloaded) onSubtitleDownloaded(); // Refresh list
+      if (onSubtitleDownloaded) onSubtitleDownloaded();
     } catch (err) {
       console.error("Failed to delete subtitle");
     } finally {
@@ -87,187 +109,258 @@ export default function SubtitleMenu({ tracks, activeIndex, state, onSelect, onS
 
   return (
     <div
-      className="absolute bottom-full right-0 mb-2 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-2xl min-w-[260px] max-w-[320px] max-h-[70vh] overflow-y-auto py-1 z-50 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent flex flex-col"
+      className="absolute bottom-full right-0 mb-3 glass-apple-popup rounded-3xl min-w-[280px] md:min-w-[320px] max-w-[calc(100vw-2rem)] sm:max-w-[360px] max-h-[75vh] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 duration-150 flex flex-col overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {view === "menu" ? (
         <>
-          <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-white/40 font-semibold border-b border-white/5 flex items-center gap-2">
-            <SettingsIcon className="w-3 h-3" /> Subtitle Appearance
+          {/* Header */}
+          <div className="px-1 py-1 text-[11px] font-bold uppercase tracking-wider text-white/50 border-b border-white/10 pb-2 mb-2 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Subtitles className="w-3.5 h-3.5 text-white/70" />
+              Subtitle Options
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-white/10 text-white/60">
+              {tracks.length} Tracks
+            </span>
           </div>
-          
-          {/* Size Selection */}
-          <div className="px-4 py-2 border-b border-white/5 flex items-center justify-between">
-            <span className="text-xs text-white/70">Size</span>
-            <div className="flex bg-white/10 rounded overflow-hidden">
-              {(["small", "medium", "large"] as const).map(size => (
-                <button
-                  key={size}
-                  onClick={() => onSizeSelect(size)}
-                  className={`px-2 py-1 text-[10px] uppercase font-bold transition-colors ${state.subtitleSize === size ? 'bg-[#E50914] text-white' : 'text-white/50 hover:bg-white/20'}`}
-                >
-                  {size[0]}
-                </button>
-              ))}
+
+          {/* Scrollable Content */}
+          <div className="space-y-3 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 pr-1 max-h-[50vh]">
+            {/* Appearance Section */}
+            <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              {/* Size */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-white/70">Font Size</span>
+                <div className="flex bg-white/10 rounded-xl p-0.5">
+                  {(["small", "medium", "large"] as const).map((size) => {
+                    const isSelected = state.subtitleSize === size;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => onSizeSelect(size)}
+                        className={`px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-lg transition-all ${
+                          isSelected
+                            ? "bg-white text-black shadow-sm font-extrabold"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        {size[0]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Color */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-white/70">Font Color</span>
+                <div className="flex bg-white/10 rounded-xl p-0.5">
+                  {(["white", "yellow"] as const).map((color) => {
+                    const isSelected = state.subtitleColor === color;
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => onColorSelect(color)}
+                        className={`px-2.5 py-0.5 text-[10px] capitalize font-bold rounded-lg transition-all ${
+                          isSelected
+                            ? "bg-white text-black shadow-sm font-extrabold"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Color Selection */}
-          <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between">
-            <span className="text-xs text-white/70">Color</span>
-            <div className="flex bg-white/10 rounded overflow-hidden">
-              {(["white", "yellow"] as const).map(color => (
-                <button
-                  key={color}
-                  onClick={() => onColorSelect(color)}
-                  className={`px-2 py-1 text-[10px] uppercase font-bold transition-colors ${state.subtitleColor === color ? 'bg-[#E50914] text-white' : 'text-white/50 hover:bg-white/20'}`}
-                >
-                  {color}
-                </button>
-              ))}
-            </div>
-          </div>
+            {/* Tracks List */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 px-1 mb-1">
+                Select Track
+              </div>
 
-          <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-white/40 font-semibold border-b border-white/5 mt-1">
-            Tracks
-          </div>
+              {/* Subtitles Off */}
+              <button
+                onClick={() => {
+                  onSelect(null);
+                  onClose();
+                }}
+                className={`w-full text-left px-3 py-2 rounded-2xl flex items-center justify-between transition-all border ${
+                  activeIndex === null
+                    ? "bg-white/20 border-white/30 text-white font-semibold shadow-sm"
+                    : "bg-transparent border-transparent text-white/70 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeIndex === null ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" : "bg-white/25"
+                    }`}
+                  />
+                  <span className="text-xs">Off (No Subtitles)</span>
+                </div>
+                {activeIndex === null && <Check className="w-3.5 h-3.5 text-white" />}
+              </button>
 
-          <button
-            onClick={() => { onSelect(null); onClose(); }}
-            className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
-              activeIndex === null
-                ? "text-[#E50914]"
-                : "text-white/70 hover:text-white hover:bg-white/10"
-            }`}
-          >
-            {activeIndex === null && <Check className="w-3.5 h-3.5" />}
-            {activeIndex !== null && <span className="w-3.5" />}
-            Off
-          </button>
+              {/* Available Tracks */}
+              {tracks.map((track, idx) => {
+                const isSelected = activeIndex === idx;
+                const isExternal = track.url?.startsWith("/api/subtitle-file");
+                return (
+                  <div key={idx} className="flex items-center w-full group">
+                    <button
+                      onClick={() => {
+                        onSelect(idx);
+                        onClose();
+                      }}
+                      className={`flex-1 min-w-0 text-left px-3 py-2 rounded-2xl flex items-center justify-between transition-all border ${
+                        isSelected
+                          ? "bg-white/20 border-white/30 text-white font-semibold shadow-sm"
+                          : "bg-transparent border-transparent text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate mr-2">
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            isSelected ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" : "bg-white/25"
+                          }`}
+                        />
+                        <span className="text-xs truncate">{track.label}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isExternal && (
+                          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-mono">
+                            Ext
+                          </span>
+                        )}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                    </button>
 
-          {tracks.map((track, idx) => {
-            const isExternal = track.url?.startsWith("/api/subtitle-file");
-            return (
-              <div key={idx} className="flex items-center w-full group overflow-hidden">
-                <button
-                  onClick={() => { onSelect(idx); onClose(); }}
-                  title={track.label}
-                  className={`flex-1 min-w-0 text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
-                    activeIndex === idx
-                      ? "text-[#E50914]"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  {activeIndex === idx && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-                  {activeIndex !== idx && <span className="w-3.5 flex-shrink-0" />}
-                  <span className="truncate">{track.label}</span>
-                </button>
-                {isExternal && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(track.url);
-                    }}
-                    disabled={deletingUrl === track.url}
-                    className="p-2 mr-2 text-white/30 hover:text-red-500 transition-colors rounded hover:bg-white/10 disabled:opacity-50"
-                  >
-                    {deletingUrl === track.url ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-white/50" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
+                    {/* External subtitle delete button */}
+                    {isExternal && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(track.url);
+                        }}
+                        disabled={deletingUrl === track.url}
+                        className="p-2 ml-1 text-white/40 hover:text-red-400 hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
+                        title="Delete external subtitle"
+                      >
+                        {deletingUrl === track.url ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     )}
-                  </button>
-                )}
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-          {/* OpenSubtitles Search Integration */}
+          {/* OpenSubtitles Search Trigger */}
           {mediaId && (
-            <>
-              <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-white/40 font-semibold border-b border-t border-white/5 mt-1 flex items-center justify-between">
-                <span>Online Search</span>
-              </div>
-              
+            <div className="pt-2 border-t border-white/10 mt-2">
               <button
                 onClick={() => {
                   setView("search");
                   if (searchResults.length === 0) handleSearch();
                 }}
-                className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 text-indigo-400 hover:text-indigo-300 hover:bg-white/5 transition-colors"
+                className="w-full py-2 px-3 rounded-2xl glass-apple-pill flex items-center justify-center gap-2 text-xs font-semibold text-white/90 hover:text-white transition-all shadow-sm"
               >
                 <Search className="w-3.5 h-3.5" />
-                Search OpenSubtitles
+                Search Online Subtitles
               </button>
-            </>
+            </div>
           )}
         </>
       ) : (
-        <div className="flex flex-col h-full">
-          <div className="px-3 py-2 border-b border-white/5 flex items-center gap-2">
+        /* SEARCH VIEW */
+        <div className="flex flex-col h-full space-y-2">
+          {/* Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-white/10">
             <button
               onClick={() => setView("menu")}
-              className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              className="p-1.5 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <span className="text-xs uppercase tracking-wider text-white/70 font-semibold">
-              OpenSubtitles
+            <span className="text-xs font-bold text-white tracking-wide">
+              Search OpenSubtitles
             </span>
           </div>
 
-          <div className="px-3 py-2 border-b border-white/5">
-            <form 
-              onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-              className="flex items-center gap-2"
+          {/* Search Form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch();
+            }}
+            className="flex items-center gap-1.5"
+          >
+            <input
+              type="text"
+              placeholder="Search title..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-white/10 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-white/30 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={isSearching}
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors disabled:opacity-50"
             >
-              <input
-                type="text"
-                placeholder="Search movie name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={isSearching}
-                className="p-1.5 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 rounded transition-colors disabled:opacity-50"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </form>
 
-          <div className="flex-1 overflow-y-auto min-h-[150px]">
+          {/* Results List */}
+          <div className="flex-1 overflow-y-auto min-h-[160px] max-h-[45vh] space-y-1.5 scrollbar-thin scrollbar-thumb-white/20 pr-1">
             {isSearching && (
-              <div className="px-4 py-6 flex flex-col items-center justify-center gap-2 text-sm text-white/50">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Searching...
+              <div className="py-8 flex flex-col items-center justify-center gap-2 text-xs text-white/50">
+                <Loader2 className="w-5 h-5 animate-spin text-white/70" />
+                Searching OpenSubtitles...
               </div>
             )}
 
             {!isSearching && searchError && (
-              <div className="px-4 py-4 text-xs text-red-400 flex items-center gap-2 bg-red-500/5 m-2 rounded">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {searchError}
+              <div className="p-3 text-xs text-red-300 flex items-center gap-2 bg-red-500/10 rounded-2xl border border-red-500/20">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{searchError}</span>
               </div>
             )}
 
             {!isSearching && searchResults.length > 0 && (
-              <div className="py-1">
+              <div className="space-y-1 pt-1">
                 {searchResults.map((sub) => (
-                  <div key={sub.id} className="w-full text-left px-4 py-2 flex items-center justify-between hover:bg-white/5 group border-b border-white/5 last:border-0">
-                    <div className="flex flex-col overflow-hidden mr-2">
-                      <span className="text-xs text-white/90 truncate">{sub.name}</span>
-                      <span className="text-[10px] text-white/50 flex items-center gap-2 mt-0.5">
-                        <span className="uppercase text-indigo-400 font-bold">{sub.language}</span>
-                        <span>{sub.downloads.toLocaleString()} DLs</span>
-                      </span>
+                  <div
+                    key={sub.id}
+                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between gap-2 transition-all"
+                  >
+                    <div className="flex-1 min-w-0 pr-1">
+                      <p className="text-xs font-semibold text-white truncate" title={sub.name}>
+                        {sub.name}
+                      </p>
+                      <p className="text-[10px] text-white/50 flex items-center gap-2 mt-0.5">
+                        <span className="uppercase text-violet-300 font-bold font-mono">
+                          {sub.language}
+                        </span>
+                        <span>•</span>
+                        <span>{sub.downloads.toLocaleString()} downloads</span>
+                      </p>
                     </div>
+
                     <button
                       onClick={() => handleDownload(sub.file_id, sub.language, sub.name)}
                       disabled={downloadingId === sub.file_id}
-                      className="p-1.5 rounded bg-white/10 text-white hover:bg-indigo-500 transition-colors disabled:opacity-50 flex-shrink-0"
+                      className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white active:scale-95 transition-all shrink-0 disabled:opacity-50"
+                      title="Download subtitle"
                     >
                       {downloadingId === sub.file_id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />

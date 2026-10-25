@@ -137,7 +137,7 @@ local-media-server/
 VidLock collapses both server and client execution into an integrated Node.js lifecycle orchestrated by [server.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/server.ts):
 - **Server Tier**: Custom `http.createServer` instance hosting Next.js request handler alongside a `Socket.IO` engine attached to the identical port (default `2886`).
 - **Database Engine**: Direct in-process SQLite driver (`better-sqlite3`) utilizing Write-Ahead Logging (`WAL` mode) executed directly in API routes and server boot routines via [lib/db.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/lib/db.ts).
-- **Client Tier**: React 19 client components bundled by Next.js using dynamic imports (`next/dynamic`) for heavy media modules (`NetflixPlayer`, `WatchPartyModal`, `QRModal`).
+- **Client Tier**: React 19 client components bundled by Next.js using dynamic imports (`next/dynamic`) for heavy media modules (`MediaPlayer`, `WatchPartyModal`, `QRModal`).
 
 ### 2.3 System Data Flow Architecture
 ```mermaid
@@ -435,7 +435,7 @@ ffmpeg -hide_banner \
 
 ## 5. Custom Video Player (Deep Dive)
 
-The custom video player is implemented across [NetflixPlayer.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/NetflixPlayer.tsx), [usePlayer.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/usePlayer.ts), and supporting control components.
+The custom video player is implemented across [MediaPlayer.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/MediaPlayer.tsx), [usePlayer.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/usePlayer.ts), and supporting control components.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -820,7 +820,7 @@ Allows users to select arbitrary video files and group them into a structured TV
 | **Player** | Custom Video Scrubber | Done | `ProgressBar.tsx` | Live thumbnail preview on hover |
 | **Player** | Audio Track Switching | Done | `AudioMenu.tsx`, `usePlayer.ts` | Triggers dynamic HLS audio map |
 | **Player** | Subtitle Search & Download | Done | `SubtitleMenu.tsx`, `opensubtitles.ts` | In-player search & save |
-| **Player** | Double-Click Seek Zones | Done | `NetflixPlayer.tsx` | 10s rewind / forward on side clicks |
+| **Player** | Double-Click Seek Zones | Done | `MediaPlayer.tsx` | 10s rewind / forward on side clicks |
 | **Library** | Recursive Media Scanner | Done | `scanner.ts`, `api/scan` | Preserves offline disk entries |
 | **Library** | Fuzzy Metadata Matcher | Done | `metadata-matcher.ts` | Levenshtein $\ge 0.65$ threshold |
 | **Library** | Drag-and-Drop Series Grouping | Done | `GroupAsSeriesModal.tsx` | Powered by `@dnd-kit` |
@@ -886,7 +886,7 @@ All data in this specification has been verified by directly analyzing the sourc
 - Transcoding flags & hardware probes: [lib/gpu-detect.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/lib/gpu-detect.ts), [app/(main)/api/hls/[mediaId]/[audioTrack]/[start]/[file]/route.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/app/%28main%29/api/hls/%5BmediaId%5D/%5BaudioTrack%5D/%5Bstart%5D/%5Bfile%5D/route.ts)
 - Sockets, synchronization ticks, ready check: [server.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/server.ts), [app/(main)/watch/[roomCode]/page.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/app/%28main%29/watch/%5BroomCode%5D/page.tsx)
 - WebRTC mesh voice chat: [hooks/useVoiceChat.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/hooks/useVoiceChat.ts), [app/(main)/api/turn-config/route.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/app/%28main%29/api/turn-config/route.ts)
-- Custom player & gestures: [components/Player/NetflixPlayer.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/NetflixPlayer.tsx), [components/Player/usePlayer.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/usePlayer.ts), [components/Player/ProgressBar.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/ProgressBar.tsx)
+- Custom player & gestures: [components/Player/MediaPlayer.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/MediaPlayer.tsx), [components/Player/usePlayer.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/usePlayer.ts), [components/Player/ProgressBar.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/Player/ProgressBar.tsx)
 - Smart TV webOS package: [application/webos-app/appinfo.json](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/application/webos-app/appinfo.json), [app/(tv)/tv/TVBrowser.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/app/%28tv%29/tv/TVBrowser.tsx), [tv-cors.cjs](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/tv-cors.cjs)
 - Database schema & migrations: [lib/db.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/lib/db.ts), [db/schema.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/db/schema.ts)
 - Security & PIN authentication: [lib/admin-session.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/lib/admin-session.ts), [app/(main)/api/admin/verify-pin/route.ts](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/app/%28main%29/api/admin/verify-pin/route.ts), [components/AdminPinGate.tsx](file:///c:/Users/krish/OneDrive/Documents/code%20Manish/local-media-server-main/components/AdminPinGate.tsx)
