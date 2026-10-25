@@ -2,6 +2,7 @@
 
 import { Check, AudioWaveform, Disc } from "lucide-react";
 import type { AudioTrack } from "./usePlayer";
+import { PLAYER_POPUP_GLASS_STYLE } from "./playerStyles";
 
 interface AudioMenuProps {
   tracks: AudioTrack[];
@@ -13,7 +14,8 @@ interface AudioMenuProps {
 export default function AudioMenu({ tracks, activeIndex, onSelect, onClose }: AudioMenuProps) {
   return (
     <div
-      className="absolute bottom-full right-0 mb-3 glass-md rounded-3xl min-w-[220px] max-w-[290px] p-2.5 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 origin-bottom-right duration-150"
+      style={PLAYER_POPUP_GLASS_STYLE}
+      className="absolute bottom-full right-0 mb-3 rounded-3xl min-w-[220px] max-w-[290px] p-2.5 z-50 text-white animate-in fade-in zoom-in-95 origin-bottom-right duration-150"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}

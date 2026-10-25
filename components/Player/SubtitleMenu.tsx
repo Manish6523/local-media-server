@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { SubtitleTrack, PlayerState } from "./usePlayer";
+import { PLAYER_POPUP_GLASS_STYLE } from "./playerStyles";
 
 interface SubtitleMenuProps {
   tracks: SubtitleTrack[];
@@ -109,7 +110,8 @@ export default function SubtitleMenu({
 
   return (
     <div
-      className="absolute bottom-full right-0 mb-3 glass-md rounded-3xl min-w-[280px] md:min-w-[320px] max-w-[calc(100vw-2rem)] sm:max-w-[360px] max-h-[75vh] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 text-white animate-in fade-in zoom-in-95 origin-bottom-right duration-150 flex flex-col overflow-hidden"
+      style={PLAYER_POPUP_GLASS_STYLE}
+      className="absolute bottom-full right-0 mb-3 rounded-3xl min-w-[280px] md:min-w-[320px] max-w-[calc(100vw-2rem)] sm:max-w-[360px] max-h-[75vh] p-3.5 z-50 text-white animate-in fade-in zoom-in-95 origin-bottom-right duration-150 flex flex-col overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {view === "menu" ? (

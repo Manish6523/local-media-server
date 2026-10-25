@@ -3,6 +3,7 @@
 import { useEffect, useState, RefObject } from "react";
 import { Info, X, Activity } from "lucide-react";
 import type { PlayerState, StreamMode } from "./usePlayer";
+import { PLAYER_POPUP_GLASS_STYLE } from "./playerStyles";
 
 interface StatsProps {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -74,7 +75,8 @@ export default function StatsForNerdsModal({
       }}
     >
       <div
-        className="w-full max-w-lg rounded-3xl glass-md p-5 md:p-6 text-white text-xs shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden animate-in zoom-in-95 duration-150"
+        style={PLAYER_POPUP_GLASS_STYLE}
+        className="w-full max-w-lg rounded-3xl p-5 md:p-6 text-white text-xs overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

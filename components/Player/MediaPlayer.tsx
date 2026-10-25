@@ -27,6 +27,7 @@ import SubtitleMenu from "./SubtitleMenu";
 import AudioMenu from "./AudioMenu";
 import StreamModeMenu from "./StreamModeMenu";
 import StatsForNerdsModal from "./StatsForNerdsModal";
+import { PLAYER_POPUP_GLASS_STYLE, PLAYER_PILL_GLASS_STYLE } from "./playerStyles";
 
 interface WatchPartyMode {
   roomCode?: string | null;
@@ -673,14 +674,20 @@ export default function MediaPlayer({
 
       {/* Resume toast */}
       {showResumeToast && initialWatchProgress > 0 && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-md px-6 py-3 rounded-full text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-500 z-40 pointer-events-none shadow-2xl text-white">
+        <div
+          style={PLAYER_PILL_GLASS_STYLE}
+          className="absolute top-24 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-500 z-40 pointer-events-none shadow-2xl text-white"
+        >
           Resuming from {formatTime(initialWatchProgress)}
         </div>
       )}
 
       {/* Stream Mode Toast */}
       {streamToast && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-md px-5 py-2.5 rounded-full text-xs md:text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-300 z-50 shadow-2xl flex items-center gap-2 text-white">
+        <div
+          style={PLAYER_PILL_GLASS_STYLE}
+          className="absolute top-24 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-xs md:text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-300 z-50 shadow-2xl flex items-center gap-2 text-white"
+        >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           {streamToast}
         </div>
@@ -692,7 +699,10 @@ export default function MediaPlayer({
       {/* Switching audio overlay */}
       {switchingAudio && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="glass-md px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl text-white">
+          <div
+            style={PLAYER_PILL_GLASS_STYLE}
+            className="px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl text-white"
+          >
             <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             <span className="text-sm font-medium">Switching audio stream...</span>
           </div>
@@ -742,14 +752,18 @@ export default function MediaPlayer({
               e.stopPropagation();
               router.back();
             }}
-            className="w-9 h-9 sm:w-10 sm:h-10 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-lg shrink-0"
+            style={PLAYER_PILL_GLASS_STYLE}
+            className="w-9 h-9 sm:w-10 sm:h-10 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-lg shrink-0"
             title="Close Player"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </button>
 
           {/* Picture-in-Picture & Cast Pill [ Always Horizontal ] */}
-          <div className="glass-md !rounded-full px-3 py-1.5 flex items-center gap-3 md:gap-3.5 shadow-lg shrink-0">
+          <div
+            style={PLAYER_PILL_GLASS_STYLE}
+            className="!rounded-full px-3 py-1.5 flex items-center gap-3 md:gap-3.5 shadow-lg shrink-0"
+          >
             <button
               onClick={togglePiP}
               className="text-white/80 hover:text-white transition-colors"
@@ -774,7 +788,8 @@ export default function MediaPlayer({
                 e.stopPropagation();
                 watchPartyMode.onToggleChat?.();
               }}
-              className={`glass-md !rounded-full px-3 py-1.5 flex items-center gap-2 transition-all shadow-lg text-xs font-semibold shrink-0 ${
+              style={PLAYER_PILL_GLASS_STYLE}
+              className={`!rounded-full px-3 py-1.5 flex items-center gap-2 transition-all shadow-lg text-xs font-semibold shrink-0 ${
                 watchPartyMode.isChatOpen
                   ? "bg-white/30 text-white border-white/40 shadow-[0_0_20px_rgba(255,255,255,0.35)]"
                   : "text-white/80 hover:text-white hover:bg-white/15"
@@ -805,7 +820,8 @@ export default function MediaPlayer({
               setIsHoveredVolume((prev) => !prev);
             }
           }}
-          className={`glass-md !rounded-full px-3 py-1.5 md:py-2 flex items-center shadow-lg select-none shrink-0 transition-all duration-300 ease-out group/volume cursor-pointer ${
+          style={PLAYER_PILL_GLASS_STYLE}
+          className={`!rounded-full px-3 py-1.5 md:py-2 flex items-center shadow-lg select-none shrink-0 transition-all duration-300 ease-out group/volume cursor-pointer ${
             controlsVisible || showVolumeHud
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 -translate-y-4 pointer-events-none"
@@ -872,7 +888,8 @@ export default function MediaPlayer({
           {/* Rewind 10s */}
           <button
             onClick={wpSkipBack}
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
+            style={PLAYER_PILL_GLASS_STYLE}
+            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
             title="Rewind 10 seconds"
           >
             <svg
@@ -903,7 +920,8 @@ export default function MediaPlayer({
           {/* Center Play / Pause */}
           <button
             onClick={wpTogglePlay}
-            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+            style={PLAYER_PILL_GLASS_STYLE}
+            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
             title={state.isPlaying ? "Pause (Space)" : "Play (Space)"}
           >
             {state.isPlaying ? (
@@ -916,7 +934,8 @@ export default function MediaPlayer({
           {/* Forward 10s */}
           <button
             onClick={wpSkipForward}
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
+            style={PLAYER_PILL_GLASS_STYLE}
+            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
             title="Forward 10 seconds"
           >
             <svg
@@ -967,7 +986,10 @@ export default function MediaPlayer({
 
             {/* Apple TV+ Control Pill [ ⏱ Speed | ıll Audio | 💬 Subtitles ] */}
             <div className="relative shrink-0">
-              <div className="glass-md !rounded-full p-1 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 shadow-lg">
+              <div
+                style={PLAYER_PILL_GLASS_STYLE}
+                className="!rounded-full p-1 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 shadow-lg"
+              >
                 {/* Playback Speed Button */}
                 <button
                   onClick={(e) => {
@@ -1024,9 +1046,12 @@ export default function MediaPlayer({
                 </button>
               </div>
 
-              {/* Popovers rendered outside the glass-md pill, eliminating nested backdrop-filter clipping */}
+              {/* Popovers rendered outside the control pill, eliminating nested backdrop-filter clipping */}
               {showSpeedMenu && (
-                <div className="absolute bottom-full right-0 mb-3 w-36 glass-md rounded-2xl p-1 shadow-2xl z-50">
+                <div
+                  style={PLAYER_POPUP_GLASS_STYLE}
+                  className="absolute bottom-full right-0 mb-3 w-36 rounded-2xl p-1 shadow-2xl z-50 text-white"
+                >
                   <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-white/40 border-b border-white/10">
                     Speed
                   </div>
@@ -1106,8 +1131,8 @@ export default function MediaPlayer({
 
               {isHoveringScrubber && state.duration > 0 && (
                 <div
-                  className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded-md glass-md text-white text-[11px] font-mono shadow-xl pointer-events-none"
-                  style={{ left: `${hoverX}px` }}
+                  className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded-md text-white text-[11px] font-mono shadow-xl pointer-events-none"
+                  style={{ ...PLAYER_PILL_GLASS_STYLE, left: `${hoverX}px` }}
                 >
                   {formatTime(hoverTime)}
                 </div>
@@ -1123,7 +1148,8 @@ export default function MediaPlayer({
           <div className="flex items-center gap-2 pt-1">
             <button
               onClick={() => setShowStats(true)}
-              className="glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all flex items-center gap-1.5 shrink-0"
+              style={PLAYER_PILL_GLASS_STYLE}
+              className="!rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Info className="w-3.5 h-3.5" />
               Info
@@ -1138,7 +1164,8 @@ export default function MediaPlayer({
                   setShowSubMenu(false);
                   setShowSpeedMenu(false);
                 }}
-                className={`glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold hover:bg-white/15 transition-all flex items-center gap-1.5 whitespace-nowrap ${streamMode === "direct" ? "text-emerald-300" : "text-violet-300"
+                style={PLAYER_PILL_GLASS_STYLE}
+                className={`!rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold hover:bg-white/15 transition-all flex items-center gap-1.5 whitespace-nowrap ${streamMode === "direct" ? "text-emerald-300" : "text-violet-300"
                   }`}
               >
                 <Zap className="w-3.5 h-3.5 fill-current" />
@@ -1164,7 +1191,8 @@ export default function MediaPlayer({
 
             <button
               onClick={toggleFullscreen}
-              className="glass-md !rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all ml-auto flex items-center gap-1.5 shrink-0"
+              style={PLAYER_PILL_GLASS_STYLE}
+              className="!rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all ml-auto flex items-center gap-1.5 shrink-0"
               title={state.isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {state.isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
