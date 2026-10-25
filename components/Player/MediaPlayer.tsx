@@ -114,7 +114,7 @@ export default function MediaPlayer({
   const [speed, setSpeed] = useState(1);
   const [switchingAudio, setSwitchingAudio] = useState(false);
 
-  // Keep controls visible whenever any modal/popup is open
+  // Keep controls visible whenever any modal/popup is open or hovering controls
   const isAnyMenuOpen =
     showStats ||
     showSubMenu ||
@@ -122,7 +122,26 @@ export default function MediaPlayer({
     showSpeedMenu ||
     showStreamMenu;
 
-  const controlsVisible = state.showControls || isAnyMenuOpen;
+  const [isHoveringControls, setIsHoveringControls] = useState(false);
+  const controlsVisible = state.showControls || isAnyMenuOpen || isHoveringControls;
+
+  // Volume HUD on keyboard change
+  const [showVolumeHud, setShowVolumeHud] = useState(false);
+  const volumeHudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerVolumeHud = useCallback(() => {
+    setShowVolumeHud(true);
+    if (volumeHudTimer.current) clearTimeout(volumeHudTimer.current);
+    volumeHudTimer.current = setTimeout(() => {
+      setShowVolumeHud(false);
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (volumeHudTimer.current) clearTimeout(volumeHudTimer.current);
+    };
+  }, []);
 
   // Scrubber drag / hover state
   const scrubberRef = useRef<HTMLDivElement>(null);
@@ -282,9 +301,21 @@ export default function MediaPlayer({
         e.clientY >= 85 &&
         e.clientY <= window.innerHeight - 120
       ) {
+        setIsHoveringControls(false);
         forceHideControls();
         return;
       }
+
+      if (e instanceof MouseEvent) {
+        const target = e.target as HTMLElement | null;
+        const overControl = !!target?.closest('button, [data-controls], [role="button"], input, a');
+        setIsHoveringControls(overControl);
+        if (overControl) {
+          resetControlsTimer();
+          return;
+        }
+      }
+
       resetControlsTimer();
     };
     document.addEventListener("mousemove", handler);
@@ -317,15 +348,19 @@ export default function MediaPlayer({
           break;
         case "ArrowUp":
           e.preventDefault();
-          setVolume(state.volume + 0.1);
+          setVolume(Math.min(1, state.volume + 0.05));
+          triggerVolumeHud();
           break;
         case "ArrowDown":
           e.preventDefault();
-          setVolume(state.volume - 0.1);
+          setVolume(Math.max(0, state.volume - 0.05));
+          triggerVolumeHud();
           break;
         case "m":
+        case "M":
           e.preventDefault();
           toggleMute();
+          triggerVolumeHud();
           break;
         case "f":
           e.preventDefault();
@@ -525,7 +560,8 @@ export default function MediaPlayer({
   const handleVolumeSeek = useCallback(
     (clientX: number) => {
       if (!volumeBarRef.current) return;
-      const rect = volumeBarRef.current.getBoundingClientRect();
+      const innerTrack = (volumeBarRef.current.firstElementChild as HTMLElement) || volumeBarRef.current;
+      const rect = innerTrack.getBoundingClientRect();
       if (rect.width <= 0) return;
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
       const newVol = Math.max(0, Math.min(1, x / rect.width));
@@ -696,12 +732,16 @@ export default function MediaPlayer({
       {/* ── TOP BAR ── */}
       <div
         data-controls
-        className={`absolute top-0 left-0 right-0 p-3.5 sm:p-5 md:p-8 flex items-start justify-between z-40 transition-all duration-300 ${
-          controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
-        }`}
+        className="absolute top-0 left-0 right-0 p-3.5 sm:p-5 md:p-8 flex items-start justify-between z-40 pointer-events-none"
       >
         {/* Top Left: Close [X] + Capsule Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div
+          className={`flex items-center gap-2 sm:gap-3 transition-all duration-300 ${
+            controlsVisible
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 -translate-y-4 pointer-events-none"
+          }`}
+        >
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -760,7 +800,7 @@ export default function MediaPlayer({
           )}
         </div>
 
-        {/* Top Right: Volume Capsule [ Collapsed: Icon + %, Hover/Drag: Extends Slider Track ] */}
+        {/* Top Right: Volume Capsule [ Collapsed: Icon + %, Hover/Drag/HUD: Extends Slider Track ] */}
         <div
           onMouseEnter={() => setIsHoveredVolume(true)}
           onMouseLeave={() => setIsHoveredVolume(false)}
@@ -770,7 +810,11 @@ export default function MediaPlayer({
               setIsHoveredVolume((prev) => !prev);
             }
           }}
-          className="glass-md !rounded-full px-3 py-1.5 md:py-2 flex items-center shadow-lg select-none shrink-0 transition-all duration-300 ease-out group/volume cursor-pointer"
+          className={`glass-md !rounded-full px-3 py-1.5 md:py-2 flex items-center shadow-lg select-none shrink-0 transition-all duration-300 ease-out group/volume cursor-pointer ${
+            controlsVisible || showVolumeHud
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 -translate-y-4 pointer-events-none"
+          }`}
         >
           <button
             onClick={(e) => {
@@ -792,7 +836,7 @@ export default function MediaPlayer({
           {/* Expandable Slider Track with smooth animation */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-out flex items-center ${
-              isHoveredVolume || isDraggingVolume
+              isHoveredVolume || isDraggingVolume || showVolumeHud
                 ? "w-20 sm:w-24 md:w-28 opacity-100 mx-2 md:mx-2.5 pointer-events-auto"
                 : "w-0 opacity-0 pointer-events-none mx-0"
             }`}
@@ -801,7 +845,7 @@ export default function MediaPlayer({
               ref={volumeBarRef}
               onMouseDown={handleVolumeMouseDown}
               onTouchStart={handleVolumeTouchStart}
-              className="w-full py-2 cursor-pointer flex items-center relative group/voltrack"
+              className="w-full py-2 px-1.5 cursor-pointer flex items-center relative group/voltrack"
             >
               <div className="w-full h-1 bg-white/30 group-hover/voltrack:bg-white/40 group-hover/voltrack:h-1.5 transition-all rounded-full relative">
                 <div
@@ -865,7 +909,7 @@ export default function MediaPlayer({
           {/* Center Play / Pause */}
           <button
             onClick={wpTogglePlay}
-            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-md !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 glass-heavy !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
             title={state.isPlaying ? "Pause (Space)" : "Play (Space)"}
           >
             {state.isPlaying ? (

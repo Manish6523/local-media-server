@@ -10,6 +10,7 @@ import AdminPinGate from "./AdminPinGate";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import HoverPreview from "./HoverPreview";
+import EpisodeThumbnail from "./EpisodeThumbnail";
 
 const CreateRoomModal = dynamic(() => import("./WatchParty/CreateRoomModal"), { ssr: false });
 
@@ -117,14 +118,29 @@ export default function PosterCard({ media, showEpisodeInfo = false, variant = "
           href={isUnavailable ? "#" : href}
           className="relative block aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02] backdrop-blur-md hover:border-violet-500/20 transition-all duration-300 shadow-lg shadow-black/20"
         >
-          <Image
-            src={media.backdrop || media.poster || "/placeholder.jpg"}
-            alt={media.title}
-            fill
-            className={`object-cover transition-transform duration-500 group-hover/card:scale-105 ${isUnavailable ? "grayscale opacity-40" : ""
+          {media.type === "show" ? (
+            <EpisodeThumbnail
+              mediaAssetId={media.id}
+              fallbackSrc={media.backdrop || media.poster || "/placeholder.jpg"}
+              alt={media.title}
+              sizes="(max-width: 768px) 50vw, 33vw"
+              className={`object-cover transition-transform duration-500 group-hover/card:scale-105 ${
+                isUnavailable ? "grayscale opacity-40" : ""
               }`}
-            sizes="(max-width: 768px) 50vw, 33vw"
-          />
+              filepath={media.filepath}
+              isAvailable={!isUnavailable}
+            />
+          ) : (
+            <Image
+              src={media.backdrop || media.poster || "/placeholder.jpg"}
+              alt={media.title}
+              fill
+              className={`object-cover transition-transform duration-500 group-hover/card:scale-105 ${
+                isUnavailable ? "grayscale opacity-40" : ""
+              }`}
+              sizes="(max-width: 768px) 50vw, 33vw"
+            />
+          )}
 
           {/* Hover Preview Video (Only for non-selection mode) */}
           {!selectionMode && !isUnavailable && media.source !== "online" && (
