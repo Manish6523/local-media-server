@@ -7,7 +7,7 @@ import React from "react";
  * compositing falls back temporarily.
  */
 export const PLAYER_POPUP_GLASS_STYLE: React.CSSProperties = {
-  background: "linear-gradient(135deg, rgba(20, 20, 32, 0.88), rgba(10, 10, 18, 0.94))",
+  background: "linear-gradient(135deg, rgba(18, 18, 20, 0.88), rgba(10, 10, 12, 0.94))",
   backdropFilter: "saturate(180%) blur(36px)",
   WebkitBackdropFilter: "saturate(180%) blur(36px)",
   border: "1px solid rgba(255, 255, 255, 0.12)",

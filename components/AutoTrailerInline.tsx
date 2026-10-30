@@ -8,6 +8,10 @@ interface AutoTrailerInlineProps {
   exactDuration: number;
   isMini?: boolean;
   isOnline?: boolean;
+  isVideoHidden?: boolean;
+  onToggleVideoHidden?: (hidden: boolean) => void;
+  hideToggle?: boolean;
+  toggleClassName?: string;
 }
 
 export default function AutoTrailerInline({
@@ -15,6 +19,10 @@ export default function AutoTrailerInline({
   exactDuration,
   isMini = false,
   isOnline = false,
+  isVideoHidden: controlledHidden,
+  onToggleVideoHidden,
+  hideToggle = false,
+  toggleClassName,
 }: AutoTrailerInlineProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [clips, setClips] = useState<number[]>([]);
@@ -22,8 +30,44 @@ export default function AutoTrailerInline({
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState(false);
-  const [isVideoHidden, setIsVideoHidden] = useState(false);
+  const [internalHidden, setInternalHidden] = useState(false);
   const [trailerFinished, setTrailerFinished] = useState(false);
+
+  const isVideoHidden = controlledHidden !== undefined ? controlledHidden : internalHidden;
+
+  const toggleVideoHidden = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const nextHidden = !isVideoHidden;
+    if (controlledHidden === undefined) {
+      setInternalHidden(nextHidden);
+    }
+    onToggleVideoHidden?.(nextHidden);
+
+    if (videoRef.current) {
+      if (nextHidden) {
+        videoRef.current.pause();
+      } else {
+        const p = videoRef.current.play();
+        if (p !== undefined) {
+          p.catch(() => {});
+        }
+      }
+    }
+  };
+
+  // Sync video play/pause when controlled isVideoHidden changes
+  useEffect(() => {
+    if (!videoRef.current || loading || trailerFinished) return;
+    if (isVideoHidden) {
+      videoRef.current.pause();
+    } else {
+      const p = videoRef.current.play();
+      if (p !== undefined) p.catch(() => {});
+    }
+  }, [isVideoHidden, loading, trailerFinished]);
 
   // Constants
   const numClips = 3;
@@ -166,30 +210,24 @@ export default function AutoTrailerInline({
       )}
 
       {/* Visibility Toggle */}
-      <div className={isMini ? "absolute bottom-3 right-3 z-[60] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto" : "absolute bottom-10 right-10 z-[60] pointer-events-auto"}>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const newHiddenState = !isVideoHidden;
-            setIsVideoHidden(newHiddenState);
-            if (videoRef.current) {
-              if (newHiddenState) {
-                videoRef.current.pause();
-              } else {
-                const p = videoRef.current.play();
-                if (p !== undefined) {
-                  p.catch(() => { });
-                }
-              }
-            }
-          }}
-          className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all cursor-pointer shadow-lg pointer-events-auto"
-          title={isVideoHidden ? "Show Trailer" : "Show Static Image"}
+      {!hideToggle && (
+        <div
+          className={
+            toggleClassName ||
+            (isMini
+              ? "absolute bottom-3 right-3 z-[60] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto"
+              : "absolute top-24 right-5 md:right-10 lg:right-14 z-[60] pointer-events-auto")
+          }
         >
-          {isVideoHidden ? <Film className="w-4 h-4 md:w-5 md:h-5" /> : <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />}
-        </button>
-      </div>
+          <button
+            onClick={toggleVideoHidden}
+            className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all cursor-pointer shadow-lg pointer-events-auto"
+            title={isVideoHidden ? "Show Trailer" : "Show Static Image"}
+          >
+            {isVideoHidden ? <Film className="w-4 h-4 md:w-5 md:h-5" /> : <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
