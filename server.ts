@@ -11,7 +11,7 @@ if (!process.env.NODE_ENV) {
   (process.env as any).NODE_ENV = process.env.npm_lifecycle_event === 'dev' ? 'development' : 'production';
 }
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
+const hostname = process.env.HOSTNAME || '0.0.0.0';
 const port = parseInt(process.env.PORT || '2886', 10);
 
 const isPackaged = process.env.IS_PACKAGED === 'true';
@@ -834,8 +834,8 @@ app.prepare().then(async () => {
     });
   });
 
-  const PORT = process.env.PORT || 2886;
-  httpServer.listen(PORT, () => {
-    console.log(`> VidLock ready on http://localhost:${PORT}`);
+  const PORT = parseInt(process.env.PORT as string, 10) || 2886;
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`> VidLock ready on http://localhost:${PORT} and network http://[IP-Address]:${PORT}`);
   });
 });
