@@ -152,16 +152,84 @@ export async function matchToOmdb(filename: string): Promise<MetadataMatch> {
   }
 
   if (!guessed.title) return { status: "unmatched", guess: guessed };
+  const title = guessed.title;
 
-  const parameters = new URLSearchParams({
-    s: guessed.title,
-    type: guessed.type === "episode" ? "series" : "movie",
+  const targetType = guessed.type === "episode" ? "series" : "movie";
+
+  // 1. Try direct exact title query with year (?t=title&y=year)
+  if (typeof guessed.year === "number") {
+    const directWithYearParams = new URLSearchParams({
+      t: guessed.title,
+      type: targetType,
+      y: String(guessed.year),
+    });
+    const directOmdb = await fetchOmdb<OmdbMedia>(directWithYearParams);
+    if (directOmdb && isConfidentMatch(guessed, directOmdb)) {
+      return { status: "matched", guess: guessed, omdb: directOmdb };
+    }
+  }
+
+  // 2. Try direct title query without year (?t=title) - handles festival vs theatrical release years (e.g. 2015 vs 2016)
+  const directParams = new URLSearchParams({
+    t: guessed.title,
+    type: targetType,
   });
-  if (typeof guessed.year === "number") parameters.set("y", String(guessed.year));
+  const directOmdb = await fetchOmdb<OmdbMedia>(directParams);
+  if (directOmdb && isConfidentMatch(guessed, directOmdb)) {
+    // If filename specified a year, verify match is within +/- 2 years
+    if (typeof guessed.year === "number" && directOmdb.Year) {
+      const parsedYear = parseInt(directOmdb.Year, 10);
+      if (isNaN(parsedYear) || Math.abs(parsedYear - guessed.year) <= 2) {
+        return { status: "matched", guess: guessed, omdb: directOmdb };
+      }
+    } else {
+      return { status: "matched", guess: guessed, omdb: directOmdb };
+    }
+  }
 
-  const search = await fetchOmdb<OmdbSearchResponse>(parameters);
-  const topResult = search?.Search?.[0];
-  if (!topResult || titleSimilarity(guessed.title, topResult.Title) < MINIMUM_TITLE_SIMILARITY) {
+  // 3. Search query with year (?s=title&y=year)
+  let topResult: { Title: string; Year: string; imdbID: string; Type: string } | undefined;
+  if (typeof guessed.year === "number") {
+    const searchWithYear = await fetchOmdb<OmdbSearchResponse>(
+      new URLSearchParams({
+        s: guessed.title,
+        type: targetType,
+        y: String(guessed.year),
+      })
+    );
+    const candidate = searchWithYear?.Search?.[0];
+    if (candidate && titleSimilarity(guessed.title, candidate.Title) >= MINIMUM_TITLE_SIMILARITY) {
+      topResult = candidate;
+    }
+  }
+
+  // 4. Search query without year (?s=title)
+  if (!topResult) {
+    const searchNoYear = await fetchOmdb<OmdbSearchResponse>(
+      new URLSearchParams({
+        s: guessed.title,
+        type: targetType,
+      })
+    );
+    if (searchNoYear?.Search && searchNoYear.Search.length > 0) {
+      // Pick best matching candidate (preferring closest year if filename has a year)
+      const candidate = searchNoYear.Search.find((item) => {
+        const sim = titleSimilarity(title, item.Title);
+        if (sim < MINIMUM_TITLE_SIMILARITY) return false;
+        if (typeof guessed.year === "number") {
+          const itemYear = parseInt(item.Year, 10);
+          return isNaN(itemYear) || Math.abs(itemYear - guessed.year) <= 2;
+        }
+        return true;
+      }) || searchNoYear.Search[0];
+
+      if (candidate && titleSimilarity(title, candidate.Title) >= MINIMUM_TITLE_SIMILARITY) {
+        topResult = candidate;
+      }
+    }
+  }
+
+  if (!topResult || titleSimilarity(title, topResult.Title) < MINIMUM_TITLE_SIMILARITY) {
     return { status: "unmatched", guess: guessed };
   }
 
