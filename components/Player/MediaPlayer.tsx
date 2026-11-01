@@ -92,6 +92,8 @@ export default function MediaPlayer({
     setCueText,
     setSubtitleSize,
     setSubtitleColor,
+    setSubtitleBg,
+    setSubtitleOffset,
     showResumeToast,
     forceHideControls,
     fetchSubtitles,
@@ -502,6 +504,50 @@ export default function MediaPlayer({
     [state.activeAudioTrack, setActiveAudioTrack],
   );
 
+  // Subtitle live offset sync
+  const handleSubtitleOffsetChange = useCallback(
+    (delta: number) => {
+      setSubtitleOffset((prev) => {
+        const next = parseFloat((prev + delta).toFixed(1));
+        const v = videoRef.current;
+        if (v) {
+          for (let i = 0; i < v.textTracks.length; i++) {
+            const track = v.textTracks[i];
+            if (track.cues) {
+              for (let j = 0; j < track.cues.length; j++) {
+                const cue = track.cues[j] as VTTCue;
+                cue.startTime = Math.max(0, cue.startTime + delta);
+                cue.endTime = Math.max(0, cue.endTime + delta);
+              }
+            }
+          }
+        }
+        return next;
+      });
+    },
+    [setSubtitleOffset, videoRef],
+  );
+
+  const handleSubtitleOffsetReset = useCallback(() => {
+    setSubtitleOffset((current) => {
+      const delta = -current;
+      const v = videoRef.current;
+      if (v) {
+        for (let i = 0; i < v.textTracks.length; i++) {
+          const track = v.textTracks[i];
+          if (track.cues) {
+            for (let j = 0; j < track.cues.length; j++) {
+              const cue = track.cues[j] as VTTCue;
+              cue.startTime = Math.max(0, cue.startTime + delta);
+              cue.endTime = Math.max(0, cue.endTime + delta);
+            }
+          }
+        }
+      }
+      return 0;
+    });
+  }, [setSubtitleOffset, videoRef]);
+
   // Scrubber seeking handlers
   const handleScrubberSeek = useCallback(
     (clientX: number) => {
@@ -653,16 +699,15 @@ export default function MediaPlayer({
         crossOrigin="anonymous"
       />
 
-      {/* Desktop-only: left-side bar (below cross button for testing as requested) */}
+      {/* Desktop-only: left-side invisible trigger zone to force hide controls */}
       <div
         data-controls
-        className="hidden md:block absolute top-[85px] bottom-[120px] left-0 w-[25px] z-[999] bg-red-500/20 border-r-2 border-red-500 pointer-events-auto"
+        className="hidden md:block absolute top-[85px] bottom-[120px] left-0 w-[25px] z-[999] pointer-events-auto"
         onMouseEnter={() => {
           if (!isAnyMenuOpen) {
             forceHideControls();
           }
         }}
-        title="Left side auto-hide test bar (25px)"
       />
 
       {/* Buffering spinner */}
@@ -712,22 +757,49 @@ export default function MediaPlayer({
       {/* Custom subtitle rendering */}
       {state.currentCueText && (
         <div
-          className={`absolute left-0 right-0 flex justify-center pointer-events-none px-8 z-20 ${state.subtitleSize === "small"
-            ? "bottom-12 md:bottom-12"
-            : state.subtitleSize === "large"
+          className={`absolute left-0 right-0 flex justify-center pointer-events-none px-6 z-20 ${
+            state.subtitleSize === "small"
+              ? "bottom-12 md:bottom-12"
+              : state.subtitleSize === "extra-large"
+              ? "bottom-36 md:bottom-32"
+              : state.subtitleSize === "large"
               ? "bottom-32 md:bottom-28"
               : "bottom-28 md:bottom-24"
-            }`}
+          }`}
         >
-          <div className="bg-black/75 px-5 py-2 rounded-xl backdrop-blur-sm text-center max-w-[80%] shadow-lg border border-white/5">
+          <div
+            className={`px-5 py-2 rounded-xl backdrop-blur-sm text-center max-w-[85%] transition-all ${
+              state.subtitleBg === "none"
+                ? "bg-transparent"
+                : state.subtitleBg === "shadow"
+                ? "bg-transparent drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"
+                : "bg-black/75 shadow-lg border border-white/5"
+            }`}
+          >
             <span
-              className={`font-medium leading-relaxed drop-shadow-md ${state.subtitleSize === "small"
-                ? "text-[0.85rem] md:text-[1rem]"
-                : state.subtitleSize === "large"
-                  ? "text-[1.4rem] md:text-[2rem]"
+              className={`font-medium leading-relaxed drop-shadow-md transition-all ${
+                state.subtitleSize === "small"
+                  ? "text-[0.85rem] md:text-[1rem]"
+                  : state.subtitleSize === "large"
+                  ? "text-[1.3rem] md:text-[1.8rem]"
+                  : state.subtitleSize === "extra-large"
+                  ? "text-[1.6rem] md:text-[2.2rem]"
                   : "text-[1.1rem] md:text-[1.4rem]"
-                } ${state.subtitleColor === "yellow" ? "text-[#f3f315]" : "text-white"
-                }`}
+              } ${
+                state.subtitleColor === "yellow"
+                  ? "text-[#f3f315]"
+                  : state.subtitleColor === "cyan"
+                  ? "text-[#4deeea]"
+                  : state.subtitleColor === "green"
+                  ? "text-[#4ade80]"
+                  : "text-white"
+              }`}
+              style={{
+                textShadow:
+                  state.subtitleBg === "none" || state.subtitleBg === "shadow"
+                    ? "0 2px 4px rgba(0,0,0,0.9), 0 0 2px #000, 0 0 8px #000"
+                    : undefined,
+              }}
               dangerouslySetInnerHTML={{ __html: state.currentCueText }}
             />
           </div>
@@ -878,92 +950,7 @@ export default function MediaPlayer({
         </div>
       </div>
 
-      {/* ── DEAD-CENTER PLAYBACK CONTROLS (Apple TV+ Cluster) ── */}
-      <div
-        data-controls
-        className={`absolute inset-0 flex items-center justify-center pointer-events-none z-30 transition-all duration-300 ${controlsVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-          }`}
-      >
-        <div className="flex items-center gap-4 sm:gap-6 md:gap-10 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-          {/* Rewind 10s */}
-          <button
-            onClick={wpSkipBack}
-            style={PLAYER_PILL_GLASS_STYLE}
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
-            title="Rewind 10 seconds"
-          >
-            <svg
-              className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-              <text
-                x="12"
-                y="14.5"
-                textAnchor="middle"
-                fontSize="6.5"
-                fontWeight="bold"
-                fill="currentColor"
-                stroke="none"
-              >
-                10
-              </text>
-            </svg>
-          </button>
 
-          {/* Center Play / Pause */}
-          <button
-            onClick={wpTogglePlay}
-            style={PLAYER_PILL_GLASS_STYLE}
-            className="w-15 h-15 sm:w-18 sm:h-18 md:w-22 md:h-22 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
-            title={state.isPlaying ? "Pause (Space)" : "Play (Space)"}
-          >
-            {state.isPlaying ? (
-              <Pause className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 fill-current" />
-            ) : (
-              <Play className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 fill-current ml-1" />
-            )}
-          </button>
-
-          {/* Forward 10s */}
-          <button
-            onClick={wpSkipForward}
-            style={PLAYER_PILL_GLASS_STYLE}
-            className="w-11 h-11 sm:w-13 sm:h-13 md:w-16 md:h-16 !rounded-full flex items-center justify-center text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all shadow-2xl"
-            title="Forward 10 seconds"
-          >
-            <svg
-              className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-              <text
-                x="12"
-                y="14.5"
-                textAnchor="middle"
-                fontSize="6.5"
-                fontWeight="bold"
-                fill="currentColor"
-                stroke="none"
-              >
-                10
-              </text>
-            </svg>
-          </button>
-        </div>
-      </div>
 
       {/* ── BOTTOM AREA ── */}
       <div
@@ -1044,28 +1031,89 @@ export default function MediaPlayer({
                 >
                   <Subtitles className="w-4 h-4" />
                 </button>
+
+                {/* Stream Engine Button (Direct Play / Direct HLS) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStreamMenu(!showStreamMenu);
+                    setShowAudioMenu(false);
+                    setShowSubMenu(false);
+                    setShowSpeedMenu(false);
+                  }}
+                  className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${
+                    showStreamMenu
+                      ? "bg-white/20 text-emerald-300 shadow-sm"
+                      : streamMode === "direct"
+                      ? "text-emerald-300 hover:text-emerald-200 hover:bg-white/10"
+                      : "text-violet-300 hover:text-violet-200 hover:bg-white/10"
+                  }`}
+                  title={streamMode === "direct" ? "Stream Engine: Direct Play" : "Stream Engine: Direct Stream (HLS)"}
+                >
+                  <Zap className="w-4 h-4 fill-current" />
+                </button>
               </div>
 
               {/* Popovers rendered outside the control pill, eliminating nested backdrop-filter clipping */}
               {showSpeedMenu && (
                 <div
                   style={PLAYER_POPUP_GLASS_STYLE}
-                  className="absolute bottom-full right-0 mb-3 w-36 rounded-2xl p-1 shadow-2xl z-50 text-white"
+                  className="fixed sm:absolute bottom-20 sm:bottom-full right-3 sm:right-0 mb-3 rounded-2xl p-3 shadow-2xl z-50 text-white min-w-[280px] sm:min-w-[320px] max-w-[calc(100vw-1.5rem)] animate-in fade-in zoom-in-95 origin-bottom-right duration-150 select-none"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-white/40 border-b border-white/10">
-                    Speed
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 px-1 text-[11px] font-bold uppercase tracking-wider text-white/50">
+                    <span className="flex items-center gap-1.5">
+                      <Gauge className="w-3.5 h-3.5 text-white/70" />
+                      Playback Speed
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-violet-300 px-2 py-0.5 rounded-full bg-white/10">
+                      {speed}x
+                    </span>
                   </div>
-                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleSpeedSelect(s)}
-                      className={`w-full text-left px-2.5 py-1.5 text-xs font-medium rounded-xl flex items-center justify-between transition-colors ${speed === s ? "bg-white/20 text-white font-bold" : "text-white/70 hover:bg-white/10"
-                        }`}
-                    >
-                      <span>{s === 1 ? "1x (Normal)" : `${s}x`}</span>
-                      {speed === s && <Check className="w-3.5 h-3.5 text-white" />}
-                    </button>
-                  ))}
+
+                  {/* Horizontal Stepped Slider: 0----0----0----0----0 */}
+                  <div className="py-2 px-1">
+                    <div className="relative flex items-center justify-between">
+                      {/* Connecting Track Line running precisely through the centers of first and last nodes */}
+                      <div className="absolute top-[11px] left-[18px] right-[18px] h-[2px] bg-white/20 rounded-full pointer-events-none" />
+                      {/* Active Progress Fill */}
+                      <div
+                        className="absolute top-[11px] left-[18px] h-[2px] bg-gradient-to-r from-violet-500 to-white rounded-full transition-all duration-150 pointer-events-none"
+                        style={{
+                          width: `calc((100% - 36px) * ${Math.max(0, [0.5, 0.75, 1, 1.25, 1.5, 2].indexOf(speed)) / 5})`,
+                        }}
+                      />
+
+                      {/* Snap Points */}
+                      {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => {
+                        const isCurrent = speed === s;
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => handleSpeedSelect(s)}
+                            className="w-9 relative z-10 flex flex-col items-center group/speednode focus:outline-none py-1"
+                          >
+                            <span
+                              className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center ${
+                                isCurrent
+                                  ? "bg-white border-violet-400 shadow-[0_0_12px_rgba(255,255,255,0.9)] scale-125"
+                                  : "bg-[#18181b] border-white/40 group-hover/speednode:border-white group-hover/speednode:scale-110"
+                              }`}
+                            >
+                              {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-violet-600" />}
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono mt-1.5 font-semibold transition-colors ${
+                                isCurrent ? "text-white font-bold" : "text-white/50 group-hover/speednode:text-white/80"
+                              }`}
+                            >
+                              {s === 1 ? "1x" : `${s}x`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1092,6 +1140,17 @@ export default function MediaPlayer({
                   onSizeSelect={setSubtitleSize}
                   onColorSelect={setSubtitleColor}
                   onClose={() => setShowSubMenu(false)}
+                />
+              )}
+
+              {showStreamMenu && (
+                <StreamModeMenu
+                  currentMode={streamMode}
+                  onSelect={(mode) => {
+                    switchStreamMode(mode);
+                    setShowStreamMenu(false);
+                  }}
+                  onClose={() => setShowStreamMenu(false)}
                 />
               )}
             </div>
@@ -1144,60 +1203,116 @@ export default function MediaPlayer({
             </span>
           </div>
 
-          {/* Bottom Action Pills: [ Info ] [ Stream Mode ] [ Fullscreen ] */}
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={() => setShowStats(true)}
-              style={PLAYER_PILL_GLASS_STYLE}
-              className="!rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all flex items-center gap-1.5 shrink-0"
-            >
-              <Info className="w-3.5 h-3.5" />
-              Info
-            </button>
-
-            <div className="relative shrink-0">
+          {/* Bottom Action Row: [ Left: Info ] [ Center: Playback Controls ] [ Right: Fullscreen ] */}
+          <div className="flex items-center justify-between gap-2 pt-1 relative">
+            {/* Left Action: Info */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowStreamMenu(!showStreamMenu);
-                  setShowAudioMenu(false);
-                  setShowSubMenu(false);
-                  setShowSpeedMenu(false);
-                }}
+                onClick={() => setShowStats(true)}
                 style={PLAYER_PILL_GLASS_STYLE}
-                className={`!rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold hover:bg-white/15 transition-all flex items-center gap-1.5 whitespace-nowrap ${streamMode === "direct" ? "text-emerald-300" : "text-violet-300"
-                  }`}
+                className="!rounded-full px-2.5 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all flex items-center gap-1.5 shrink-0"
+                title="Stats for Nerds"
               >
-                <Zap className="w-3.5 h-3.5 fill-current" />
-                <span className="hidden sm:inline">
-                  {streamMode === "direct" ? "Direct Play" : "Direct Stream (HLS)"}
-                </span>
-                <span className="inline sm:hidden">
-                  {streamMode === "direct" ? "Direct" : "HLS Stream"}
-                </span>
+                <Info className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Info</span>
               </button>
-
-              {showStreamMenu && (
-                <StreamModeMenu
-                  currentMode={streamMode}
-                  onSelect={(mode) => {
-                    switchStreamMode(mode);
-                    setShowStreamMenu(false);
-                  }}
-                  onClose={() => setShowStreamMenu(false)}
-                />
-              )}
             </div>
 
-            <button
-              onClick={toggleFullscreen}
-              style={PLAYER_PILL_GLASS_STYLE}
-              className="!rounded-full px-3 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all ml-auto flex items-center gap-1.5 shrink-0"
-              title={state.isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            >
-              {state.isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{state.isFullscreen ? "Windowed" : "Fullscreen"}</span>
-            </button>
+            {/* Center Playback Controls Capsule [ ⏪ 10s | ▶ / ⏸ Play/Pause | ⏩ 10s ] */}
+            <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center shrink-0">
+              <div
+                style={PLAYER_PILL_GLASS_STYLE}
+                className="!rounded-full px-2 py-1 sm:px-2.5 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-lg"
+              >
+                {/* Rewind 10s */}
+                <button
+                  onClick={wpSkipBack}
+                  className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/15 active:scale-95 transition-all"
+                  title="Rewind 10 seconds (Left Arrow)"
+                >
+                  <svg
+                    className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <text
+                      x="12"
+                      y="14.5"
+                      textAnchor="middle"
+                      fontSize="6.5"
+                      fontWeight="bold"
+                      fill="currentColor"
+                      stroke="none"
+                    >
+                      10
+                    </text>
+                  </svg>
+                </button>
+
+                {/* Play / Pause Toggle */}
+                <button
+                  onClick={wpTogglePlay}
+                  className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full text-white bg-white/15 hover:bg-white/25 active:scale-95 border border-white/20 transition-all shadow-sm"
+                  title={state.isPlaying ? "Pause (Space)" : "Play (Space)"}
+                >
+                  {state.isPlaying ? (
+                    <Pause className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current" />
+                  ) : (
+                    <Play className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current ml-0.5" />
+                  )}
+                </button>
+
+                {/* Forward 10s */}
+                <button
+                  onClick={wpSkipForward}
+                  className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/15 active:scale-95 transition-all"
+                  title="Forward 10 seconds (Right Arrow)"
+                >
+                  <svg
+                    className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                    <path d="M21 3v5h-5" />
+                    <text
+                      x="12"
+                      y="14.5"
+                      textAnchor="middle"
+                      fontSize="6.5"
+                      fontWeight="bold"
+                      fill="currentColor"
+                      stroke="none"
+                    >
+                      10
+                    </text>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Fullscreen */}
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
+              <button
+                onClick={toggleFullscreen}
+                style={PLAYER_PILL_GLASS_STYLE}
+                className="!rounded-full px-2.5 sm:px-4 py-1.5 text-xs font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-all flex items-center gap-1.5 shrink-0"
+                title={state.isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              >
+                {state.isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{state.isFullscreen ? "Windowed" : "Fullscreen"}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

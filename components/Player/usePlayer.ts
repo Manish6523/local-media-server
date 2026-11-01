@@ -34,8 +34,10 @@ export interface PlayerState {
   audioTracks: AudioTrack[];
   skipAnimation: "left" | "right" | null;
   currentCueText: string;
-  subtitleSize: "small" | "medium" | "large";
-  subtitleColor: "white" | "yellow";
+  subtitleSize: "small" | "medium" | "large" | "extra-large";
+  subtitleColor: "white" | "yellow" | "cyan" | "green";
+  subtitleBg: "box" | "shadow" | "none";
+  subtitleOffset: number;
 }
 
 export function usePlayer(
@@ -70,6 +72,8 @@ export function usePlayer(
     currentCueText: "",
     subtitleSize: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_size")) as any || "medium",
     subtitleColor: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_color")) as any || "white",
+    subtitleBg: (typeof window !== "undefined" && localStorage.getItem("vidlock_subtitle_bg")) as any || "box",
+    subtitleOffset: 0,
   });
 
   const [transcodeStartTime, setTranscodeStartTime] = useState(0);
@@ -566,14 +570,23 @@ export function usePlayer(
     setState((s) => ({ ...s, currentCueText: text }));
   }, []);
 
-  const setSubtitleSize = useCallback((size: "small" | "medium" | "large") => {
+  const setSubtitleSize = useCallback((size: "small" | "medium" | "large" | "extra-large") => {
     setState((s) => ({ ...s, subtitleSize: size }));
     if (typeof window !== "undefined") localStorage.setItem("vidlock_subtitle_size", size);
   }, []);
 
-  const setSubtitleColor = useCallback((color: "white" | "yellow") => {
+  const setSubtitleColor = useCallback((color: "white" | "yellow" | "cyan" | "green") => {
     setState((s) => ({ ...s, subtitleColor: color }));
     if (typeof window !== "undefined") localStorage.setItem("vidlock_subtitle_color", color);
+  }, []);
+
+  const setSubtitleBg = useCallback((bg: "box" | "shadow" | "none") => {
+    setState((s) => ({ ...s, subtitleBg: bg }));
+    if (typeof window !== "undefined") localStorage.setItem("vidlock_subtitle_bg", bg);
+  }, []);
+
+  const setSubtitleOffset = useCallback((offset: number | ((prev: number) => number)) => {
+    setState((s) => ({ ...s, subtitleOffset: typeof offset === "function" ? offset(s.subtitleOffset) : offset }));
   }, []);
 
   // Fullscreen change listener
@@ -614,6 +627,8 @@ export function usePlayer(
     setCueText,
     setSubtitleSize,
     setSubtitleColor,
+    setSubtitleBg,
+    setSubtitleOffset,
     showResumeToast,
     updateTranscodeStart: setTranscodeStartTime,
     forceHideControls,
