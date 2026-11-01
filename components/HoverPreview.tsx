@@ -32,7 +32,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
     if (isHovered) {
       // 500ms delay to prevent accidental loading on fast mouse swipes
       timeoutId = setTimeout(() => {
-        const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
+        const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0) || 1440; // Default ~24min if missing
         if (startAt !== undefined) {
           setComputedStartTime(Math.max(0, startAt));
         } else if (randomStart) {
@@ -46,7 +46,7 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
               setComputedStartTime(Math.random() * (totalSeconds - clipDuration));
             }
           } else {
-             setComputedStartTime(0);
+             setComputedStartTime(fallbackStartTime);
           }
         } else {
           if (totalSeconds > 0) {
@@ -131,15 +131,34 @@ export default function HoverPreview({ mediaId, runtime, exactDuration, isHovere
         onPlay={() => setIsPlaying(true)}
         onLoadedMetadata={(e) => {
           const video = e.currentTarget;
-          const totalSeconds = exactDuration || (runtime ? runtime * 60 : 0);
-          if (startAt === undefined && totalSeconds === 0 && !randomStart && isFinite(video.duration) && video.duration > 0) {
-            const exactStart = Math.max(0, (video.duration / 3) - 1);
-            setComputedStartTime(exactStart);
-            video.currentTime = exactStart;
+          if (isFinite(video.duration) && video.duration > clipDuration) {
+            // If duration wasn't known from DB, pick random starting point from actual duration
+            if (!exactDuration && !runtime) {
+              const middleStart = video.duration * 0.3;
+              const middleEnd = video.duration * 0.7 - clipDuration;
+              const freshStart = middleEnd > middleStart
+                ? middleStart + Math.random() * (middleEnd - middleStart)
+                : Math.random() * (video.duration - clipDuration);
+              setComputedStartTime(freshStart);
+              try {
+                video.currentTime = freshStart;
+              } catch {}
+              return;
+            }
+          }
+          if (computedStartTime > 0 && Math.abs(video.currentTime - computedStartTime) > 1.5) {
+            try {
+              video.currentTime = computedStartTime;
+            } catch {}
           }
         }}
-        onLoadedData={(e) => {
-          // Native #t= fragment handles initial seek, so no manual seek needed here
+        onCanPlay={(e) => {
+          const video = e.currentTarget;
+          if (computedStartTime > 0 && Math.abs(video.currentTime - computedStartTime) > 1.5) {
+            try {
+              video.currentTime = computedStartTime;
+            } catch {}
+          }
         }}
       />
 

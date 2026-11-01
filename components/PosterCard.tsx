@@ -156,7 +156,7 @@ export default function PosterCard({
           {!selectionMode && !isUnavailable && media.source !== "online" && (
             <HoverPreview
               mediaId={media.id}
-              runtime={media.runtime}
+              runtime={media.runtime || (media.type === "show" ? 24 : 90)}
               exactDuration={media.exactDuration}
               isHovered={isHovered}
               clipDuration={10}
@@ -300,7 +300,7 @@ export default function PosterCard({
         {!selectionMode && !isUnavailable && media.source !== "online" && (
           <HoverPreview
             mediaId={media.id}
-            runtime={media.runtime}
+            runtime={media.runtime || (media.type === "show" ? 24 : 90)}
             exactDuration={media.exactDuration}
             isHovered={isHovered}
             clipDuration={10}
