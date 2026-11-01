@@ -329,6 +329,8 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
     mediaType === "show"
       ? inProgressEp || episodes.find((e) => e.available) || episodes[0]
       : null;
+  const targetMediaForPreview =
+    mediaType === "movie" ? primaryItem : (firstAvailableEp || primaryItem);
 
   // Watch progress for movie or active show episode
   const progressPercent =
@@ -366,14 +368,15 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
           priority
         />
 
-        {/* Inline Auto-Trailer (Movies) */}
-        {mediaType === "movie" && enableAutoTrailerBg && (
+        {/* Inline Auto-Trailer (Movies & Series) */}
+        {enableAutoTrailerBg && targetMediaForPreview && (
           <AutoTrailerInline
-            mediaId={primaryItem.id}
+            key={targetMediaForPreview.id}
+            mediaId={targetMediaForPreview.id}
             exactDuration={
-              primaryItem.exactDuration || (primaryItem.runtime ? primaryItem.runtime * 60 : 0)
+              targetMediaForPreview.exactDuration || (targetMediaForPreview.runtime ? targetMediaForPreview.runtime * 60 : 0)
             }
-            isOnline={primaryItem.source === "online"}
+            isOnline={targetMediaForPreview.source === "online"}
             isVideoHidden={isTrailerHidden}
             onToggleVideoHidden={setIsTrailerHidden}
             hideToggle={true}
@@ -454,21 +457,23 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
             className="glass-md flex items-center rounded-full p-1.5 gap-1 shadow-lg flex-shrink-0"
             style={PLAYER_PILL_GLASS_STYLE}
           >
-            {mediaType === "movie" && enableAutoTrailerBg && primaryItem.source !== "online" && (
-              <>
-                <button
-                  onClick={() => setIsTrailerHidden(!isTrailerHidden)}
-                  title={isTrailerHidden ? "Show Background Trailer" : "Show Static Backdrop"}
-                  className="flex items-center justify-center w-8 h-8 rounded-full text-white/80 hover:text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                >
-                  {isTrailerHidden ? (
-                    <Film className="w-4 h-4 text-white" />
-                  ) : (
-                    <ImageIcon className="w-4 h-4 text-white" />
-                  )}
-                </button>
-                <span className="w-[1px] h-4 bg-white/15" />
-              </>
+            {enableAutoTrailerBg &&
+              targetMediaForPreview &&
+              targetMediaForPreview.source !== "online" && (
+                <>
+                  <button
+                    onClick={() => setIsTrailerHidden(!isTrailerHidden)}
+                    title={isTrailerHidden ? "Show Background Trailer" : "Show Static Backdrop"}
+                    className="flex items-center justify-center w-8 h-8 rounded-full text-white/80 hover:text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isTrailerHidden ? (
+                      <Film className="w-4 h-4 text-white" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4 text-white" />
+                    )}
+                  </button>
+                  <span className="w-[1px] h-4 bg-white/15" />
+                </>
             )}
 
             {primaryItem.source !== "online" && (
@@ -890,27 +895,29 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
 
           {/* ── Right Column: Floating Poster Widget (glass-surface) ────── */}
           <div className="hidden lg:flex w-[370px] xl:w-[410px] flex-col justify-end items-end flex-shrink-0 pointer-events-auto gap-2.5">
-            {/* Backdrop View / Play Trailer Pill (Movies with Trailer) */}
-            {mediaType === "movie" && enableAutoTrailerBg && primaryItem.source !== "online" && (
-              <button
-                onClick={() => setIsTrailerHidden(!isTrailerHidden)}
-                title={isTrailerHidden ? "Show Background Trailer" : "Show Static Backdrop"}
-                className="glass-md flex items-center gap-2 px-3.5 py-1.5 rounded-full text-white/85 hover:text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all text-xs font-semibold cursor-pointer shadow-xl mb-1"
-                style={PLAYER_PILL_GLASS_STYLE}
-              >
-                {isTrailerHidden ? (
-                  <>
-                    <Film className="w-3.5 h-3.5 text-white" />
-                    <span>Play Trailer</span>
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="w-3.5 h-3.5 text-white" />
-                    <span>Backdrop View</span>
-                  </>
-                )}
-              </button>
-            )}
+            {/* Backdrop View / Play Trailer Pill (Movies & Series with Trailer) */}
+            {enableAutoTrailerBg &&
+              targetMediaForPreview &&
+              targetMediaForPreview.source !== "online" && (
+                <button
+                  onClick={() => setIsTrailerHidden(!isTrailerHidden)}
+                  title={isTrailerHidden ? "Show Background Trailer" : "Show Static Backdrop"}
+                  className="glass-md flex items-center gap-2 px-3.5 py-1.5 rounded-full text-white/85 hover:text-white hover:bg-white/15 hover:scale-105 active:scale-95 transition-all text-xs font-semibold cursor-pointer shadow-xl mb-1"
+                  style={PLAYER_PILL_GLASS_STYLE}
+                >
+                  {isTrailerHidden ? (
+                    <>
+                      <Film className="w-3.5 h-3.5 text-white" />
+                      <span>Play Trailer</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-3.5 h-3.5 text-white" />
+                      <span>Backdrop View</span>
+                    </>
+                  )}
+                </button>
+              )}
 
             {/* Poster Card Widget */}
             <div
