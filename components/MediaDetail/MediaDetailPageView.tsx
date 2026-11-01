@@ -374,7 +374,9 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
             key={targetMediaForPreview.id}
             mediaId={targetMediaForPreview.id}
             exactDuration={
-              targetMediaForPreview.exactDuration || (targetMediaForPreview.runtime ? targetMediaForPreview.runtime * 60 : 0)
+              targetMediaForPreview.exactDuration ||
+              (targetMediaForPreview.runtime ? targetMediaForPreview.runtime * 60 : 0) ||
+              (mediaType === "show" ? 24 * 60 : 90 * 60)
             }
             isOnline={targetMediaForPreview.source === "online"}
             isVideoHidden={isTrailerHidden}

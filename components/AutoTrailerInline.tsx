@@ -73,34 +73,35 @@ export default function AutoTrailerInline({
   const numClips = 3;
   const clipDuration = 30; // seconds
 
+  const createClipsFromDuration = (duration: number) => {
+    if (!duration || duration < clipDuration * numClips) {
+      return [0];
+    }
+
+    // Avoid first 8% (intros/logos) and last 10% (credits)
+    const minTime = duration * 0.08;
+    const maxTime = duration * 0.90;
+    const validDuration = maxTime - minTime;
+
+    const newClips: number[] = [];
+    const segmentSize = validDuration / numClips;
+
+    for (let i = 0; i < numClips; i++) {
+      const segmentStart = minTime + i * segmentSize;
+      const maxOffset = Math.max(0, segmentSize - clipDuration);
+      const randomOffset = Math.random() * maxOffset;
+      newClips.push(segmentStart + randomOffset);
+    }
+
+    return newClips;
+  };
+
   useEffect(() => {
-    // Generate random timestamps
-    const generateClips = () => {
-      if (exactDuration < clipDuration * numClips) {
-        setClips([0]);
-        return;
-      }
-
-      // Avoid first 5% (logos) and last 10% (credits)
-      const minTime = exactDuration * 0.05;
-      const maxTime = exactDuration * 0.90;
-      const validDuration = maxTime - minTime;
-
-      const newClips: number[] = [];
-      const segmentSize = validDuration / numClips;
-
-      for (let i = 0; i < numClips; i++) {
-        const segmentStart = minTime + i * segmentSize;
-        const maxOffset = Math.max(0, segmentSize - clipDuration);
-        const randomOffset = Math.random() * maxOffset;
-        newClips.push(segmentStart + randomOffset);
-      }
-
-      setClips(newClips);
-      setCurrentClipIndex(0);
-    };
-
-    generateClips();
+    // Generate initial timestamps from exactDuration or fallback
+    const effectiveDuration = exactDuration > 0 ? exactDuration : 1440; // Default ~24min if unknown
+    const newClips = createClipsFromDuration(effectiveDuration);
+    setClips(newClips);
+    setCurrentClipIndex(0);
   }, [exactDuration]);
 
   // Load video source
@@ -110,8 +111,17 @@ export default function AutoTrailerInline({
     const video = videoRef.current;
     const streamUrl = `/api/stream?id=${mediaId}`;
 
+    const seekToInitialClip = (targetTime: number) => {
+      if (targetTime > 0 && Math.abs(video.currentTime - targetTime) > 1.5) {
+        try {
+          video.currentTime = targetTime;
+        } catch {}
+      }
+    };
+
     const handleCanPlay = () => {
       setLoading(false);
+      seekToInitialClip(clips[0]);
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -124,7 +134,17 @@ export default function AutoTrailerInline({
     const handlePause = () => setIsPlaying(false);
 
     const handleLoadedMetadata = () => {
-      // Native #t= fragment handles initial seek, so no manual seek needed here
+      // If native duration is discovered and differs from DB duration, recalculate clips dynamically
+      if (video.duration && isFinite(video.duration) && video.duration > clipDuration * numClips) {
+        if (!exactDuration || Math.abs(video.duration - exactDuration) > 120) {
+          const dynamicClips = createClipsFromDuration(video.duration);
+          setClips(dynamicClips);
+          setCurrentClipIndex(0);
+          seekToInitialClip(dynamicClips[0]);
+          return;
+        }
+      }
+      seekToInitialClip(clips[0]);
     };
 
     video.addEventListener("canplay", handleCanPlay);
@@ -140,7 +160,7 @@ export default function AutoTrailerInline({
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
     };
-  }, [clips, mediaId, trailerFinished]);
+  }, [clips, mediaId, trailerFinished, exactDuration]);
 
   // Time update listener for auto-skipping
   useEffect(() => {
