@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { TVNavigationProvider } from "@/components/TV/TVNavigationContext";
 
 export const metadata: Metadata = {
-  title: "VidLock TV",
-  description: "VidLock lightweight TV interface for webOS and older browsers.",
+  title: "VidLock TV — 10-Foot Cinema Experience",
+  description: "Modern D-Pad and remote control optimized media streaming interface for Smart TVs and displays.",
 };
 
 export default function TVLayout({
@@ -14,22 +15,14 @@ export default function TVLayout({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        {/* Universal Smart TV Compatible Stylesheet (Chromium 38+ / webOS / Tizen) */}
         <link rel="stylesheet" href="/tv-styles.css" />
       </head>
       <body>
-        <header className="tv-header">
-          <div className="tv-header-inner clearfix">
-            <div className="tv-logo">VidLock</div>
-            <nav className="tv-nav">
-              <a href="/tv">Home</a>
-              <a href="/tv?type=movie">Movies</a>
-              <a href="/tv?type=show">Shows</a>
-            </nav>
-          </div>
-        </header>
-        {children}
-        <div className="tv-footer">VidLock TV &mdash; Lightweight Interface</div>
+        <TVNavigationProvider>
+          {children}
+        </TVNavigationProvider>
       </body>
     </html>
   );

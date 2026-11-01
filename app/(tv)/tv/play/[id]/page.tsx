@@ -1,84 +1,39 @@
-import { getMediaById } from "@/lib/db";
+import React from "react";
 import { notFound } from "next/navigation";
-import TVPlayer from "./TVPlayer";
+import { getMediaById, getAllMedia, type MediaEntry } from "@/lib/db";
+import TVPlayerClient from "./TVPlayerClient";
 
 export const dynamic = "force-dynamic";
 
-interface PlayPageProps {
+interface TVPlayPageProps {
   params: Promise<{ id: string }>;
 }
 
-function formatEpisodeLabel(item: {
-  type: string;
-  season: number | null;
-  episode_start: number | null;
-  episode_end: number | null;
-}) {
-  if (item.type !== "show") {
-    return "";
-  }
-  var parts = [];
-  if (item.season !== null && item.season !== undefined) {
-    parts.push("Season " + item.season);
-  }
-  if (item.episode_start !== null && item.episode_start !== undefined) {
-    parts.push("Episode " + item.episode_start);
-    if (
-      item.episode_end !== null &&
-      item.episode_end !== undefined &&
-      item.episode_end !== item.episode_start
-    ) {
-      parts[parts.length - 1] =
-        "Episodes " + item.episode_start + "-" + item.episode_end;
+export default async function TVPlayPage({ params }: TVPlayPageProps) {
+  const { id } = await params;
+  const mediaId = Number.parseInt(id, 10);
+  if (Number.isNaN(mediaId)) notFound();
+
+  const media = getMediaById(mediaId);
+  if (!media) notFound();
+
+  let nextEpisode: MediaEntry | null = null;
+  if (media.type === "show") {
+    const all = getAllMedia();
+    const showEps = all
+      .filter((m) => m.type === "show" && m.title.toLowerCase() === media.title.toLowerCase())
+      .sort((a, b) => {
+        if ((a.season ?? 0) !== (b.season ?? 0)) {
+          return (a.season ?? 0) - (b.season ?? 0);
+        }
+        return (a.episode_start ?? 0) - (b.episode_start ?? 0);
+      });
+
+    const currentIndex = showEps.findIndex((e) => e.id === media.id);
+    if (currentIndex !== -1 && currentIndex < showEps.length - 1) {
+      nextEpisode = showEps[currentIndex + 1];
     }
   }
-  return parts.join(", ");
-}
 
-export default async function PlayPage(props: PlayPageProps) {
-  var resolvedParams = await props.params;
-  var id = parseInt(resolvedParams.id, 10);
-
-  if (isNaN(id)) {
-    notFound();
-  }
-
-  var media = getMediaById(id);
-
-  if (!media) {
-    notFound();
-  }
-
-  var title = media.title || "Untitled";
-  var episodeLabel = formatEpisodeLabel(media);
-  var nativeFormats = ["mp4", "m4v", "mov", "webm"];
-  var fileExt = (media.filename.split(".").pop() || "").toLowerCase();
-  var streamUrl = nativeFormats.includes(fileExt)
-    ? "/api/stream?id=" + media.id
-    : "/api/hls/" + media.id + "/0/0/playlist.m3u8?clientId=tv";
-
-  var metaParts = [];
-  if (media.year) {
-    metaParts.push(String(media.year));
-  }
-  if (media.rating) {
-    metaParts.push(media.rating);
-  }
-  if (media.genres) {
-    metaParts.push(media.genres);
-  }
-  if (media.runtime) {
-    metaParts.push(media.runtime + " min");
-  }
-  var metaText = metaParts.join(" \u2022 ");
-
-  return (
-    <TVPlayer
-      title={title}
-      episodeLabel={episodeLabel}
-      metaText={metaText}
-      streamUrl={streamUrl}
-      overview={media.overview || ""}
-    />
-  );
+  return <TVPlayerClient media={media} nextEpisode={nextEpisode} />;
 }

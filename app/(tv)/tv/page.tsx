@@ -1,5 +1,6 @@
-import { getAllMedia, getMediaByType } from "@/lib/db";
-import TVBrowser from "./TVBrowser";
+import React from "react";
+import { getAllMedia, type MediaEntry } from "@/lib/db";
+import TVHomeView from "@/components/TV/TVHomeView";
 
 export const dynamic = "force-dynamic";
 
@@ -7,74 +8,56 @@ interface TVPageProps {
   searchParams: Promise<{ type?: string; search?: string }>;
 }
 
-function getFilteredMedia(type: string | undefined, search: string | undefined) {
-  var media;
+export default async function TVPage({ searchParams }: TVPageProps) {
+  const sp = await searchParams;
+  const activeFilter = sp.type;
+  const query = sp.search?.toLowerCase().trim();
 
-  if (type === "movie" || type === "show") {
-    media = getMediaByType(type);
-  } else {
-    media = getAllMedia();
+  let all = getAllMedia();
+
+  if (query) {
+    all = all.filter((m) => m.title && m.title.toLowerCase().includes(query));
   }
 
-  if (search && search.length > 0) {
-    var lower = search.toLowerCase();
-    media = media.filter(function (item) {
-      return item.title && item.title.toLowerCase().indexOf(lower) !== -1;
+  // 1. Continue watching: in-progress items, sorted by most recently watched
+  const continueWatching = all
+    .filter((m) => (m.watch_progress ?? 0) > 0 && !(m.is_watched ?? 0) && m.available)
+    .sort((a, b) => {
+      const aTime = a.last_watched_at ? new Date(a.last_watched_at).getTime() : 0;
+      const bTime = b.last_watched_at ? new Date(b.last_watched_at).getTime() : 0;
+      return bTime - aTime;
     });
+
+  // 2. Movies
+  const movies = all.filter((m) => m.type === "movie");
+
+  // 3. Unique Shows (group loose episodes into single representative show cards)
+  const showsMap = new Map<string, MediaEntry>();
+  for (const item of all) {
+    if (item.type === "show") {
+      const normTitle = item.title.toLowerCase();
+      if (!showsMap.has(normTitle)) {
+        showsMap.set(normTitle, item);
+      } else {
+        // If the current entry has a backdrop/poster and existing doesn't, prefer it
+        const current = showsMap.get(normTitle)!;
+        if (!current.poster && item.poster) {
+          showsMap.set(normTitle, item);
+        }
+      }
+    }
   }
+  const shows = Array.from(showsMap.values());
 
-  return media;
-}
-
-export default async function TVPage(props: TVPageProps) {
-  var sp = await props.searchParams;
-  var type = sp.type;
-  var search = sp.search;
-  var media = getFilteredMedia(type, search);
-
-  var movies = media.filter(function (m) {
-    return m.type === "movie";
-  });
-  var shows = media.filter(function (m) {
-    return m.type === "show";
-  });
-
-  var activeFilter = type || "all";
-
-  // Serialize only what the client component needs
-  var movieItems = movies.map(function (m) {
-    return {
-      id: m.id,
-      type: m.type,
-      title: m.title,
-      year: m.year,
-      season: m.season,
-      episode_start: m.episode_start,
-      episode_end: m.episode_end,
-      poster: m.poster,
-      genres: m.genres,
-    };
-  });
-
-  var showItems = shows.map(function (m) {
-    return {
-      id: m.id,
-      type: m.type,
-      title: m.title,
-      year: m.year,
-      season: m.season,
-      episode_start: m.episode_start,
-      episode_end: m.episode_end,
-      poster: m.poster,
-      genres: m.genres,
-    };
-  });
+  // 4. Featured Hero: first continue watching item, or top movie, or top show
+  const featured = continueWatching[0] || movies[0] || shows[0] || null;
 
   return (
-    <TVBrowser
-      movies={movieItems}
-      shows={showItems}
-      allCount={media.length}
+    <TVHomeView
+      continueWatching={continueWatching}
+      movies={movies}
+      shows={shows}
+      featured={featured}
       activeFilter={activeFilter}
     />
   );
