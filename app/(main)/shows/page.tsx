@@ -18,8 +18,9 @@ export default function ShowsPage() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showPartyModal, setShowPartyModal] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/media?type=show")
+  const fetchShows = (silent = false) => {
+    if (!silent) setLoading(true);
+    fetch(`/api/media?type=show&t=${Date.now()}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         if (!Array.isArray(data)) return;
@@ -31,7 +32,8 @@ export default function ShowsPage() {
             groupedMap.set(item.title, { ...item });
           } else {
             const existing = groupedMap.get(item.title)!;
-            if (item.available && !existing.available) {
+            // Update availability in real-time
+            if (item.available) {
               existing.available = 1;
             }
           }
@@ -39,7 +41,25 @@ export default function ShowsPage() {
         setShows(Array.from(groupedMap.values()));
       })
       .catch(() => setShows([]))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchShows(false);
+
+    const handleFocus = () => fetchShows(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchShows(true);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const sortedShows = useMemo(() => {

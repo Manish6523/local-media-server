@@ -28,11 +28,12 @@ export default function HomeContent() {
         const data = await res.json();
         setMedia(Array.isArray(data) ? data : []);
       } else {
+        const now = Date.now();
         const [mediaRes, cwRes, raRes, favRes] = await Promise.all([
-          fetch("/api/media"),
-          fetch("/api/continue-watching"),
-          fetch("/api/recently-added"),
-          fetch("/api/favorites?limit=8")
+          fetch(`/api/media?t=${now}`, { cache: "no-store" }),
+          fetch(`/api/continue-watching?t=${now}`, { cache: "no-store" }),
+          fetch(`/api/recently-added?t=${now}`, { cache: "no-store" }),
+          fetch(`/api/favorites?limit=8&t=${now}`, { cache: "no-store" })
         ]);
 
         const [mediaData, cwData, raData, favData] = await Promise.all([
@@ -57,6 +58,18 @@ export default function HomeContent() {
 
   useEffect(() => {
     fetchAllData();
+
+    const handleFocus = () => fetchAllData();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchAllData();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchAllData]);
 
   const movies = media.filter((m) => m.type === "movie");

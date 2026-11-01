@@ -161,7 +161,7 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
           .catch(() => setMovie(null))
           .finally(() => setLoading(false));
       } else {
-        fetch("/api/media?type=movie")
+        fetch(`/api/media?type=movie&includeOffline=true&t=${Date.now()}`, { cache: "no-store" })
           .then((r) => r.json())
           .then((data: MediaEntry[]) => {
             const found = data.find(
@@ -213,7 +213,7 @@ export default function MediaDetailPageView({ mediaType }: MediaDetailPageViewPr
           })
           .finally(() => setLoading(false));
       } else {
-        fetch("/api/media?type=show")
+        fetch(`/api/media?type=show&includeOffline=true&t=${Date.now()}`, { cache: "no-store" })
           .then((r) => r.json())
           .then((data: MediaEntry[]) => {
             const filtered = data.filter(

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import fs from "fs";
-import { getAllMedia, getMediaById, getMediaByType, searchMedia, getMediaStats, getConfig, getShowOfflineMedia } from "@/lib/db";
+import { getAllMedia, getMediaById, getMediaByType, searchMedia, getMediaStats, getConfig, getShowOfflineMedia, isFileAccessible } from "@/lib/db";
 import { FFPROBE } from "@/lib/ffmpeg";
 
 export const dynamic = "force-dynamic";
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,8 +19,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const search = searchParams.get("search");
     const stats = searchParams.get("stats");
+    const includeOffline = searchParams.get("includeOffline") === "true";
 
     const showOffline = getShowOfflineMedia();
+    const shouldFilterOffline = !showOffline && !includeOffline;
 
     // Return stats
     if (stats === "true") {
@@ -28,14 +36,14 @@ export async function GET(request: NextRequest) {
         lastScan,
         localPath,
         hddPath,
-      });
+      }, { headers: NO_CACHE_HEADERS });
     }
 
     // Return single media entry
     if (id) {
       const media = getMediaById(parseInt(id, 10));
       if (!media) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
+        return NextResponse.json({ error: "Not found" }, { status: 404, headers: NO_CACHE_HEADERS });
       }
 
       // Dynamically fetch exact duration via ffprobe for accurate seeking
@@ -53,32 +61,32 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ ...media, exactDuration });
+      return NextResponse.json({ ...media, exactDuration }, { headers: NO_CACHE_HEADERS });
     }
 
     // Search
     if (search) {
       let results = searchMedia(search);
-      if (!showOffline) results = results.filter(m => m.available === 1);
-      return NextResponse.json(results);
+      if (shouldFilterOffline) results = results.filter(m => m.available === 1);
+      return NextResponse.json(results, { headers: NO_CACHE_HEADERS });
     }
 
     // Filter by type
     if (type === "movie" || type === "show") {
       let results = getMediaByType(type);
-      if (!showOffline) results = results.filter(m => m.available === 1);
-      return NextResponse.json(results);
+      if (shouldFilterOffline) results = results.filter(m => m.available === 1);
+      return NextResponse.json(results, { headers: NO_CACHE_HEADERS });
     }
 
     // Return all media
     let all = getAllMedia();
-    if (!showOffline) all = all.filter(m => m.available === 1);
-    return NextResponse.json(all);
+    if (shouldFilterOffline) all = all.filter(m => m.available === 1);
+    return NextResponse.json(all, { headers: NO_CACHE_HEADERS });
   } catch (err) {
     console.error("[Media API] Error:", err);
     return NextResponse.json(
       { error: String(err) },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }

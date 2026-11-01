@@ -13,12 +13,31 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true);
   const [sortParam, setSortParam] = useState<SortOption>("rating_desc");
 
-  useEffect(() => {
-    fetch("/api/favorites")
+  const fetchFavorites = (silent = false) => {
+    if (!silent) setLoading(true);
+    fetch(`/api/favorites?t=${Date.now()}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setFavorites(Array.isArray(data) ? data : []))
       .catch(() => setFavorites([]))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchFavorites(false);
+
+    const handleFocus = () => fetchFavorites(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchFavorites(true);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const sortedFavorites = useMemo(() => {

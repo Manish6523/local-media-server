@@ -3,6 +3,12 @@ import { getAllMedia, MediaEntry, getShowOfflineMedia } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
+
 export async function GET() {
   try {
     const showOffline = getShowOfflineMedia();
@@ -26,9 +32,9 @@ export async function GET() {
     
     const recentlyAdded = Array.from(grouped.values()).slice(0, 6);
 
-    return NextResponse.json(recentlyAdded);
+    return NextResponse.json(recentlyAdded, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error("Failed to fetch recently added:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }

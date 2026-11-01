@@ -25,17 +25,36 @@ export default function MoviesPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const fetchMovies = useCallback(() => {
-    setLoading(true);
-    fetch("/api/media?type=movie")
+  const fetchMovies = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
+    fetch(`/api/media?type=movie&t=${Date.now()}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setMovies(Array.isArray(data) ? data : []))
       .catch(() => setMovies([]))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
-    fetchMovies();
+    fetchMovies(false);
+
+    const handleFocus = () => {
+      fetchMovies(true);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchMovies(true);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchMovies]);
 
   // Exit selection on Escape
