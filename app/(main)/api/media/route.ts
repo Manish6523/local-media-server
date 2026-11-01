@@ -15,9 +15,6 @@ export async function GET(request: NextRequest) {
     const stats = searchParams.get("stats");
 
     const showOffline = getShowOfflineMedia();
-    console.log('[Media API] showOfflineMedia setting:', showOffline);
-    const hddPath = getConfig("hdd_path");
-    const hddConnected = hddPath ? fs.existsSync(hddPath) : false;
 
     // Return stats
     if (stats === "true") {
@@ -43,7 +40,7 @@ export async function GET(request: NextRequest) {
 
       // Dynamically fetch exact duration via ffprobe for accurate seeking
       let exactDuration = media.runtime ? media.runtime * 60 : 0;
-      if (fs.existsSync(media.filepath)) {
+      if (media.available && fs.existsSync(media.filepath)) {
         try {
           const output = execSync(
             `"${FFPROBE}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${media.filepath}"`,
@@ -56,17 +53,12 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const available = media.source === 'hdd' ? (hddConnected ? 1 : 0) : 1;
-      return NextResponse.json({ ...media, exactDuration, available });
+      return NextResponse.json({ ...media, exactDuration });
     }
 
     // Search
     if (search) {
       let results = searchMedia(search);
-      results = results.map(item => ({
-        ...item,
-        available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
-      }));
       if (!showOffline) results = results.filter(m => m.available === 1);
       return NextResponse.json(results);
     }
@@ -74,20 +66,12 @@ export async function GET(request: NextRequest) {
     // Filter by type
     if (type === "movie" || type === "show") {
       let results = getMediaByType(type);
-      results = results.map(item => ({
-        ...item,
-        available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
-      }));
       if (!showOffline) results = results.filter(m => m.available === 1);
       return NextResponse.json(results);
     }
 
     // Return all media
     let all = getAllMedia();
-    all = all.map(item => ({
-      ...item,
-      available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
-    }));
     if (!showOffline) all = all.filter(m => m.available === 1);
     return NextResponse.json(all);
   } catch (err) {

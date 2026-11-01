@@ -62,6 +62,23 @@ export default function TVPosterCard({
       {/* Dark Vignette Overlay */}
       <div className="tv-card-gradient" />
 
+      {/* Offline Badge */}
+      {isUnavailable && (
+        <span
+          className="tv-badge"
+          style={{
+            position: "absolute",
+            top: "8px",
+            left: "8px",
+            background: "rgba(225, 29, 72, 0.85)",
+            color: "#fff",
+            zIndex: 4,
+          }}
+        >
+          Offline
+        </span>
+      )}
+
       {/* Focused Center Play Highlight Icon */}
       {focused && !isUnavailable && (
         <div

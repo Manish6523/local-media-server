@@ -28,7 +28,12 @@ export default function ShowsPage() {
         const groupedMap = new Map<string, MediaEntry>();
         for (const item of data) {
           if (!groupedMap.has(item.title)) {
-            groupedMap.set(item.title, item);
+            groupedMap.set(item.title, { ...item });
+          } else {
+            const existing = groupedMap.get(item.title)!;
+            if (item.available && !existing.available) {
+              existing.available = 1;
+            }
           }
         }
         setShows(Array.from(groupedMap.values()));

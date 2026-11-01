@@ -1,5 +1,5 @@
 import React from "react";
-import { getAllMedia, type MediaEntry } from "@/lib/db";
+import { getAllMedia, getShowOfflineMedia, type MediaEntry } from "@/lib/db";
 import TVHomeView from "@/components/TV/TVHomeView";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,10 @@ export default async function TVPage({ searchParams }: TVPageProps) {
   const query = sp.search?.toLowerCase().trim();
 
   let all = getAllMedia();
+  const showOffline = getShowOfflineMedia();
+  if (!showOffline) {
+    all = all.filter((m) => m.available === 1);
+  }
 
   if (query) {
     all = all.filter((m) => m.title && m.title.toLowerCase().includes(query));

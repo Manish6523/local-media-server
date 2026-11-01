@@ -1,26 +1,18 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import { getAllMedia, MediaEntry, getShowOfflineMedia, getConfig } from "@/lib/db";
+import { getAllMedia, MediaEntry, getShowOfflineMedia } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const showOffline = getShowOfflineMedia();
-    const hddPath = getConfig("hdd_path");
-    const hddConnected = hddPath ? fs.existsSync(hddPath) : false;
-
     let all = getAllMedia();
-    all = all.map(item => ({
-      ...item,
-      available: item.source === 'hdd' ? (hddConnected ? 1 : 0) : 1
-    }));
     if (!showOffline) all = all.filter(m => m.available === 1);
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     
     const recent = all
       .filter(m => m.created_at && new Date(m.created_at).getTime() > sevenDaysAgo)
-      .sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
     const grouped = new Map<string, MediaEntry & { episode_count: number }>();
     for (const m of recent) {

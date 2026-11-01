@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor, ChevronRight, Globe } from "lucide-react";
+import { Play, Star, Pencil, Users, Check, MonitorPlay, Monitor, ChevronRight, Globe, HardDrive } from "lucide-react";
 import { useState, useEffect } from "react";
 import FavoriteButton from "./FavoriteButton";
 import EditTitleModal from "./EditTitleModal";
@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import HoverPreview from "./HoverPreview";
 import EpisodeThumbnail from "./EpisodeThumbnail";
+import { GLASS_BUTTON_STYLE } from "./Player/playerStyles";
 
 const CreateRoomModal = dynamic(() => import("./WatchParty/CreateRoomModal"), { ssr: false });
 
@@ -124,7 +125,7 @@ export default function PosterCard({
         style={{ WebkitTouchCallout: 'none' }}
       >
         <Link
-          href={isUnavailable ? "#" : href}
+          href={href}
           className="relative block aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02] backdrop-blur-md hover:border-violet-500/20 transition-all duration-300 shadow-lg shadow-black/20"
         >
           {useEpisodeThumbnail && media.type === "show" ? (
@@ -165,6 +166,23 @@ export default function PosterCard({
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
 
+          {isUnavailable && (
+            <div className="absolute top-3 left-3 z-30">
+              <span
+                style={{
+                  background: "rgba(244, 63, 94, 0.22)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  border: "1px solid rgba(244, 63, 94, 0.4)",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+                }}
+                className="inline-flex items-center gap-1 text-rose-300 text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-bold w-fit"
+              >
+                <HardDrive className="w-2.5 h-2.5" /> Drive Offline
+              </span>
+            </div>
+          )}
+
           {/* Bottom info */}
           <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
             <h3 className="text-base font-semibold text-white truncate">{media.title}</h3>
@@ -187,7 +205,10 @@ export default function PosterCard({
 
           {/* Play icon */}
           {!isUnavailable && (
-            <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-violet-500/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all shadow-lg shadow-violet-500/25 z-20">
+            <div
+              style={GLASS_BUTTON_STYLE}
+              className="absolute bottom-4 right-4 w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all hover:scale-110 active:scale-95 z-20 cursor-pointer"
+            >
               <Play className="w-4 h-4 text-white fill-white ml-0.5" />
             </div>
           )}
@@ -234,7 +255,7 @@ export default function PosterCard({
   const CardWrapper = selectionMode ? "div" : Link;
   const cardWrapperProps = selectionMode
     ? { onClick: handleSelectionClick, role: "button", tabIndex: 0 }
-    : { href: isUnavailable ? "#" : href };
+    : { href };
 
   return (
     <div
@@ -309,21 +330,42 @@ export default function PosterCard({
 
             {/* Bottom Left Play Button */}
             <div className="absolute bottom-4 left-3 transform translate-y-4 group-hover/card:translate-y-0 opacity-0 group-hover/card:opacity-100 transition-all duration-300 pointer-events-none z-40">
-              <div className="w-10 h-10 rounded-full bg-violet-500/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)] pointer-events-auto border border-white/20 hover:scale-110 hover:bg-violet-400 transition-transform cursor-pointer">
-                <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+              <div
+                style={GLASS_BUTTON_STYLE}
+                className="w-10 h-10 rounded-full flex items-center justify-center pointer-events-auto hover:scale-110 active:scale-95 transition-all cursor-pointer"
+              >
+                <Play className="w-4 h-4 text-white fill-white ml-0.5 drop-shadow-md" />
               </div>
             </div>
           </div>
         )}
 
         {/* Status Badges */}
-        <div className={`absolute ${selectionMode ? "top-12" : "top-3"} left-3 flex flex-col gap-1.5 z-30`}>
-          <span className="inline-flex items-center bg-black/50 backdrop-blur-md text-[9px] uppercase tracking-wider border border-white/[0.08] text-white/80 px-2 py-0.5 rounded-md font-bold">
+        <div className={`absolute ${selectionMode ? "top-12" : "top-3"} left-3 flex items-center flex-wrap gap-1.5 z-30`}>
+          <span
+            style={{
+              background: "rgba(0, 0, 0, 0.65)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+            }}
+            className="inline-flex items-center text-[9px] uppercase tracking-wider text-white/90 px-2 py-0.5 rounded-md font-bold w-fit"
+          >
             {media.type === "show" ? "Series" : "Movie"}
           </span>
           {isUnavailable && (
-            <span className="inline-flex items-center bg-red-500/80 backdrop-blur-md text-[9px] uppercase tracking-wider text-white px-2 py-0.5 rounded-md font-bold">
-              Offline
+            <span
+              style={{
+                background: "rgba(244, 63, 94, 0.22)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(244, 63, 94, 0.4)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+              }}
+              className="inline-flex items-center gap-1 text-rose-300 text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-bold w-fit"
+            >
+              <HardDrive className="w-2.5 h-2.5" /> Drive Offline
             </span>
           )}
         </div>
@@ -416,7 +458,7 @@ export default function PosterCard({
 
       {/* Info Section Below Poster */}
       <div className="mt-3 px-1">
-        <h3 className="text-sm font-bold text-white/90 line-clamp-1 group-hover/card:text-violet-300 transition-colors">
+        <h3 className="text-sm font-bold w-fit text-white/90 line-clamp-1 group-hover/card:text-violet-300 transition-colors">
           {media.title}
         </h3>
         <div className="flex items-center gap-1.5 mt-1 text-[11px] text-white/40 font-medium">

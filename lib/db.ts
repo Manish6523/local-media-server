@@ -155,6 +155,63 @@ export function getDb() {
 
 // ---- Query Builders for Flat Interface ----
 
+// Quick cache for media root path existence check (refreshed every 3 seconds)
+let rootStatusCache: { [root: string]: boolean } = {};
+let lastRootCheckTime = 0;
+
+export function getMediaRootAvailability(): { [root: string]: boolean } {
+  const now = Date.now();
+  if (now - lastRootCheckTime < 3000 && Object.keys(rootStatusCache).length > 0) {
+    return rootStatusCache;
+  }
+  const roots = getMediaPaths();
+  const nextStatus: { [root: string]: boolean } = {};
+  for (const root of roots) {
+    try {
+      nextStatus[root] = fs.existsSync(root);
+    } catch {
+      nextStatus[root] = false;
+    }
+  }
+  rootStatusCache = nextStatus;
+  lastRootCheckTime = now;
+  return nextStatus;
+}
+
+export function isFileAccessible(filePath: string, source?: string): boolean {
+  if (source === "online") return true;
+  if (!filePath) return false;
+
+  const rootStatus = getMediaRootAvailability();
+  const roots = Object.keys(rootStatus);
+
+  for (const root of roots) {
+    const relative = path.relative(root, filePath);
+    const isUnderRoot = relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+    if (isUnderRoot) {
+      if (!rootStatus[root]) {
+        // Parent folder/drive is offline
+        return false;
+      }
+      break;
+    }
+  }
+
+  // Also check drive root directly if on Windows (e.g. "D:\")
+  const parsed = path.parse(filePath);
+  if (parsed.root) {
+    try {
+      if (!fs.existsSync(parsed.root)) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function mapToFlatEntry(asset: any, movie: any, show: any, episode: any, progress: any): MediaEntry {
   const isMovie = asset.type === "movie";
   return {
@@ -176,7 +233,7 @@ function mapToFlatEntry(asset: any, movie: any, show: any, episode: any, progres
     rating: isMovie ? movie?.rating : show?.rating,
     genres: isMovie ? movie?.genres : show?.genres,
     runtime: isMovie ? movie?.runtime : episode?.runtime,
-    available: asset.available ?? 1,
+    available: isFileAccessible(asset.filepath, asset.source) ? 1 : 0,
     fetched_at: asset.fetchedAt,
     created_at: asset.createdAt,
     last_watched_at: progress?.lastWatchedAt || null,
